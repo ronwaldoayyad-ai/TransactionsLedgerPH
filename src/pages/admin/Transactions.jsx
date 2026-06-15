@@ -43,8 +43,8 @@ export default function Transactions() {
   // Sorting applies after filtering, so it works on any filtered view.
   const [sortKey, setSortKey] = usePersistedState('txn.sortKey', 'dueDate') // dueDate | txnDate
   const [sortDir, setSortDir] = usePersistedState('txn.sortDir', 'asc')
-  // Hide settled (Paid/Refunded/Cancelled) transactions when on.
-  const [hideSettled, setHideSettled] = usePersistedState('txn.hideSettled', false)
+  // Hide settled (Paid/Refunded/Cancelled) transactions when on. Default ON.
+  const [hideSettled, setHideSettled] = usePersistedState('txn.hideSettled', true)
   const [selected, setSelected] = useState(() => new Set())
   const [bulkStatus, setBulkStatus] = useState('paid')
   const importInputRef = useRef(null)
@@ -485,9 +485,9 @@ export default function Transactions() {
               <Switch
                 checked={hideSettled}
                 onChange={setHideSettled}
-                label="Hide paid, refunded, and cancelled transactions"
+                label={hideSettled ? 'Show all transactions' : 'Hide paid, refunded, and cancelled transactions'}
               />
-              Hide paid/refunded/cancelled
+              {hideSettled ? 'Show all transactions' : 'Hide paid/refunded/cancelled'}
             </label>
           }
         />

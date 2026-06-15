@@ -995,12 +995,13 @@ export function AppProvider({ children }) {
           next.status = 'paid'
         if (!patch.datePaid && next.status === 'paid') next.status = 'unpaid'
       }
-      // Keep date_paid consistent with the DB constraint when status changes
-      // directly: paid needs a date; unpaid/cancelled/past_due clear it.
-      if ('status' in patch) {
-        if (next.status === 'paid' && !next.datePaid) next.datePaid = toISODate(new Date())
-        else if (['unpaid', 'cancelled', 'past_due'].includes(next.status)) next.datePaid = null
-      }
+      // Keep date_paid consistent with the status (and the DB constraint):
+      //  - setting status to "paid" stamps today if no date yet
+      //  - unpaid / past due / cancelled NEVER carry a date (enforced always,
+      //    so a stale date can't linger after any edit)
+      if ('status' in patch && next.status === 'paid' && !next.datePaid)
+        next.datePaid = toISODate(new Date())
+      if (['unpaid', 'cancelled', 'past_due'].includes(next.status)) next.datePaid = null
       if (isLive) {
         supabase
           .from('transactions')

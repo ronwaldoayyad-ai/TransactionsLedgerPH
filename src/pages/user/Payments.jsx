@@ -11,8 +11,16 @@ const MAX_FILE_BYTES = 5 * 1024 * 1024 // 5 MB
 
 // Payment proof submission + status tracking for the borrower.
 export default function Payments() {
-  const { session, loans, payments, submitPayment, syncError, realSession, isViewingAs } = useApp()
-  const myLoans = loans.filter((l) => l.userId === session.user.id)
+  const { session, loans, payments, transactions, submitPayment, syncError, realSession, isViewingAs } =
+    useApp()
+  // Loan dropdown: only the borrower's loans that still have an outstanding
+  // installment (not fully paid / refunded / cancelled) — so the list stays
+  // short and you can't attach a proof to an already-settled loan.
+  const myLoans = loans.filter((l) => {
+    if (l.userId !== session.user.id) return false
+    const txns = transactions.filter((t) => t.loanId === l.id)
+    return txns.length > 0 && txns.some((t) => !['paid', 'refunded', 'cancelled'].includes(t.status))
+  })
   const myPayments = payments.filter((p) => p.userId === session.user.id)
   const isLive = realSession?.source === 'supabase'
 

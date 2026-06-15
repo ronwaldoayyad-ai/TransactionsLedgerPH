@@ -70,7 +70,9 @@ export const mapTransaction = (r) => ({
   txnDate: day(r.txn_date),
   dueDate: day(r.due_date),
   status: r.status,
-  datePaid: day(r.date_paid),
+  // Invariant: only paid/refunded carry a payment date. Unpaid / past due /
+  // cancelled must show blank — never auto-populate a date for them.
+  datePaid: ['unpaid', 'cancelled', 'past_due'].includes(r.status) ? null : day(r.date_paid),
   archivedAt: day(r.archived_at),
 })
 
