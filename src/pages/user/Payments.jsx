@@ -1,0 +1,253 @@
+import { useRef, useState } from 'react'
+import { useApp } from '../../context/AppContext'
+import { PageHeader } from '../../components/AppShell'
+import Icon from '../../components/Icon'
+import PaymentList from '../../components/PaymentList'
+import RefreshButton from '../../components/RefreshButton'
+import { Button, Card, CardHeader, CurrencyInput, Field, inputClass } from '../../components/ui'
+
+const ACCEPTED = '.jpg,.jpeg,.png,.pdf'
+const MAX_FILE_BYTES = 5 * 1024 * 1024 // 5 MB
+
+// Payment proof submission + status tracking for the borrower.
+export default function Payments() {
+  const { session, loans, payments, submitPayment, syncError, realSession, isViewingAs } = useApp()
+  const myLoans = loans.filter((l) => l.userId === session.user.id)
+  const myPayments = payments.filter((p) => p.userId === session.user.id)
+  const isLive = realSession?.source === 'supabase'
+
+  const fileInputRef = useRef(null)
+  const [file, setFile] = useState(null)
+  const [loanId, setLoanId] = useState(myLoans[0]?.id ?? '')
+  const [amount, setAmount] = useState(null)
+  const [method, setMethod] = useState('GCash')
+  const [reference, setReference] = useState('')
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState(false)
+  const [dragOver, setDragOver] = useState(false)
+
+  const acceptFile = (f) => {
+    if (!f) return
+    if (!/\.(jpe?g|png|pdf)$/i.test(f.name)) {
+      setError('Unsupported file type. Only JPG, PNG, or PDF files are accepted.')
+      return
+    }
+    if (f.size > MAX_FILE_BYTES) {
+      setError(
+        `File is too large (${(f.size / 1024 / 1024).toFixed(1)} MB). The maximum allowed size is 5 MB.`,
+      )
+      return
+    }
+    setFile(f)
+    setError('')
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    if (!file) return setError('Please attach your proof of payment.')
+    if (!loanId) return setError('Please select which loan this payment is for.')
+    if (!amount || amount <= 0) return setError('Please enter the amount you paid.')
+    const payment = await submitPayment(session.user.name, {
+      userId: session.user.id,
+      loanId,
+      amount,
+      method,
+      reference: reference.trim() || '—',
+      fileName: file.name,
+      fileType: /\.pdf$/i.test(file.name) ? 'pdf' : 'image',
+      file, // live mode uploads this to Storage
+      // Demo fallback: session-scoped object URL so view/download still work.
+      fileUrl: URL.createObjectURL(file),
+    })
+    if (!payment) {
+      setError('Upload failed — please try again.')
+      return
+    }
+    setFile(null)
+    setAmount(null)
+    setReference('')
+    if (fileInputRef.current) fileInputRef.current.value = ''
+    setSuccess(true)
+    setTimeout(() => setSuccess(false), 5000)
+  }
+
+  return (
+    <>
+      <PageHeader
+        title="My Payments"
+        subtitle="Submit proof of payment and track its verification status."
+        action={<RefreshButton />}
+      />
+
+      <div className="grid gap-6 xl:grid-cols-5">
+        <Card className="xl:col-span-2">
+          <CardHeader
+            title="Submit Proof of Payment"
+            subtitle="GCash receipts, bank transfer screenshots, or PDFs"
+          />
+          <form onSubmit={handleSubmit} className="space-y-4 px-5 py-4" noValidate>
+            {isViewingAs && (
+              <p className="flex items-start gap-2 rounded-lg border border-amber-300/70 bg-amber-50/80 px-3 py-2.5 text-xs text-amber-900">
+                <Icon name="eye" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                Submitting on behalf of <span className="font-semibold">{session.user.name}</span> — this
+                proof will be attributed to this borrower.
+              </p>
+            )}
+            {/* Dropzone */}
+            <div
+              onDragOver={(e) => {
+                e.preventDefault()
+                setDragOver(true)
+              }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={(e) => {
+                e.preventDefault()
+                setDragOver(false)
+                acceptFile(e.dataTransfer.files[0])
+              }}
+              className={`rounded-xl border-2 border-dashed p-6 text-center transition-colors duration-200 ${
+                dragOver ? 'border-navy-600 bg-navy-50' : 'border-slate-300 bg-slate-50'
+              }`}
+            >
+              {file ? (
+                <div className="flex items-center justify-center gap-3">
+                  <span className="rounded-lg bg-emerald-50 p-2 text-emerald-600">
+                    <Icon name={/\.pdf$/i.test(file.name) ? 'file' : 'image'} className="h-5 w-5" />
+                  </span>
+                  <div className="text-left">
+                    <p className="text-sm font-medium text-slate-900">{file.name}</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFile(null)
+                        if (fileInputRef.current) fileInputRef.current.value = ''
+                      }}
+                      className="cursor-pointer text-xs text-red-600 transition-colors duration-200 hover:text-red-800"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <span className="mx-auto inline-flex rounded-full bg-white p-3 text-slate-400 shadow-sm">
+                    <Icon name="upload" className="h-6 w-6" />
+                  </span>
+                  <p className="mt-3 text-sm text-slate-600">
+                    Drag & drop your receipt here, or{' '}
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="cursor-pointer font-medium text-navy-700 underline-offset-2 hover:underline"
+                    >
+                      browse files
+                    </button>
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">JPG, PNG, or PDF · max 5 MB</p>
+                </>
+              )}
+              <input
+                ref={fileInputRef}
+                id="proof-file"
+                type="file"
+                accept={ACCEPTED}
+                className="sr-only"
+                onChange={(e) => acceptFile(e.target.files[0])}
+              />
+            </div>
+
+            <Field label="Loan" htmlFor="pay-loan">
+              <select
+                id="pay-loan"
+                value={loanId}
+                onChange={(e) => setLoanId(e.target.value)}
+                className={inputClass}
+              >
+                {myLoans.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.label} ({l.id})
+                  </option>
+                ))}
+              </select>
+            </Field>
+
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Amount paid (PHP)" htmlFor="pay-amount">
+                <CurrencyInput
+                  id="pay-amount"
+                  value={amount}
+                  onValueChange={setAmount}
+                  placeholder="0.00"
+                />
+              </Field>
+              <Field label="Payment method" htmlFor="pay-method">
+                <select
+                  id="pay-method"
+                  value={method}
+                  onChange={(e) => setMethod(e.target.value)}
+                  className={inputClass}
+                >
+                  <option>GCash</option>
+                  <option>Maya</option>
+                  <option>Bank Transfer</option>
+                  <option>Cash Deposit</option>
+                </select>
+              </Field>
+            </div>
+
+            <Field label="Reference number (optional)" htmlFor="pay-ref">
+              <input
+                id="pay-ref"
+                type="text"
+                value={reference}
+                onChange={(e) => setReference(e.target.value)}
+                className={inputClass}
+                placeholder="e.g. GC-2026-123456"
+              />
+            </Field>
+
+            {error && (
+              <p role="alert" className="rounded-lg bg-red-50 px-3 py-2.5 text-sm text-red-700">
+                {error}
+              </p>
+            )}
+            {success && (
+              <p role="status" className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2.5 text-sm text-emerald-700">
+                <Icon name="check" className="h-4 w-4" />
+                Proof submitted. Your administrator will verify it shortly.
+              </p>
+            )}
+
+            <Button type="submit" className="w-full" disabled={myLoans.length === 0}>
+              <Icon name="send" className="h-4 w-4" />
+              Submit for verification
+            </Button>
+          </form>
+        </Card>
+
+        <Card className="xl:col-span-3">
+          <CardHeader
+            title="Submission History"
+            subtitle={`${myPayments.length} proof${myPayments.length === 1 ? '' : 's'} submitted — view and download any of them`}
+            action={<RefreshButton />}
+          />
+          {isLive && syncError && (
+            <p
+              role="alert"
+              className="mx-5 mt-4 flex items-start gap-2 rounded-lg bg-red-50 px-3 py-2.5 text-xs text-red-700"
+            >
+              <Icon name="alert" className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              Some records couldn&apos;t be loaded from the database ({syncError}). Tap Refresh; if
+              proofs are still missing, contact your administrator.
+            </p>
+          )}
+          <PaymentList
+            payments={myPayments}
+            defaultTab="all"
+            emptyBody="Your uploaded proofs and their verification status will appear here."
+          />
+        </Card>
+      </div>
+    </>
+  )
+}

@@ -1,0 +1,96 @@
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  --color-navy-50: #f0f4fa;
+  --color-navy-100: #dce5f2;
+  --color-navy-200: #bccde4;
+  --color-navy-300: #8eabd0;
+  --color-navy-400: #5a83b8;
+  --color-navy-500: #38659e;
+  --color-navy-600: #2a5085;
+  --color-navy-700: #24416c;
+  --color-navy-800: #1e3a8a;
+  --color-navy-900: #172b54;
+  --color-navy-950: #0f172a;
+
+  --color-gold-400: #e0af34;
+  --color-gold-500: #ca8a04;
+  --color-gold-600: #a16207;
+}
+
+html {
+  font-family: var(--font-sans);
+}
+
+/* Liquid-glass backdrop: soft brand-tinted glows the frosted surfaces sit on */
+body {
+  background-color: #f3f6fb;
+  background-image:
+    radial-gradient(60rem 40rem at 110% -10%, rgba(202, 138, 4, 0.1), transparent 60%),
+    radial-gradient(50rem 35rem at -15% 25%, rgba(30, 58, 138, 0.1), transparent 60%),
+    radial-gradient(45rem 30rem at 55% 115%, rgba(14, 165, 233, 0.08), transparent 60%);
+  background-attachment: fixed;
+  color: #0f172a;
+}
+
+/* Motion vocabulary — strong ease-out per design-engineering practice */
+:root {
+  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* One-time entrance: fade + small rise. `backwards` holds the hidden state
+   during stagger delays. */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+.lp-rise {
+  animation: rise 400ms var(--ease-out-strong) backwards;
+}
+
+/* Modal/dialog entrance: never from scale(0) — start near full size */
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+.modal-pop {
+  animation: pop 180ms var(--ease-out-strong) backwards;
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+.backdrop-fade {
+  animation: fade 180ms ease-out backwards;
+}
+
+/* Sign-in → home transition: brief scale-down with blur to mask the swap */
+@keyframes page-leave {
+  to {
+    opacity: 0;
+    transform: scale(0.985);
+    filter: blur(4px);
+  }
+}
+.page-leave {
+  animation: page-leave 220ms var(--ease-out-strong) forwards;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

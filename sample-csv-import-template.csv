@@ -1,0 +1,6 @@
+Borrower,Txn Date,Item Description,Amount,Type,Due Date,Date Paid,Status,Principal Amount,Monthly Add-on Rate,Duration,First Payment Date,DST,Processing Fee,Notarial Fee,Total Deductions,Net Proceeds
+Maria Santos,2026-01-01,"HENRY'S-FUJIFILM XA5 (1 of 3)","2,499.17",Installment,2026-06-10,2026-06-10,Paid,"7,200.00",1.8934,3,2026-06-10,54.00,150.00,0.00,204.00,"6,996.00"
+Maria Santos,2026-01-01,"HENRY'S-FUJIFILM XA5 (2 of 3)","2,499.17",Installment,2026-07-10,,Unpaid,,,,,,,,,
+Maria Santos,2026-01-01,"HENRY'S-FUJIFILM XA5 (3 of 3)","2,499.17",Installment,2026-08-10,,Unpaid,,,,,,,,,
+Jose Ramirez,2026-01-04,GRAB,"1,000.00",Straight,2026-02-10,2026-02-08,Paid,"1,000.00",0,1,2026-02-10,0.00,0.00,0.00,0.00,"1,000.00"
+Jose Ramirez,2026-01-17,MERALCO,"3,514.29",Straight,2026-02-10,2026-02-08,Paid,"3,514.29",0,1,2026-02-10,0.00,0.00,0.00,0.00,"3,514.29"
