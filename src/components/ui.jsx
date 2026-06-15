@@ -152,9 +152,10 @@ export function CurrencyInput({ value, onValueChange, allowNegative = false, cla
     if (!focusedRef.current) setText(formatAmount(value))
   }, [value])
 
-  // allowNegative lets the field accept a leading "-" (e.g. straight-transaction
-  // overpayments that reduce the total due).
-  const pattern = allowNegative ? /^-?[\d,]*\.?\d{0,2}$/ : /^[\d,]*\.?\d{0,2}$/
+  // Magnitude only — sign is handled separately so a "-" typed anywhere in the
+  // field (not just position 0) is honored. allowNegative permits the sign at
+  // all, e.g. straight-transaction overpayments that reduce the total due.
+  const magnitude = /^[\d,]*\.?\d{0,2}$/
 
   return (
     <input
@@ -165,10 +166,14 @@ export function CurrencyInput({ value, onValueChange, allowNegative = false, cla
         focusedRef.current = true
       }}
       onChange={(e) => {
-        const raw = e.target.value
-        if (!pattern.test(raw)) return
-        setText(raw)
-        onValueChange(parseAmount(raw))
+        let raw = e.target.value
+        // Treat any "-" present as a negative sign regardless of caret position.
+        const negative = allowNegative && raw.includes('-')
+        if (negative) raw = raw.replaceAll('-', '')
+        if (!magnitude.test(raw)) return
+        const next = negative ? `-${raw}` : raw
+        setText(next)
+        onValueChange(parseAmount(next))
       }}
       onBlur={() => {
         focusedRef.current = false
