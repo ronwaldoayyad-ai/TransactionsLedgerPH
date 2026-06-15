@@ -144,7 +144,7 @@ export function Switch({ checked, onChange, label }) {
 // Amount input: accepts free typing of digits/commas/decimal point, reports
 // the numeric value via onValueChange (null when cleared), and re-formats to
 // 2 decimals with comma separators on blur (e.g. 1,500.00).
-export function CurrencyInput({ value, onValueChange, className = '', ...props }) {
+export function CurrencyInput({ value, onValueChange, allowNegative = false, className = '', ...props }) {
   const [text, setText] = useState(formatAmount(value))
   const focusedRef = useRef(false)
 
@@ -152,17 +152,21 @@ export function CurrencyInput({ value, onValueChange, className = '', ...props }
     if (!focusedRef.current) setText(formatAmount(value))
   }, [value])
 
+  // allowNegative lets the field accept a leading "-" (e.g. straight-transaction
+  // overpayments that reduce the total due).
+  const pattern = allowNegative ? /^-?[\d,]*\.?\d{0,2}$/ : /^[\d,]*\.?\d{0,2}$/
+
   return (
     <input
       type="text"
-      inputMode="decimal"
+      inputMode={allowNegative ? 'text' : 'decimal'}
       value={text}
       onFocus={() => {
         focusedRef.current = true
       }}
       onChange={(e) => {
         const raw = e.target.value
-        if (!/^[\d,]*\.?\d{0,2}$/.test(raw)) return
+        if (!pattern.test(raw)) return
         setText(raw)
         onValueChange(parseAmount(raw))
       }}

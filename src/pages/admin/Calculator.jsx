@@ -273,7 +273,15 @@ export default function Calculator() {
                   className={inputClass}
                 />
               </Field>
-              <Field label="Principal Amount (P)" htmlFor="calc-principal">
+              <Field
+                label={txnType === 'straight' ? 'Amount (P)' : 'Principal Amount (P)'}
+                htmlFor="calc-principal"
+                hint={
+                  txnType === 'straight'
+                    ? 'Enter a negative amount to record an overpayment — it deducts from the total due.'
+                    : undefined
+                }
+              >
                 <div className="relative">
                   <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-slate-500">
                     ₱
@@ -282,6 +290,7 @@ export default function Calculator() {
                     id="calc-principal"
                     value={principal}
                     onValueChange={setPrincipal}
+                    allowNegative={txnType === 'straight'}
                     className="pl-7"
                   />
                 </div>

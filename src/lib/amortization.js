@@ -111,7 +111,10 @@ export function generateSchedule({
   const P = Number(principal)
   const R = Number(monthlyRate)
   const D = Math.floor(Number(durationMonths))
-  if (!P || P <= 0 || !D || D <= 0 || R < 0 || !firstPaymentDate) return null
+  // Reject zero/NaN principal. A NEGATIVE principal is allowed only for a
+  // single payment (straight transaction, D=1) — e.g. an overpayment credit
+  // that reduces the total due. Installments (D>1) must be positive.
+  if (!P || (P < 0 && D !== 1) || !D || D <= 0 || R < 0 || !firstPaymentDate) return null
 
   const anchor =
     typeof firstPaymentDate === 'string' ? parseISODate(firstPaymentDate) : firstPaymentDate
