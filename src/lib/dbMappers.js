@@ -134,6 +134,43 @@ export const toDbPaymentLog = (l) => ({
   note: l.note ?? '',
 })
 
+export const mapInterestRate = (r) => ({
+  id: r.id,
+  kind: r.kind,
+  rate: num(r.rate),
+})
+
+export const mapArbitrageLoan = (r) => ({
+  id: r.id,
+  userId: r.user_id,
+  principal: num(r.principal),
+  txnDate: day(r.txn_date),
+  firstPaymentDate: day(r.first_payment_date),
+  durationMonths: r.duration_months,
+  lastPaymentDate: day(r.last_payment_date),
+  borrowerRate: num(r.borrower_rate),
+  costRate: num(r.cost_rate),
+  dst: num(r.dst),
+  processingFee: num(r.processing_fee),
+  notarialFee: num(r.notarial_fee),
+  createdAt: r.created_at ?? null,
+})
+
+// App arbitrage record → DB row (for insert). `id`/`created_at` are DB-defaulted.
+export const toDbArbitrageLoan = (l) => ({
+  user_id: l.userId,
+  principal: l.principal,
+  txn_date: l.txnDate,
+  first_payment_date: l.firstPaymentDate,
+  duration_months: l.durationMonths,
+  last_payment_date: l.lastPaymentDate,
+  borrower_rate: l.borrowerRate,
+  cost_rate: l.costRate,
+  dst: l.dst,
+  processing_fee: l.processingFee,
+  notarial_fee: l.notarialFee,
+})
+
 export const mapAudit = (r) => ({
   id: String(r.id),
   at: stamp(r.at),

@@ -2,12 +2,15 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { adminUser, mockAuditLog, mockLoans, mockPayments, mockUsers } from '../data/mock'
 import { addMonthsClamped, buildDisclosure, parseISODate, toISODate } from '../lib/amortization'
 import {
+  mapArbitrageLoan,
   mapAudit,
+  mapInterestRate,
   mapLoan,
   mapPayment,
   mapPaymentLog,
   mapProfile,
   mapTransaction,
+  toDbArbitrageLoan,
   toDbPaymentLog,
   toDbTransaction,
 } from '../lib/dbMappers'
@@ -107,6 +110,8 @@ export function AppProvider({ children }) {
   const [transactions, setTransactions] = useState(() => buildTransactions(mockLoans))
   const [archivedTransactions, setArchivedTransactions] = useState([])
   const [paymentLogs, setPaymentLogs] = useState([])
+  const [arbitrageLoans, setArbitrageLoans] = useState([])
+  const [interestRates, setInterestRates] = useState([])
   const [auditLog, setAuditLog] = useState(mockAuditLog)
 
   const isLive = session?.source === 'supabase'
@@ -153,6 +158,8 @@ export function AppProvider({ children }) {
     setTransactions(buildTransactions(mockLoans))
     setArchivedTransactions([])
     setPaymentLogs([])
+    setArbitrageLoans([])
+    setInterestRates([])
     setAuditLog(mockAuditLog)
   }
 
@@ -164,8 +171,16 @@ export function AppProvider({ children }) {
   const loadLiveData = useCallback(async () => {
     const failures = []
     try {
-      const [profilesRes, loansRes, txnsRes, paymentsRes, paymentLogsRes, auditRes] =
-        await Promise.all([
+      const [
+        profilesRes,
+        loansRes,
+        txnsRes,
+        paymentsRes,
+        paymentLogsRes,
+        arbitrageRes,
+        ratesRes,
+        auditRes,
+      ] = await Promise.all([
           // Secondary .order('id') makes paging deterministic (a non-unique
           // primary sort key could otherwise shift rows across page boundaries).
           fetchAllRows(() => supabase.from('profiles').select('*').order('created_at').order('id')),
@@ -181,6 +196,10 @@ export function AppProvider({ children }) {
           fetchAllRows(() =>
             supabase.from('payment_logs').select('*').order('created_at').order('id'),
           ),
+          fetchAllRows(() =>
+            supabase.from('arbitrage_loans').select('*').order('created_at').order('id'),
+          ),
+          fetchAllRows(() => supabase.from('interest_rates').select('*').order('kind').order('rate')),
           supabase.from('audit_log').select('*').order('at', { ascending: false }).limit(500),
         ])
 
@@ -199,6 +218,14 @@ export function AppProvider({ children }) {
 
       if (paymentLogsRes.error) failures.push(`payment logs (${paymentLogsRes.error.message})`)
       else setPaymentLogs((paymentLogsRes.data ?? []).map(mapPaymentLog))
+
+      // Arbitrage + interest rates are admin-only; RLS returns an empty set for
+      // borrowers (not an error), so these stay empty for them.
+      if (arbitrageRes.error) failures.push(`arbitrage (${arbitrageRes.error.message})`)
+      else setArbitrageLoans((arbitrageRes.data ?? []).map(mapArbitrageLoan))
+
+      if (ratesRes.error) failures.push(`interest rates (${ratesRes.error.message})`)
+      else setInterestRates((ratesRes.data ?? []).map(mapInterestRate))
 
       if (auditRes.error) failures.push(`audit log (${auditRes.error.message})`)
       else setAuditLog((auditRes.data ?? []).map(mapAudit))
@@ -1241,6 +1268,97 @@ export function AppProvider({ children }) {
     [isLive, log, actor],
   )
 
+  // Log an arbitrage record (admin only). Standalone — never touches the loan
+  // ledger. Stores only the inputs; the spread/fee figures are derived.
+  const createArbitrageLoan = useCallback(
+    async (input) => {
+      const borrower = users.find((u) => u.id === input.userId)
+      if (isLive) {
+        const { data: row, error } = await supabase
+          .from('arbitrage_loans')
+          .insert(toDbArbitrageLoan(input))
+          .select()
+          .single()
+        if (error) {
+          console.error('[supabase] arbitrage insert failed:', error.message)
+          reportDbError?.(`arbitrage save failed (${error.message}) — a migration may be missing`)
+          return null
+        }
+        const record = mapArbitrageLoan(row)
+        setArbitrageLoans((prev) => [...prev, record])
+        log(actor, 'ARBITRAGE_CREATED', `Arbitrage logged for ${borrower?.name ?? input.userId}`)
+        return record
+      }
+      const record = { ...input, id: nextId('arb'), createdAt: nowStamp() }
+      setArbitrageLoans((prev) => [...prev, record])
+      log(actor, 'ARBITRAGE_CREATED', `Arbitrage logged for ${borrower?.name ?? input.userId}`)
+      return record
+    },
+    [isLive, log, actor, users],
+  )
+
+  const deleteArbitrageLoan = useCallback(
+    async (id) => {
+      if (isLive) {
+        const { error } = await supabase.from('arbitrage_loans').delete().eq('id', id)
+        if (error) {
+          console.error('[supabase] arbitrage delete failed:', error.message)
+          reportDbError?.(`delete arbitrage (${error.message})`)
+          return false
+        }
+      }
+      setArbitrageLoans((prev) => prev.filter((r) => r.id !== id))
+      log(actor, 'ARBITRAGE_DELETED', `Arbitrage record ${id} deleted`)
+      return true
+    },
+    [isLive, log, actor],
+  )
+
+  // Manage the stored rate lists (admin only) that populate the rate dropdowns
+  // here and on the Loan Calculator. `kind` is 'borrower' or 'cost'.
+  const addInterestRate = useCallback(
+    async (kind, rate) => {
+      const value = Math.round((Number(rate) + Number.EPSILON) * 10000) / 10000
+      if (!Number.isFinite(value) || value < 0) return null
+      if (interestRates.some((r) => r.kind === kind && r.rate === value)) return null // dedupe
+      if (isLive) {
+        const { data: row, error } = await supabase
+          .from('interest_rates')
+          .insert({ kind, rate: value })
+          .select()
+          .single()
+        if (error) {
+          console.error('[supabase] rate insert failed:', error.message)
+          reportDbError?.(`add rate failed (${error.message})`)
+          return null
+        }
+        const mapped = mapInterestRate(row)
+        setInterestRates((prev) => [...prev, mapped])
+        return mapped
+      }
+      const mapped = { id: nextId('rate'), kind, rate: value }
+      setInterestRates((prev) => [...prev, mapped])
+      return mapped
+    },
+    [isLive, interestRates],
+  )
+
+  const deleteInterestRate = useCallback(
+    async (id) => {
+      if (isLive) {
+        const { error } = await supabase.from('interest_rates').delete().eq('id', id)
+        if (error) {
+          console.error('[supabase] rate delete failed:', error.message)
+          reportDbError?.(`delete rate (${error.message})`)
+          return false
+        }
+      }
+      setInterestRates((prev) => prev.filter((r) => r.id !== id))
+      return true
+    },
+    [isLive],
+  )
+
   const value = useMemo(
     () => ({
       session: effectiveSession,
@@ -1262,6 +1380,12 @@ export function AppProvider({ children }) {
       paymentLogs,
       createPaymentLog,
       deletePaymentLog,
+      arbitrageLoans,
+      interestRates,
+      createArbitrageLoan,
+      deleteArbitrageLoan,
+      addInterestRate,
+      deleteInterestRate,
       transactions,
       auditLog,
       signInWithPassword,
@@ -1291,6 +1415,8 @@ export function AppProvider({ children }) {
       session, effectiveSession, isViewingAs, startViewAs, stopViewAs, authLoading,
       refreshing, refreshData, syncError, getProofUrl, importLoans, updateMyProfile, setMyAvatar,
       users, loans, payments, paymentLogs, createPaymentLog, deletePaymentLog,
+      arbitrageLoans, interestRates, createArbitrageLoan, deleteArbitrageLoan,
+      addInterestRate, deleteInterestRate,
       transactions, archivedTransactions, auditLog,
       signInWithPassword, signInDemo, signOut, completePasswordSetup, inviteUser, updateUser,
       deleteUser, resendInvite, submitPayment, reviewPayment, deletePayment, assignLoan, unassignLoan,

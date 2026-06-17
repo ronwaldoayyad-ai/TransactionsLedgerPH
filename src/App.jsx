@@ -16,6 +16,7 @@ import Queue from './pages/admin/Queue'
 import Users from './pages/admin/Users'
 import Logs from './pages/admin/Logs'
 import PaymentLogs from './pages/admin/PaymentLogs'
+import Arbitrage from './pages/admin/Arbitrage'
 
 // Two-tier RBAC route guard. Admin routes are unreachable for general users
 // and vice versa; unauthenticated visitors land on the invite-only login.
@@ -58,6 +59,7 @@ export default function App() {
           <Route path="/admin/queue" element={<Protected role="admin"><Queue /></Protected>} />
           <Route path="/admin/users" element={<Protected role="admin"><Users /></Protected>} />
           <Route path="/admin/payment-logs" element={<Protected role="admin"><PaymentLogs /></Protected>} />
+          <Route path="/admin/arbitrage" element={<Protected role="admin"><Arbitrage /></Protected>} />
           <Route path="/admin/logs" element={<Protected role="admin"><Logs /></Protected>} />
 
           <Route path="*" element={<Navigate to="/login" replace />} />

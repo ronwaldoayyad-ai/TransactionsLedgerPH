@@ -27,8 +27,12 @@ import {
 // Dynamic Loan Amortization & Disclosure Module (Admin only).
 // All outputs are reactive to the inputs — no "Calculate" button needed.
 export default function Calculator() {
-  const { session, users, assignLoan, unassignLoan } = useApp()
+  const { session, users, interestRates, assignLoan, unassignLoan } = useApp()
   const borrowers = users.filter((u) => u.role === 'user')
+  // Stored borrower rates populate the rate field's dropdown (still free-typeable).
+  const borrowerRateOptions = interestRates
+    .filter((r) => r.kind === 'borrower')
+    .sort((a, b) => a.rate - b.rate)
 
   // All calculator inputs survive navigating to other sections; they change
   // only when edited here (or after Refresh, which resets to defaults).
@@ -304,10 +308,16 @@ export default function Calculator() {
                       min="0"
                       step="0.0001"
                       inputMode="decimal"
+                      list="calc-rate-options"
                       value={ratePct}
                       onChange={(e) => setRatePct(e.target.value)}
                       className={`${inputClass} pr-8 font-mono`}
                     />
+                    <datalist id="calc-rate-options">
+                      {borrowerRateOptions.map((r) => (
+                        <option key={r.id} value={r.rate.toFixed(4)} />
+                      ))}
+                    </datalist>
                     <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-slate-500">
                       %
                     </span>

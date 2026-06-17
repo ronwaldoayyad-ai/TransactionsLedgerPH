@@ -11,6 +11,7 @@ const adminNav = [
   { to: '/admin/queue', label: 'Verification Queue', icon: 'inbox' },
   { to: '/admin/users', label: 'User Management', icon: 'users' },
   { to: '/admin/payment-logs', label: 'Payment Logs', icon: 'wallet' },
+  { to: '/admin/arbitrage', label: 'Interest / Arbitrage', icon: 'chart' },
   { to: '/admin/logs', label: 'Reports & Logs', icon: 'scroll' },
 ]
 
