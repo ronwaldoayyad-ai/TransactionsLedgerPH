@@ -166,6 +166,10 @@ export default function LoanTracker() {
     }
   }, [trackedLoans, today])
 
+  // Combined monthly obligation across loans still being repaid.
+  const outstandingMonthly =
+    Math.round(outstanding.reduce((s, l) => s + computeLoan(l).monthly, 0) * 100) / 100
+
   const canSave =
     form.bank &&
     Number(form.principal) > 0 &&
@@ -215,7 +219,8 @@ export default function LoanTracker() {
 
       {/* Split: form + grids */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,320px)_1fr]">
-        <Card className="self-start">
+        <div className="space-y-4 self-start">
+          <Card>
           <CardHeader title="Add New Loan" />
           <div className="space-y-4 px-5 py-4">
             <Field label="Bank" htmlFor="trk-bank">
@@ -283,7 +288,16 @@ export default function LoanTracker() {
               {saving ? 'Saving…' : 'Track Loan'}
             </Button>
           </div>
-        </Card>
+          </Card>
+
+          <Card className="p-5">
+            <p className="text-sm font-semibold text-slate-500">Total Monthly Payment (Outstanding)</p>
+            <p className="mt-1 font-mono text-2xl font-bold text-blue-700">{formatPeso(outstandingMonthly)}</p>
+            <p className="mt-1 text-xs text-slate-500">
+              Across {outstanding.length} outstanding loan{outstanding.length === 1 ? '' : 's'}
+            </p>
+          </Card>
+        </div>
 
         <div className="space-y-8">
           <section>
