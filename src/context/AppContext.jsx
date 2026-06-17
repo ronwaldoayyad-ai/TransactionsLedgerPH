@@ -9,9 +9,11 @@ import {
   mapPayment,
   mapPaymentLog,
   mapProfile,
+  mapTrackedLoan,
   mapTransaction,
   toDbArbitrageLoan,
   toDbPaymentLog,
+  toDbTrackedLoan,
   toDbTransaction,
 } from '../lib/dbMappers'
 import { allocate, netCarry } from '../lib/paymentLogs'
@@ -112,6 +114,7 @@ export function AppProvider({ children }) {
   const [paymentLogs, setPaymentLogs] = useState([])
   const [arbitrageLoans, setArbitrageLoans] = useState([])
   const [interestRates, setInterestRates] = useState([])
+  const [trackedLoans, setTrackedLoans] = useState([])
   const [auditLog, setAuditLog] = useState(mockAuditLog)
 
   const isLive = session?.source === 'supabase'
@@ -160,6 +163,7 @@ export function AppProvider({ children }) {
     setPaymentLogs([])
     setArbitrageLoans([])
     setInterestRates([])
+    setTrackedLoans([])
     setAuditLog(mockAuditLog)
   }
 
@@ -179,6 +183,7 @@ export function AppProvider({ children }) {
         paymentLogsRes,
         arbitrageRes,
         ratesRes,
+        trackedRes,
         auditRes,
       ] = await Promise.all([
           // Secondary .order('id') makes paging deterministic (a non-unique
@@ -200,6 +205,9 @@ export function AppProvider({ children }) {
             supabase.from('arbitrage_loans').select('*').order('created_at').order('id'),
           ),
           fetchAllRows(() => supabase.from('interest_rates').select('*').order('kind').order('rate')),
+          fetchAllRows(() =>
+            supabase.from('tracked_loans').select('*').order('created_at').order('id'),
+          ),
           supabase.from('audit_log').select('*').order('at', { ascending: false }).limit(500),
         ])
 
@@ -226,6 +234,9 @@ export function AppProvider({ children }) {
 
       if (ratesRes.error) failures.push(`interest rates (${ratesRes.error.message})`)
       else setInterestRates((ratesRes.data ?? []).map(mapInterestRate))
+
+      if (trackedRes.error) failures.push(`loan tracker (${trackedRes.error.message})`)
+      else setTrackedLoans((trackedRes.data ?? []).map(mapTrackedLoan))
 
       if (auditRes.error) failures.push(`audit log (${auditRes.error.message})`)
       else setAuditLog((auditRes.data ?? []).map(mapAudit))
@@ -1359,6 +1370,51 @@ export function AppProvider({ children }) {
     [isLive],
   )
 
+  // Loan Tracker (admin only): the admin's personal record of loans availed
+  // from banks. Standalone — never touches any other table.
+  const createTrackedLoan = useCallback(
+    async (input) => {
+      if (isLive) {
+        const { data: row, error } = await supabase
+          .from('tracked_loans')
+          .insert(toDbTrackedLoan(input))
+          .select()
+          .single()
+        if (error) {
+          console.error('[supabase] tracked loan insert failed:', error.message)
+          reportDbError?.(`loan tracker save failed (${error.message}) — a migration may be missing`)
+          return null
+        }
+        const record = mapTrackedLoan(row)
+        setTrackedLoans((prev) => [...prev, record])
+        log(actor, 'TRACKED_LOAN_CREATED', `Tracked loan added (${input.bankName})`)
+        return record
+      }
+      const record = { ...input, id: nextId('trk'), createdAt: nowStamp() }
+      setTrackedLoans((prev) => [...prev, record])
+      log(actor, 'TRACKED_LOAN_CREATED', `Tracked loan added (${input.bankName})`)
+      return record
+    },
+    [isLive, log, actor],
+  )
+
+  const deleteTrackedLoan = useCallback(
+    async (id) => {
+      if (isLive) {
+        const { error } = await supabase.from('tracked_loans').delete().eq('id', id)
+        if (error) {
+          console.error('[supabase] tracked loan delete failed:', error.message)
+          reportDbError?.(`delete tracked loan (${error.message})`)
+          return false
+        }
+      }
+      setTrackedLoans((prev) => prev.filter((r) => r.id !== id))
+      log(actor, 'TRACKED_LOAN_DELETED', `Tracked loan ${id} deleted`)
+      return true
+    },
+    [isLive, log, actor],
+  )
+
   const value = useMemo(
     () => ({
       session: effectiveSession,
@@ -1386,6 +1442,9 @@ export function AppProvider({ children }) {
       deleteArbitrageLoan,
       addInterestRate,
       deleteInterestRate,
+      trackedLoans,
+      createTrackedLoan,
+      deleteTrackedLoan,
       transactions,
       auditLog,
       signInWithPassword,
@@ -1417,6 +1476,7 @@ export function AppProvider({ children }) {
       users, loans, payments, paymentLogs, createPaymentLog, deletePaymentLog,
       arbitrageLoans, interestRates, createArbitrageLoan, deleteArbitrageLoan,
       addInterestRate, deleteInterestRate,
+      trackedLoans, createTrackedLoan, deleteTrackedLoan,
       transactions, archivedTransactions, auditLog,
       signInWithPassword, signInDemo, signOut, completePasswordSetup, inviteUser, updateUser,
       deleteUser, resendInvite, submitPayment, reviewPayment, deletePayment, assignLoan, unassignLoan,

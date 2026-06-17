@@ -171,6 +171,35 @@ export const toDbArbitrageLoan = (l) => ({
   notarial_fee: l.notarialFee,
 })
 
+export const mapTrackedLoan = (r) => ({
+  id: r.id,
+  bankName: r.bank_name,
+  bankAcronym: r.bank_acronym ?? '',
+  bankColor: r.bank_color ?? '#1e3a8a',
+  bankDomain: r.bank_domain ?? '',
+  principal: num(r.principal),
+  processingFee: num(r.processing_fee),
+  monthlyRate: num(r.monthly_rate),
+  durationMonths: r.duration_months,
+  txnDate: day(r.txn_date),
+  firstPaymentDate: day(r.first_payment_date),
+  createdAt: r.created_at ?? null,
+})
+
+// App tracked loan → DB row (for insert). `id`/`created_at` are DB-defaulted.
+export const toDbTrackedLoan = (l) => ({
+  bank_name: l.bankName,
+  bank_acronym: l.bankAcronym,
+  bank_color: l.bankColor,
+  bank_domain: l.bankDomain,
+  principal: l.principal,
+  processing_fee: l.processingFee,
+  monthly_rate: l.monthlyRate,
+  duration_months: l.durationMonths,
+  txn_date: l.txnDate,
+  first_payment_date: l.firstPaymentDate,
+})
+
 export const mapAudit = (r) => ({
   id: String(r.id),
   at: stamp(r.at),

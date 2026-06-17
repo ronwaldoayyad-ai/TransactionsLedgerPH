@@ -12,6 +12,7 @@ const adminNav = [
   { to: '/admin/users', label: 'User Management', icon: 'users' },
   { to: '/admin/payment-logs', label: 'Payment Logs', icon: 'wallet' },
   { to: '/admin/arbitrage', label: 'Interest / Arbitrage', icon: 'chart' },
+  { to: '/admin/loan-tracker', label: 'Loan Tracker', icon: 'wallet' },
   { to: '/admin/logs', label: 'Reports & Logs', icon: 'scroll' },
 ]
 
