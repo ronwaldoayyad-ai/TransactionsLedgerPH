@@ -11,7 +11,7 @@ import { effectiveStatus } from '../../lib/transactions'
 
 export default function UserDashboard() {
   const { session, loans, payments, transactions } = useApp()
-  const [hidePaid, setHidePaid] = usePersistedState('dashboard.hidePaid', false)
+  const [hidePaid, setHidePaid] = usePersistedState('dashboard.hidePaid', true)
   const myPayments = payments.filter((p) => p.userId === session.user.id)
   // Balances and progress derive from the shared transactions store, which the
   // admin updates from the Overall Transactions ledger.
@@ -47,7 +47,6 @@ export default function UserDashboard() {
     return txns.length > 0 && txns.every((t) => ['paid', 'refunded', 'cancelled'].includes(t.status))
   }
   const fullyPaidCount = myLoans.filter((l) => isFullyPaid(l.id)).length
-  const settledCount = myLoans.filter((l) => isSettled(l.id)).length
   // Optional toggle: hide loans whose installments are all paid/refunded/cancelled.
   const visibleLoans = hidePaid ? sortedLoans.filter((l) => !isSettled(l.id)) : sortedLoans
 
@@ -138,16 +137,14 @@ export default function UserDashboard() {
             action={
               myLoans.length > 0 && (
                 <div className="flex flex-wrap items-center gap-3">
-                  {settledCount > 0 && (
-                    <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
-                      <Switch
-                        checked={hidePaid}
-                        onChange={setHidePaid}
-                        label="Hide fully paid, refunded, or cancelled loans"
-                      />
-                      Hide fully paid/refunded/cancelled
-                    </label>
-                  )}
+                  <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
+                    <Switch
+                      checked={hidePaid}
+                      onChange={setHidePaid}
+                      label={hidePaid ? 'Show all loans' : 'Hide fully paid, refunded, or cancelled loans'}
+                    />
+                    {hidePaid ? 'Show all transactions' : 'Hide fully paid/refunded/cancelled'}
+                  </label>
                   <Link
                     to="/portal/consolidated"
                     className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-navy-200 bg-navy-50 px-3 py-1.5 text-sm font-medium text-navy-800 transition-colors duration-200 hover:bg-navy-100"

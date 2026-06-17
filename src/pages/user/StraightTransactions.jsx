@@ -3,7 +3,7 @@ import { useApp } from '../../context/AppContext'
 import { PageHeader } from '../../components/AppShell'
 import BorrowerScheduleTable from '../../components/BorrowerScheduleTable'
 import RefreshButton from '../../components/RefreshButton'
-import { Card, CardHeader, EmptyState, MultiSelect } from '../../components/ui'
+import { Card, CardHeader, EmptyState, MultiSelect, Switch } from '../../components/ui'
 import { usePersistedState } from '../../hooks/usePersistedState'
 import { formatPeso, toISODate } from '../../lib/amortization'
 import { BORROWER_STATUS_LABELS, borrowerStatus, isReceivable } from '../../lib/transactions'
@@ -17,6 +17,8 @@ export default function StraightTransactions() {
   const { session, transactions } = useApp()
   const today = toISODate(new Date())
   const [statusSel, setStatusSel] = usePersistedState('straight.statusSel', () => new Set())
+  // Hide fully paid/refunded/cancelled (show only unpaid). Default ON.
+  const [hideSettled, setHideSettled] = usePersistedState('straight.hideSettled', true)
   const [sortKey, setSortKey] = usePersistedState('straight.sortKey', 'dueDate') // dueDate | txnDate
   const [sortDir, setSortDir] = usePersistedState('straight.sortDir', 'asc')
 
@@ -29,14 +31,18 @@ export default function StraightTransactions() {
   const filtered = useMemo(
     () =>
       myStraight
-        .filter((t) => statusSel.size === 0 || statusSel.has(borrowerStatus(t, today)))
+        .filter(
+          (t) =>
+            (!hideSettled || !['paid', 'refunded', 'cancelled'].includes(t.status)) &&
+            (statusSel.size === 0 || statusSel.has(borrowerStatus(t, today))),
+        )
         .sort((a, b) => {
           const dir = sortDir === 'asc' ? 1 : -1
           return (
             (a[sortKey] ?? '').localeCompare(b[sortKey] ?? '') * dir || a.id.localeCompare(b.id)
           )
         }),
-    [myStraight, statusSel, sortKey, sortDir, today],
+    [myStraight, statusSel, hideSettled, sortKey, sortDir, today],
   )
   const outstanding = filtered
     .filter((t) => isReceivable(t, today))
@@ -66,6 +72,14 @@ export default function StraightTransactions() {
           subtitle={`${filtered.length} items · outstanding ${formatPeso(outstanding)}`}
           action={
             <div className="flex flex-wrap items-center gap-2">
+              <label className="mr-1 flex cursor-pointer items-center gap-2 text-sm text-slate-600">
+                <Switch
+                  checked={hideSettled}
+                  onChange={setHideSettled}
+                  label={hideSettled ? 'Show all transactions' : 'Hide fully paid, refunded, and cancelled transactions'}
+                />
+                {hideSettled ? 'Show all transactions' : 'Hide fully paid/refunded/cancelled'}
+              </label>
               <span className="text-xs font-medium text-slate-500">Status</span>
               <MultiSelect
                 label="Status"
@@ -103,7 +117,9 @@ export default function StraightTransactions() {
             body={
               statusSel.size > 0
                 ? 'No items match the selected filters.'
-                : 'One-time purchases assigned by your administrator will appear here.'
+                : hideSettled && myStraight.length > 0
+                  ? "All your straight transactions are fully paid, refunded, or cancelled. Toggle 'Show all transactions' to view them."
+                  : 'One-time purchases assigned by your administrator will appear here.'
             }
           />
         ) : (

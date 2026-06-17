@@ -4,7 +4,7 @@ import { useApp } from '../../context/AppContext'
 import { PageHeader } from '../../components/AppShell'
 import BorrowerScheduleTable from '../../components/BorrowerScheduleTable'
 import RefreshButton from '../../components/RefreshButton'
-import { Card, CardHeader, EmptyState, MultiSelect } from '../../components/ui'
+import { Card, CardHeader, EmptyState, MultiSelect, Switch } from '../../components/ui'
 import { usePersistedState } from '../../hooks/usePersistedState'
 import { formatDate, formatPeso, toISODate } from '../../lib/amortization'
 import { BORROWER_STATUS_LABELS, borrowerStatus, isReceivable } from '../../lib/transactions'
@@ -20,6 +20,8 @@ export default function ConsolidatedLoans() {
   // Multi-select filters: empty set = all. Survive navigation (reset on Refresh).
   const [statusSel, setStatusSel] = usePersistedState('consolidated.statusSel', () => new Set())
   const [dueDateSel, setDueDateSel] = usePersistedState('consolidated.dueDateSel', () => new Set())
+  // Hide fully paid/refunded/cancelled (show only unpaid). Default ON.
+  const [hideSettled, setHideSettled] = usePersistedState('consolidated.hideSettled', true)
   // Sorting applies after filtering, so it works on any filtered view.
   const [sortKey, setSortKey] = usePersistedState('consolidated.sortKey', 'dueDate') // dueDate | txnDate
   const [sortDir, setSortDir] = usePersistedState('consolidated.sortDir', 'asc')
@@ -42,6 +44,7 @@ export default function ConsolidatedLoans() {
       myTxns
         .filter(
           (t) =>
+            (!hideSettled || !['paid', 'refunded', 'cancelled'].includes(t.status)) &&
             (statusSel.size === 0 || statusSel.has(borrowerStatus(t, today))) &&
             (dueDateSel.size === 0 || dueDateSel.has(t.dueDate)),
         )
@@ -51,7 +54,7 @@ export default function ConsolidatedLoans() {
             (a[sortKey] ?? '').localeCompare(b[sortKey] ?? '') * dir || a.id.localeCompare(b.id)
           )
         }),
-    [myTxns, statusSel, dueDateSel, sortKey, sortDir, today],
+    [myTxns, statusSel, dueDateSel, hideSettled, sortKey, sortDir, today],
   )
   const outstanding = filtered.filter((t) => isReceivable(t, today)).reduce((s, t) => s + t.amount, 0)
 
@@ -85,6 +88,14 @@ export default function ConsolidatedLoans() {
           subtitle={`${filtered.length} items · outstanding ${formatPeso(outstanding)}`}
           action={
             <div className="flex flex-wrap items-center gap-2">
+              <label className="mr-1 flex cursor-pointer items-center gap-2 text-sm text-slate-600">
+                <Switch
+                  checked={hideSettled}
+                  onChange={setHideSettled}
+                  label={hideSettled ? 'Show all transactions' : 'Hide fully paid, refunded, and cancelled transactions'}
+                />
+                {hideSettled ? 'Show all transactions' : 'Hide fully paid/refunded/cancelled'}
+              </label>
               <span className="text-xs font-medium text-slate-500">Status</span>
               <MultiSelect
                 label="Status"
@@ -143,7 +154,9 @@ export default function ConsolidatedLoans() {
             body={
               statusSel.size > 0 || dueDateSel.size > 0
                 ? 'No payments match the selected filters.'
-                : 'You have no loan schedules yet.'
+                : hideSettled && myTxns.length > 0
+                  ? "All your transactions are fully paid, refunded, or cancelled. Toggle 'Show all transactions' to view them."
+                  : 'You have no loan schedules yet.'
             }
           />
         ) : (
