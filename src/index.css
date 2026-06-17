@@ -24,6 +24,11 @@
 
 html {
   font-family: var(--font-sans);
+  /* This is a light-themed app. Pin the color scheme so native control popups
+     (datalist suggestions, date pickers, number spinners, selects) always
+     render dark-text-on-light and stay readable, instead of following the OS
+     dark mode and producing unreadable light-on-light dropdowns. */
+  color-scheme: light;
 }
 
 /* Liquid-glass backdrop: soft brand-tinted glows the frosted surfaces sit on */
