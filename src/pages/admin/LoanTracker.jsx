@@ -86,16 +86,24 @@ function Row({ label, value, strong }) {
   )
 }
 
-function LoanCard({ loan, today, onDelete }) {
+function LoanCard({ loan, today, collapsed, onToggleCollapse, onDelete }) {
   const c = computeLoan(loan)
   const last = lastPaymentDate(loan.firstPaymentDate, loan.durationMonths)
   const outstanding = !isFullyPaid(loan, today)
   return (
     <Card className="p-5">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         <BankLogo domain={loan.bankDomain} acronym={loan.bankAcronym} color={loan.bankColor} size={40} />
         <span className="min-w-0 flex-1 truncate text-base font-bold text-slate-900">{loan.bankName}</span>
         <StatusBadge outstanding={outstanding} />
+        <button
+          onClick={() => onToggleCollapse(loan.id)}
+          aria-label={collapsed ? 'Expand loan details' : 'Collapse loan details'}
+          aria-expanded={!collapsed}
+          className="cursor-pointer rounded-md p-1.5 text-slate-400 transition-colors duration-200 hover:bg-slate-100 hover:text-slate-700"
+        >
+          <Icon name="chevron" className={`h-4 w-4 transition-transform duration-200 ${collapsed ? '' : 'rotate-180'}`} />
+        </button>
         <button
           onClick={() => onDelete(loan.id)}
           aria-label="Delete tracked loan"
@@ -105,31 +113,40 @@ function LoanCard({ loan, today, onDelete }) {
         </button>
       </div>
 
-      <div className="mt-4">
-        <Row label="Transaction Date:" value={formatDate(loan.txnDate)} />
-        <Row label="Principal:" value={formatPeso(loan.principal)} />
-        <Row label="Processing Fee:" value={formatPeso(loan.processingFee)} />
-        <Row label="Duration:" value={`${loan.durationMonths} Months`} />
-        <Row label="Add-on Rate:" value={`${Number(loan.monthlyRate).toFixed(2)}%`} />
-      </div>
+      {collapsed ? (
+        // Collapsed: bank stays visible in the header; show only the principal.
+        <div className="mt-3">
+          <Row label="Principal:" value={formatPeso(loan.principal)} strong />
+        </div>
+      ) : (
+        <>
+          <div className="mt-4">
+            <Row label="Transaction Date:" value={formatDate(loan.txnDate)} />
+            <Row label="Principal:" value={formatPeso(loan.principal)} />
+            <Row label="Processing Fee:" value={formatPeso(loan.processingFee)} />
+            <Row label="Duration:" value={`${loan.durationMonths} Months`} />
+            <Row label="Add-on Rate:" value={`${Number(loan.monthlyRate).toFixed(2)}%`} />
+          </div>
 
-      <div className="my-3 border-t border-dashed border-slate-200" />
-      <Row label="Total Interest:" value={formatPeso(c.interest)} />
-      <div className="flex items-center justify-between py-1 text-sm">
-        <span className="text-slate-500">Total Repayment:</span>
-        <span className="font-mono text-base font-bold text-blue-700">{formatPeso(c.repayment)}</span>
-      </div>
+          <div className="my-3 border-t border-dashed border-slate-200" />
+          <Row label="Total Interest:" value={formatPeso(c.interest)} />
+          <div className="flex items-center justify-between py-1 text-sm">
+            <span className="text-slate-500">Total Repayment:</span>
+            <span className="font-mono text-base font-bold text-blue-700">{formatPeso(c.repayment)}</span>
+          </div>
 
-      <div className="my-3 border-t border-dashed border-slate-200" />
-      <Row label="First Payment:" value={formatDate(loan.firstPaymentDate)} />
-      <Row label="Last Payment:" value={formatDate(last)} />
+          <div className="my-3 border-t border-dashed border-slate-200" />
+          <Row label="First Payment:" value={formatDate(loan.firstPaymentDate)} />
+          <Row label="Last Payment:" value={formatDate(last)} />
 
-      <div className="mt-4 flex items-center justify-between rounded-lg bg-slate-50 px-4 py-3">
-        <span className="text-sm font-medium text-slate-600">Monthly Payment:</span>
-        <span className="rounded-md bg-white px-3 py-1 font-mono text-base font-bold text-slate-900 shadow-sm">
-          {formatPeso(c.monthly)}
-        </span>
-      </div>
+          <div className="mt-4 flex items-center justify-between rounded-lg bg-slate-50 px-4 py-3">
+            <span className="text-sm font-medium text-slate-600">Monthly Payment:</span>
+            <span className="rounded-md bg-white px-3 py-1 font-mono text-base font-bold text-slate-900 shadow-sm">
+              {formatPeso(c.monthly)}
+            </span>
+          </div>
+        </>
+      )}
     </Card>
   )
 }
@@ -152,7 +169,20 @@ export default function LoanTracker() {
   const [form, setForm] = useState(blank)
   const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(null)
+  // Per-card collapse: ids in the set are collapsed (header + principal only).
+  const [collapsedIds, setCollapsedIds] = useState(() => new Set())
   const update = (patch) => setForm((f) => ({ ...f, ...patch }))
+
+  const toggleCollapse = (id) =>
+    setCollapsedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  const allCollapsed = trackedLoans.length > 0 && trackedLoans.every((l) => collapsedIds.has(l.id))
+  const toggleAll = () =>
+    setCollapsedIds(allCollapsed ? new Set() : new Set(trackedLoans.map((l) => l.id)))
 
   const summary = useMemo(() => portfolioSummary(trackedLoans), [trackedLoans])
 
@@ -300,6 +330,14 @@ export default function LoanTracker() {
         </div>
 
         <div className="space-y-8">
+          {trackedLoans.length > 0 && (
+            <div className="flex justify-end">
+              <Button variant="secondary" onClick={toggleAll}>
+                <Icon name="chevron" className={`h-4 w-4 transition-transform duration-200 ${allCollapsed ? '' : 'rotate-180'}`} />
+                {allCollapsed ? 'Expand all' : 'Collapse all'}
+              </Button>
+            </div>
+          )}
           <section>
             <div className="mb-3 flex items-center gap-2">
               <h2 className="text-xl font-bold text-slate-900">Outstanding Loans</h2>
@@ -314,7 +352,14 @@ export default function LoanTracker() {
             ) : (
               <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
                 {outstanding.map((l) => (
-                  <LoanCard key={l.id} loan={l} today={today} onDelete={setConfirmDelete} />
+                  <LoanCard
+                    key={l.id}
+                    loan={l}
+                    today={today}
+                    collapsed={collapsedIds.has(l.id)}
+                    onToggleCollapse={toggleCollapse}
+                    onDelete={setConfirmDelete}
+                  />
                 ))}
               </div>
             )}
@@ -334,7 +379,14 @@ export default function LoanTracker() {
             ) : (
               <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
                 {paid.map((l) => (
-                  <LoanCard key={l.id} loan={l} today={today} onDelete={setConfirmDelete} />
+                  <LoanCard
+                    key={l.id}
+                    loan={l}
+                    today={today}
+                    collapsed={collapsedIds.has(l.id)}
+                    onToggleCollapse={toggleCollapse}
+                    onDelete={setConfirmDelete}
+                  />
                 ))}
               </div>
             )}
