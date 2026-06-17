@@ -61,6 +61,14 @@ export function computeDST(principal) {
   return Math.ceil(principal / 200) * 1.5
 }
 
+// DST is auto-applied only when the principal is PHP 500,000 or more; below
+// that the auto value is 0 (it stays manually editable in the UI).
+export const DST_THRESHOLD = 500000
+export function autoDST(principal) {
+  const P = Number(principal) || 0
+  return P >= DST_THRESHOLD ? computeDST(P) : 0
+}
+
 // `dst` may be passed to override the auto-calculated BIR amount.
 // When `deductFromProceeds` is false, fees are not taken out of the principal;
 // the borrower receives the full principal and the fees are collected as part

@@ -2,18 +2,15 @@
 // admin lends at a monthly add-on rate while sourcing funds at a lower cost
 // rate; the spread plus collected fees is the net gain. Standalone records —
 // independent of the amortization ledger.
-import { addMonthsClamped, computeDST, parseISODate, toISODate } from './amortization'
+import { addMonthsClamped, parseISODate, toISODate } from './amortization'
+
+// DST auto-applies only at principal >= PHP 500,000 — canonical helper lives
+// with computeDST in amortization.js; re-exported here for the Arbitrage page.
+export { autoDST } from './amortization'
 
 export const DEFAULT_PROCESSING_FEE = 1500
 
 const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100
-
-// DST is auto-calculated only when the principal is PHP 500,000 or more, at
-// PHP 1.50 per PHP 200 (or fraction). Editable afterward.
-export function autoDST(principal) {
-  const P = Number(principal) || 0
-  return P >= 500000 ? computeDST(P) : 0
-}
 
 // Last Payment Date is the First Payment Date advanced by the full duration
 // (matches the tracker's convention: a 24-month loan first paid 2026-06-25

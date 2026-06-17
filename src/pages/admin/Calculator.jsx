@@ -15,7 +15,7 @@ import {
   inputClass,
 } from '../../components/ui'
 import {
-  computeDST,
+  autoDST,
   computeDeductions,
   downloadCSV,
   formatPeso,
@@ -51,7 +51,7 @@ export default function Calculator() {
   const [processingFee, setProcessingFee] = usePersistedState('calc.processingFee', 1500)
   const [addProcessingFee, setAddProcessingFee] = usePersistedState('calc.addProcessingFee', false)
   const [notarialFee, setNotarialFee] = usePersistedState('calc.notarialFee', 0)
-  const [deductFromProceeds, setDeductFromProceeds] = usePersistedState('calc.deductFromProceeds', true)
+  const [deductFromProceeds, setDeductFromProceeds] = usePersistedState('calc.deductFromProceeds', false)
   const [label, setLabel] = usePersistedState('calc.label', 'Cash Loan')
   const [assigneeId, setAssigneeId] = usePersistedState('calc.assigneeId', '')
   const [assigned, setAssigned] = useState(null) // { message, loanId } — loanId enables Undo
@@ -76,7 +76,7 @@ export default function Calculator() {
     } else {
       setLabel('Cash Loan')
       setApplyDST(true)
-      setDeductFromProceeds(true)
+      setDeductFromProceeds(false)
     }
   }
 
@@ -84,7 +84,7 @@ export default function Calculator() {
   // edit holds only for the principal it was entered against, so changing the
   // principal re-syncs the auto-calculated amount.
   const dst =
-    dstOverride && dstOverride.forPrincipal === P ? dstOverride.value : computeDST(P)
+    dstOverride && dstOverride.forPrincipal === P ? dstOverride.value : autoDST(P)
   const setDst = (value) => setDstOverride({ forPrincipal: P, value })
 
   // Checkbox-gated fees: unchecked means the fee is excluded entirely (0.00).
