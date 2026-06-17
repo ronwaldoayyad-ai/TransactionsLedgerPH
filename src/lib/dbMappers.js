@@ -93,6 +93,47 @@ export const mapPayment = (r, fileUrl = null) => ({
   note: r.note ?? '',
 })
 
+export const mapPaymentLog = (r) => ({
+  id: r.id,
+  userId: r.user_id,
+  kind: r.kind,
+  txnDate: day(r.txn_date),
+  reference: r.reference ?? '',
+  subject: r.subject ?? '',
+  dueDate: day(r.due_date),
+  amountOwed: num(r.amount_owed),
+  method: r.method ?? null,
+  fundsApplied: num(r.funds_applied),
+  remainingBalance: num(r.remaining_balance),
+  allocStatus: r.alloc_status,
+  carryApplied: num(r.carry_applied),
+  parentId: r.parent_id ?? null,
+  consumed: !!r.consumed,
+  consumedBy: r.consumed_by ?? null,
+  note: r.note ?? '',
+  createdAt: r.created_at ?? null,
+})
+
+// App payment log → DB row (for insert). `id`/`created_at` are DB-defaulted.
+export const toDbPaymentLog = (l) => ({
+  user_id: l.userId,
+  kind: l.kind,
+  txn_date: l.txnDate,
+  reference: l.reference,
+  subject: l.subject,
+  due_date: l.dueDate,
+  amount_owed: l.amountOwed,
+  method: l.method,
+  funds_applied: l.fundsApplied,
+  remaining_balance: l.remainingBalance,
+  alloc_status: l.allocStatus,
+  carry_applied: l.carryApplied,
+  parent_id: l.parentId ?? null,
+  consumed: l.consumed ?? false,
+  consumed_by: l.consumedBy ?? null,
+  note: l.note ?? '',
+})
+
 export const mapAudit = (r) => ({
   id: String(r.id),
   at: stamp(r.at),

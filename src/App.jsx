@@ -8,12 +8,14 @@ import LoanDetail from './pages/user/LoanDetail'
 import ConsolidatedLoans from './pages/user/ConsolidatedLoans'
 import StraightTransactions from './pages/user/StraightTransactions'
 import Payments from './pages/user/Payments'
+import UserPaymentLogs from './pages/user/PaymentLogs'
 import AdminDashboard from './pages/admin/AdminDashboard'
 import Transactions from './pages/admin/Transactions'
 import Calculator from './pages/admin/Calculator'
 import Queue from './pages/admin/Queue'
 import Users from './pages/admin/Users'
 import Logs from './pages/admin/Logs'
+import PaymentLogs from './pages/admin/PaymentLogs'
 
 // Two-tier RBAC route guard. Admin routes are unreachable for general users
 // and vice versa; unauthenticated visitors land on the invite-only login.
@@ -48,12 +50,14 @@ export default function App() {
           <Route path="/portal/consolidated" element={<Protected role="user"><ConsolidatedLoans /></Protected>} />
           <Route path="/portal/straight" element={<Protected role="user"><StraightTransactions /></Protected>} />
           <Route path="/portal/payments" element={<Protected role="user"><Payments /></Protected>} />
+          <Route path="/portal/payment-logs" element={<Protected role="user"><UserPaymentLogs /></Protected>} />
 
           <Route path="/admin" element={<Protected role="admin"><AdminDashboard /></Protected>} />
           <Route path="/admin/transactions" element={<Protected role="admin"><Transactions /></Protected>} />
           <Route path="/admin/calculator" element={<Protected role="admin"><Calculator /></Protected>} />
           <Route path="/admin/queue" element={<Protected role="admin"><Queue /></Protected>} />
           <Route path="/admin/users" element={<Protected role="admin"><Users /></Protected>} />
+          <Route path="/admin/payment-logs" element={<Protected role="admin"><PaymentLogs /></Protected>} />
           <Route path="/admin/logs" element={<Protected role="admin"><Logs /></Protected>} />
 
           <Route path="*" element={<Navigate to="/login" replace />} />

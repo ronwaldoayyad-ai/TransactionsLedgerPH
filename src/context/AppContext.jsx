@@ -5,10 +5,13 @@ import {
   mapAudit,
   mapLoan,
   mapPayment,
+  mapPaymentLog,
   mapProfile,
   mapTransaction,
+  toDbPaymentLog,
   toDbTransaction,
 } from '../lib/dbMappers'
+import { allocate, netCarry } from '../lib/paymentLogs'
 import { clearPageStore } from '../lib/pageStateStore'
 import { supabase } from '../supabaseClient'
 
@@ -103,6 +106,7 @@ export function AppProvider({ children }) {
   const [payments, setPayments] = useState(mockPayments)
   const [transactions, setTransactions] = useState(() => buildTransactions(mockLoans))
   const [archivedTransactions, setArchivedTransactions] = useState([])
+  const [paymentLogs, setPaymentLogs] = useState([])
   const [auditLog, setAuditLog] = useState(mockAuditLog)
 
   const isLive = session?.source === 'supabase'
@@ -148,6 +152,7 @@ export function AppProvider({ children }) {
     setPayments(mockPayments)
     setTransactions(buildTransactions(mockLoans))
     setArchivedTransactions([])
+    setPaymentLogs([])
     setAuditLog(mockAuditLog)
   }
 
@@ -159,21 +164,25 @@ export function AppProvider({ children }) {
   const loadLiveData = useCallback(async () => {
     const failures = []
     try {
-      const [profilesRes, loansRes, txnsRes, paymentsRes, auditRes] = await Promise.all([
-        // Secondary .order('id') makes paging deterministic (a non-unique
-        // primary sort key could otherwise shift rows across page boundaries).
-        fetchAllRows(() => supabase.from('profiles').select('*').order('created_at').order('id')),
-        fetchAllRows(() => supabase.from('loans').select('*').order('created_at').order('id')),
-        fetchAllRows(() => supabase.from('transactions').select('*').order('due_date').order('id')),
-        fetchAllRows(() =>
-          supabase
-            .from('payments')
-            .select('*')
-            .order('submitted_at', { ascending: false })
-            .order('id'),
-        ),
-        supabase.from('audit_log').select('*').order('at', { ascending: false }).limit(500),
-      ])
+      const [profilesRes, loansRes, txnsRes, paymentsRes, paymentLogsRes, auditRes] =
+        await Promise.all([
+          // Secondary .order('id') makes paging deterministic (a non-unique
+          // primary sort key could otherwise shift rows across page boundaries).
+          fetchAllRows(() => supabase.from('profiles').select('*').order('created_at').order('id')),
+          fetchAllRows(() => supabase.from('loans').select('*').order('created_at').order('id')),
+          fetchAllRows(() => supabase.from('transactions').select('*').order('due_date').order('id')),
+          fetchAllRows(() =>
+            supabase
+              .from('payments')
+              .select('*')
+              .order('submitted_at', { ascending: false })
+              .order('id'),
+          ),
+          fetchAllRows(() =>
+            supabase.from('payment_logs').select('*').order('created_at').order('id'),
+          ),
+          supabase.from('audit_log').select('*').order('at', { ascending: false }).limit(500),
+        ])
 
       if (profilesRes.error) failures.push(`profiles (${profilesRes.error.message})`)
       else setUsers((profilesRes.data ?? []).map(mapProfile))
@@ -187,6 +196,9 @@ export function AppProvider({ children }) {
         setTransactions(allTxns.filter((t) => !t.archivedAt))
         setArchivedTransactions(allTxns.filter((t) => t.archivedAt))
       }
+
+      if (paymentLogsRes.error) failures.push(`payment logs (${paymentLogsRes.error.message})`)
+      else setPaymentLogs((paymentLogsRes.data ?? []).map(mapPaymentLog))
 
       if (auditRes.error) failures.push(`audit log (${auditRes.error.message})`)
       else setAuditLog((auditRes.data ?? []).map(mapAudit))
@@ -1056,6 +1068,179 @@ export function AppProvider({ children }) {
     [isLive, log, actor, loans],
   )
 
+  // Record a payment received (admin only). Writes ONLY payment_logs — never
+  // the transactions ledger. Stores the acknowledgement (kind 'payment') and,
+  // when funds don't exactly settle the amount owed, a separate 'carry' row
+  // (the excess/shortfall) to be auto-netted into the next log. Any prior
+  // unconsumed carry for this borrower is marked consumed by this recording.
+  const createPaymentLog = useCallback(
+    async (input) => {
+      const borrower = users.find((u) => u.id === input.userId)
+      const { remaining, status } = allocate(input.amountOwed, input.fundsApplied)
+      const carryApplied = netCarry(paymentLogs, input.userId)
+      const priorCarryIds = paymentLogs
+        .filter((l) => l.kind === 'carry' && l.userId === input.userId && !l.consumed)
+        .map((l) => l.id)
+      const priorSet = new Set(priorCarryIds)
+
+      const paymentDraft = {
+        userId: input.userId,
+        kind: 'payment',
+        txnDate: input.txnDate,
+        reference: input.reference ?? '',
+        subject: input.subject ?? '',
+        dueDate: input.dueDate ?? null,
+        amountOwed: input.amountOwed,
+        method: input.method,
+        fundsApplied: input.fundsApplied,
+        remainingBalance: remaining,
+        allocStatus: status,
+        carryApplied,
+        parentId: null,
+        consumed: false,
+        consumedBy: null,
+        note: input.note ?? '',
+      }
+      const carrySubject =
+        status === 'Overpayment'
+          ? 'Overpayment credit carried forward'
+          : 'Underpayment balance carried forward'
+
+      if (isLive) {
+        const { data: payRow, error } = await supabase
+          .from('payment_logs')
+          .insert(toDbPaymentLog(paymentDraft))
+          .select()
+          .single()
+        if (error) {
+          console.error('[supabase] payment log insert failed:', error.message)
+          reportDbError?.(`payment log save failed (${error.message}) — a migration may be missing`)
+          return null
+        }
+        const payment = mapPaymentLog(payRow)
+
+        let carry = null
+        if (remaining !== 0) {
+          const { data: carryRow, error: carryErr } = await supabase
+            .from('payment_logs')
+            .insert(
+              toDbPaymentLog({
+                userId: input.userId,
+                kind: 'carry',
+                txnDate: input.txnDate,
+                reference: input.reference ?? '',
+                subject: carrySubject,
+                dueDate: input.dueDate ?? null,
+                amountOwed: 0,
+                method: null,
+                fundsApplied: 0,
+                remainingBalance: remaining,
+                allocStatus: status,
+                carryApplied: 0,
+                parentId: payment.id,
+                consumed: false,
+                consumedBy: null,
+                note: '',
+              }),
+            )
+            .select()
+            .single()
+          if (carryErr) {
+            console.error('[supabase] carry insert failed:', carryErr.message)
+            reportDbError?.(`carry entry save failed (${carryErr.message})`)
+          } else carry = mapPaymentLog(carryRow)
+        }
+
+        if (priorCarryIds.length > 0) {
+          supabase
+            .from('payment_logs')
+            .update({ consumed: true, consumed_by: payment.id })
+            .in('id', priorCarryIds)
+            .then(logDbError('carry consume'))
+        }
+
+        setPaymentLogs((prev) => {
+          const next = prev.map((l) =>
+            priorSet.has(l.id) ? { ...l, consumed: true, consumedBy: payment.id } : l,
+          )
+          next.push(payment)
+          if (carry) next.push(carry)
+          return next
+        })
+        log(actor, 'PAYMENT_LOG_CREATED', `Payment logged for ${borrower?.name ?? input.userId} (${status})`)
+        return payment
+      }
+
+      // demo path: in-memory only
+      const payment = { ...paymentDraft, id: nextId('plog'), createdAt: nowStamp() }
+      const carry =
+        remaining !== 0
+          ? {
+              id: nextId('plog'),
+              userId: input.userId,
+              kind: 'carry',
+              txnDate: input.txnDate,
+              reference: input.reference ?? '',
+              subject: carrySubject,
+              dueDate: input.dueDate ?? null,
+              amountOwed: 0,
+              method: null,
+              fundsApplied: 0,
+              remainingBalance: remaining,
+              allocStatus: status,
+              carryApplied: 0,
+              parentId: payment.id,
+              consumed: false,
+              consumedBy: null,
+              note: '',
+              createdAt: nowStamp(),
+            }
+          : null
+      setPaymentLogs((prev) => {
+        const next = prev.map((l) =>
+          priorSet.has(l.id) ? { ...l, consumed: true, consumedBy: payment.id } : l,
+        )
+        next.push(payment)
+        if (carry) next.push(carry)
+        return next
+      })
+      log(actor, 'PAYMENT_LOG_CREATED', `Payment logged for ${borrower?.name ?? input.userId} (${status})`)
+      return payment
+    },
+    [isLive, log, actor, users, paymentLogs],
+  )
+
+  // Permanently delete a payment log (admin). Also detaches any child carry it
+  // produced and any "consumed_by" pointer that referenced it.
+  const deletePaymentLog = useCallback(
+    async (id) => {
+      if (isLive) {
+        const { error } = await supabase.from('payment_logs').delete().eq('id', id)
+        if (error) {
+          console.error('[supabase] payment log delete failed:', error.message)
+          reportDbError?.(`delete payment log (${error.message})`)
+          return false
+        }
+      }
+      // Mirror the DB's ON DELETE SET NULL: child carry keeps its row with a
+      // nulled parent_id, and any consumed_by pointer to this row is nulled.
+      setPaymentLogs((prev) =>
+        prev
+          .filter((l) => l.id !== id)
+          .map((l) =>
+            l.parentId === id
+              ? { ...l, parentId: null }
+              : l.consumedBy === id
+                ? { ...l, consumedBy: null }
+                : l,
+          ),
+      )
+      log(actor, 'PAYMENT_LOG_DELETED', `Payment log ${id} deleted`)
+      return true
+    },
+    [isLive, log, actor],
+  )
+
   const value = useMemo(
     () => ({
       session: effectiveSession,
@@ -1074,6 +1259,9 @@ export function AppProvider({ children }) {
       users,
       loans,
       payments,
+      paymentLogs,
+      createPaymentLog,
+      deletePaymentLog,
       transactions,
       auditLog,
       signInWithPassword,
@@ -1102,7 +1290,8 @@ export function AppProvider({ children }) {
     [
       session, effectiveSession, isViewingAs, startViewAs, stopViewAs, authLoading,
       refreshing, refreshData, syncError, getProofUrl, importLoans, updateMyProfile, setMyAvatar,
-      users, loans, payments, transactions, archivedTransactions, auditLog,
+      users, loans, payments, paymentLogs, createPaymentLog, deletePaymentLog,
+      transactions, archivedTransactions, auditLog,
       signInWithPassword, signInDemo, signOut, completePasswordSetup, inviteUser, updateUser,
       deleteUser, resendInvite, submitPayment, reviewPayment, deletePayment, assignLoan, unassignLoan,
       setTransactionStatus, updateTransaction, updateLoan, archiveTransactions, restoreTransactions,

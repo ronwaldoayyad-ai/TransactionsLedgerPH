@@ -10,6 +10,7 @@ const adminNav = [
   { to: '/admin/calculator', label: 'Loan Calculator', icon: 'calculator' },
   { to: '/admin/queue', label: 'Verification Queue', icon: 'inbox' },
   { to: '/admin/users', label: 'User Management', icon: 'users' },
+  { to: '/admin/payment-logs', label: 'Payment Logs', icon: 'wallet' },
   { to: '/admin/logs', label: 'Reports & Logs', icon: 'scroll' },
 ]
 
@@ -18,6 +19,7 @@ const userNav = [
   { to: '/portal/straight', label: 'Straight Transactions', icon: 'wallet' },
   { to: '/portal/consolidated', label: 'Consolidated Transactions', icon: 'list' },
   { to: '/portal/payments', label: 'My Payments', icon: 'upload' },
+  { to: '/portal/payment-logs', label: 'Payment Logs', icon: 'scroll' },
 ]
 
 export default function AppShell({ children }) {
