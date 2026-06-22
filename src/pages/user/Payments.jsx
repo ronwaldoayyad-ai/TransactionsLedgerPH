@@ -14,12 +14,14 @@ export default function Payments() {
   const { session, loans, payments, transactions, submitPayment, syncError, realSession, isViewingAs } =
     useApp()
   // Loan dropdown: only the borrower's loans that still have an outstanding
-  // installment (not fully paid / refunded / cancelled) — so the list stays
-  // short and you can't attach a proof to an already-settled loan.
+  // installment with a POSITIVE amount (not fully paid / refunded / cancelled).
+  // Negative-amount items are credits (overpayment / partial-payment, e.g.
+  // "Overpayment Credit") — there is nothing to pay against them, so they are
+  // excluded from the selectable list.
   const myLoans = loans.filter((l) => {
     if (l.userId !== session.user.id) return false
     const txns = transactions.filter((t) => t.loanId === l.id)
-    return txns.length > 0 && txns.some((t) => !['paid', 'refunded', 'cancelled'].includes(t.status))
+    return txns.some((t) => t.amount > 0 && !['paid', 'refunded', 'cancelled'].includes(t.status))
   })
   const myPayments = payments.filter((p) => p.userId === session.user.id)
   const isLive = realSession?.source === 'supabase'
