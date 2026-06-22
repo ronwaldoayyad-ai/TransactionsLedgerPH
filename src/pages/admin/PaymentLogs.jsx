@@ -10,7 +10,6 @@ import {
   PAY_LOG_STATUSES,
   allocate,
   defaultSubject,
-  netCarry,
   suggestedAmountOwed,
 } from '../../lib/paymentLogs'
 
@@ -53,7 +52,6 @@ export default function PaymentLogs() {
   }
   const [form, setForm] = useState(blank)
 
-  const pendingCarry = form.userId ? netCarry(paymentLogs, form.userId) : 0
   const { remaining, status: computedStatus } = allocate(form.amountOwed, form.fundsApplied)
   const effectiveStatus = form.statusOverride ?? computedStatus
 
@@ -86,7 +84,7 @@ export default function PaymentLogs() {
   const recompute = (next) => {
     const owed = next.owedTouched
       ? next.amountOwed
-      : suggestedAmountOwed(transactions, paymentLogs, next.userId, next.dueDate, today)
+      : suggestedAmountOwed(transactions, next.userId, next.dueDate, today)
     const subject = next.subjectTouched ? next.subject : defaultSubject(next.dueDate)
     return { ...next, amountOwed: owed, subject }
   }
@@ -125,13 +123,25 @@ export default function PaymentLogs() {
   }
 
   const rows = useMemo(() => {
-    const list =
-      filterBorrower === 'all'
-        ? paymentLogs
-        : paymentLogs.filter((l) => l.userId === filterBorrower)
-    // Newest first; carry rows render right under their parent payment.
+    // Only acknowledgement rows — there are no "carried forward" entries.
+    const list = paymentLogs.filter(
+      (l) => l.kind === 'payment' && (filterBorrower === 'all' || l.userId === filterBorrower),
+    )
     return [...list].sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')))
   }, [paymentLogs, filterBorrower])
+
+  const totals = useMemo(
+    () =>
+      rows.reduce(
+        (a, l) => ({
+          amountOwed: a.amountOwed + (Number(l.amountOwed) || 0),
+          fundsApplied: a.fundsApplied + (Number(l.fundsApplied) || 0),
+          remaining: a.remaining + (Number(l.remainingBalance) || 0),
+        }),
+        { amountOwed: 0, fundsApplied: 0, remaining: 0 },
+      ),
+    [rows],
+  )
 
   return (
     <>
@@ -241,6 +251,17 @@ export default function PaymentLogs() {
                   )
                 })}
               </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-slate-200 bg-navy-50/70 text-xs font-semibold text-navy-900">
+                  <td className="px-3 py-2" colSpan={5}>
+                    Totals ({rows.length} payment{rows.length === 1 ? '' : 's'})
+                  </td>
+                  <td className="px-3 py-2 text-right font-mono">{formatPeso(totals.amountOwed)}</td>
+                  <td className="px-3 py-2 text-right font-mono">{formatPeso(totals.fundsApplied)}</td>
+                  <td className="px-3 py-2 text-right font-mono">{formatPeso(totals.remaining)}</td>
+                  <td className="px-3 py-2" colSpan={2} />
+                </tr>
+              </tfoot>
             </table>
           </div>
         )}
@@ -326,15 +347,8 @@ export default function PaymentLogs() {
           </Field>
 
           <div className="grid grid-cols-2 gap-4">
-            <Field
-              label="Amount Owed"
-              htmlFor="pl-owed"
-              hint={
-                form.userId && pendingCarry !== 0
-                  ? `${pendingCarry > 0 ? 'Credit' : 'Shortfall'} of ${formatPeso(Math.abs(pendingCarry))} carried in.`
-                  : 'Auto-filled; editable.'
-              }
-            >
+            <Field label="Amount Owed" htmlFor="pl-owed" hint="Auto-filled; editable.">
+
               <CurrencyInput
                 id="pl-owed"
                 value={form.amountOwed}

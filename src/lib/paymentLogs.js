@@ -32,23 +32,10 @@ export function computeAmountOwed(transactions, userId, dueDate, today) {
   return round2(sum)
 }
 
-// Net of the borrower's unconsumed carry entries: an Overpayment carry is a
-// credit (+), an Underpayment carry is an outstanding shortfall (−). A positive
-// result reduces the next Amount Owed; a negative result increases it.
-export function netCarry(paymentLogs, userId) {
-  const net = paymentLogs
-    .filter((l) => l.kind === 'carry' && l.userId === userId && !l.consumed)
-    .reduce((s, l) => {
-      const mag = Math.abs(Number(l.remainingBalance || 0))
-      return l.allocStatus === 'Overpayment' ? s + mag : s - mag
-    }, 0)
-  return round2(net)
-}
-
-// Pre-filled, editable Amount Owed: receivables up to the cutoff, less the net
-// prior carry (credit lowers it, shortfall raises it).
-export function suggestedAmountOwed(transactions, paymentLogs, userId, dueDate, today) {
-  return round2(computeAmountOwed(transactions, userId, dueDate, today) - netCarry(paymentLogs, userId))
+// Pre-filled, editable Amount Owed: sum of receivables up to the cutoff date.
+// (No "carried forward" netting — that behavior has been removed.)
+export function suggestedAmountOwed(transactions, userId, dueDate, today) {
+  return computeAmountOwed(transactions, userId, dueDate, today)
 }
 
 // (7) Remaining Balance + Allocation Status from Amount Owed vs Funds Applied.

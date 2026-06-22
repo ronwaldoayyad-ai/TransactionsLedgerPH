@@ -21,7 +21,7 @@ export default function PaymentLogs() {
   const rows = useMemo(
     () =>
       paymentLogs
-        .filter((l) => l.userId === myId)
+        .filter((l) => l.userId === myId && l.kind === 'payment')
         .sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? ''))),
     [paymentLogs, myId],
   )

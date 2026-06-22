@@ -16,7 +16,7 @@ import {
   toDbTrackedLoan,
   toDbTransaction,
 } from '../lib/dbMappers'
-import { allocate, netCarry } from '../lib/paymentLogs'
+import { allocate } from '../lib/paymentLogs'
 import { clearPageStore } from '../lib/pageStateStore'
 import { supabase } from '../supabaseClient'
 
@@ -1107,23 +1107,14 @@ export function AppProvider({ children }) {
   )
 
   // Record a payment received (admin only). Writes ONLY payment_logs — never
-  // the transactions ledger. Stores the acknowledgement (kind 'payment') and,
-  // when funds don't exactly settle the amount owed, a separate 'carry' row
-  // (the excess/shortfall) to be auto-netted into the next log. Any prior
-  // unconsumed carry for this borrower is marked consumed by this recording.
+  // the transactions ledger. Each recording is a single acknowledgement row;
+  // there is no automatic "carried forward" entry.
   const createPaymentLog = useCallback(
     async (input) => {
       const borrower = users.find((u) => u.id === input.userId)
       const { remaining, status: computedStatus } = allocate(input.amountOwed, input.fundsApplied)
       // The admin may override the computed status (e.g. to "Credited").
       const status = input.status ?? computedStatus
-      // Only true over/under payments carry forward; Settled and Credited do not.
-      const makesCarry = remaining !== 0 && (status === 'Overpayment' || status === 'Underpayment')
-      const carryApplied = netCarry(paymentLogs, input.userId)
-      const priorCarryIds = paymentLogs
-        .filter((l) => l.kind === 'carry' && l.userId === input.userId && !l.consumed)
-        .map((l) => l.id)
-      const priorSet = new Set(priorCarryIds)
 
       const paymentDraft = {
         userId: input.userId,
@@ -1137,16 +1128,12 @@ export function AppProvider({ children }) {
         fundsApplied: input.fundsApplied,
         remainingBalance: remaining,
         allocStatus: status,
-        carryApplied,
+        carryApplied: 0,
         parentId: null,
         consumed: false,
         consumedBy: null,
         note: input.note ?? '',
       }
-      const carrySubject =
-        status === 'Overpayment'
-          ? 'Overpayment credit carried forward'
-          : 'Underpayment balance carried forward'
 
       if (isLive) {
         const { data: payRow, error } = await supabase
@@ -1160,96 +1147,18 @@ export function AppProvider({ children }) {
           return null
         }
         const payment = mapPaymentLog(payRow)
-
-        let carry = null
-        if (makesCarry) {
-          const { data: carryRow, error: carryErr } = await supabase
-            .from('payment_logs')
-            .insert(
-              toDbPaymentLog({
-                userId: input.userId,
-                kind: 'carry',
-                txnDate: input.txnDate,
-                reference: input.reference ?? '',
-                subject: carrySubject,
-                dueDate: input.dueDate ?? null,
-                amountOwed: 0,
-                method: null,
-                fundsApplied: 0,
-                remainingBalance: remaining,
-                allocStatus: status,
-                carryApplied: 0,
-                parentId: payment.id,
-                consumed: false,
-                consumedBy: null,
-                note: '',
-              }),
-            )
-            .select()
-            .single()
-          if (carryErr) {
-            console.error('[supabase] carry insert failed:', carryErr.message)
-            reportDbError?.(`carry entry save failed (${carryErr.message})`)
-          } else carry = mapPaymentLog(carryRow)
-        }
-
-        if (priorCarryIds.length > 0) {
-          supabase
-            .from('payment_logs')
-            .update({ consumed: true, consumed_by: payment.id })
-            .in('id', priorCarryIds)
-            .then(logDbError('carry consume'))
-        }
-
-        setPaymentLogs((prev) => {
-          const next = prev.map((l) =>
-            priorSet.has(l.id) ? { ...l, consumed: true, consumedBy: payment.id } : l,
-          )
-          next.push(payment)
-          if (carry) next.push(carry)
-          return next
-        })
+        setPaymentLogs((prev) => [...prev, payment])
         log(actor, 'PAYMENT_LOG_CREATED', `Payment logged for ${borrower?.name ?? input.userId} (${status})`)
         return payment
       }
 
       // demo path: in-memory only
       const payment = { ...paymentDraft, id: nextId('plog'), createdAt: nowStamp() }
-      const carry =
-        makesCarry
-          ? {
-              id: nextId('plog'),
-              userId: input.userId,
-              kind: 'carry',
-              txnDate: input.txnDate,
-              reference: input.reference ?? '',
-              subject: carrySubject,
-              dueDate: input.dueDate ?? null,
-              amountOwed: 0,
-              method: null,
-              fundsApplied: 0,
-              remainingBalance: remaining,
-              allocStatus: status,
-              carryApplied: 0,
-              parentId: payment.id,
-              consumed: false,
-              consumedBy: null,
-              note: '',
-              createdAt: nowStamp(),
-            }
-          : null
-      setPaymentLogs((prev) => {
-        const next = prev.map((l) =>
-          priorSet.has(l.id) ? { ...l, consumed: true, consumedBy: payment.id } : l,
-        )
-        next.push(payment)
-        if (carry) next.push(carry)
-        return next
-      })
+      setPaymentLogs((prev) => [...prev, payment])
       log(actor, 'PAYMENT_LOG_CREATED', `Payment logged for ${borrower?.name ?? input.userId} (${status})`)
       return payment
     },
-    [isLive, log, actor, users, paymentLogs],
+    [isLive, log, actor, users],
   )
 
   // Permanently delete a payment log (admin). Also detaches any child carry it
