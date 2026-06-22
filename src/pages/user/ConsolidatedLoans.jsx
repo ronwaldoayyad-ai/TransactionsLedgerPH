@@ -20,6 +20,7 @@ export default function ConsolidatedLoans() {
   // Multi-select filters: empty set = all. Survive navigation (reset on Refresh).
   const [statusSel, setStatusSel] = usePersistedState('consolidated.statusSel', () => new Set())
   const [dueDateSel, setDueDateSel] = usePersistedState('consolidated.dueDateSel', () => new Set())
+  const [typeSel, setTypeSel] = usePersistedState('consolidated.typeSel', () => new Set())
   // Hide fully paid/refunded/cancelled (show only unpaid). Default ON.
   const [hideSettled, setHideSettled] = usePersistedState('consolidated.hideSettled', true)
   // Sorting applies after filtering, so it works on any filtered view.
@@ -31,12 +32,30 @@ export default function ConsolidatedLoans() {
     [transactions, session.user.id],
   )
 
+  // Filter options reflect the current hide-settled view so the dropdowns only
+  // list statuses and due dates that are actually selectable — e.g. when settled
+  // rows are hidden, Paid/Refunded/Cancelled and their dates drop out.
+  const optionBase = useMemo(
+    () => myTxns.filter((t) => !hideSettled || !['paid', 'refunded', 'cancelled'].includes(t.status)),
+    [myTxns, hideSettled],
+  )
+  const statusOptions = useMemo(() => {
+    const present = new Set(optionBase.map((t) => borrowerStatus(t, today)))
+    return FILTERABLE_STATUSES.filter((s) => present.has(s)).map((s) => ({
+      value: s,
+      label: BORROWER_STATUS_LABELS[s],
+    }))
+  }, [optionBase, today])
   const dueDateOptions = useMemo(
     () =>
-      [...new Set(myTxns.map((t) => t.dueDate))]
+      [...new Set(optionBase.map((t) => t.dueDate))]
         .sort()
         .map((d) => ({ value: d, label: formatDate(d) })),
-    [myTxns],
+    [optionBase],
+  )
+  const typeOptions = useMemo(
+    () => [...new Set(optionBase.map((t) => t.type))].sort().map((ty) => ({ value: ty, label: ty })),
+    [optionBase],
   )
 
   const filtered = useMemo(
@@ -45,6 +64,7 @@ export default function ConsolidatedLoans() {
         .filter(
           (t) =>
             (!hideSettled || !['paid', 'refunded', 'cancelled'].includes(t.status)) &&
+            (typeSel.size === 0 || typeSel.has(t.type)) &&
             (statusSel.size === 0 || statusSel.has(borrowerStatus(t, today))) &&
             (dueDateSel.size === 0 || dueDateSel.has(t.dueDate)),
         )
@@ -54,7 +74,7 @@ export default function ConsolidatedLoans() {
             (a[sortKey] ?? '').localeCompare(b[sortKey] ?? '') * dir || a.id.localeCompare(b.id)
           )
         }),
-    [myTxns, statusSel, dueDateSel, hideSettled, sortKey, sortDir, today],
+    [myTxns, statusSel, dueDateSel, typeSel, hideSettled, sortKey, sortDir, today],
   )
   const outstanding = filtered.filter((t) => isReceivable(t, today)).reduce((s, t) => s + t.amount, 0)
 
@@ -96,10 +116,18 @@ export default function ConsolidatedLoans() {
                 />
                 {hideSettled ? 'Show all transactions' : 'Hide fully paid/refunded/cancelled'}
               </label>
+              <span className="text-xs font-medium text-slate-500">Type</span>
+              <MultiSelect
+                label="Type"
+                options={typeOptions}
+                selected={typeSel}
+                onChange={setTypeSel}
+                className="w-32"
+              />
               <span className="text-xs font-medium text-slate-500">Status</span>
               <MultiSelect
                 label="Status"
-                options={FILTERABLE_STATUSES.map((s) => ({ value: s, label: BORROWER_STATUS_LABELS[s] }))}
+                options={statusOptions}
                 selected={statusSel}
                 onChange={setStatusSel}
                 className="w-36"
@@ -133,11 +161,12 @@ export default function ConsolidatedLoans() {
                   </button>
                 ))}
               </div>
-              {(statusSel.size > 0 || dueDateSel.size > 0) && (
+              {(statusSel.size > 0 || dueDateSel.size > 0 || typeSel.size > 0) && (
                 <button
                   onClick={() => {
                     setStatusSel(new Set())
                     setDueDateSel(new Set())
+                    setTypeSel(new Set())
                   }}
                   className="cursor-pointer text-xs font-medium text-navy-700 transition-colors duration-200 hover:text-navy-900"
                 >
@@ -152,7 +181,7 @@ export default function ConsolidatedLoans() {
             icon="clock"
             title="No installments found"
             body={
-              statusSel.size > 0 || dueDateSel.size > 0
+              statusSel.size > 0 || dueDateSel.size > 0 || typeSel.size > 0
                 ? 'No payments match the selected filters.'
                 : hideSettled && myTxns.length > 0
                   ? "All your transactions are fully paid, refunded, or cancelled. Toggle 'Show all transactions' to view them."

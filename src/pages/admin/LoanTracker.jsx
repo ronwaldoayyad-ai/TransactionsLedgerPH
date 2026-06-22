@@ -4,6 +4,7 @@ import { PageHeader } from '../../components/AppShell'
 import Icon from '../../components/Icon'
 import RefreshButton from '../../components/RefreshButton'
 import { Button, Card, CardHeader, CurrencyInput, EmptyState, Field, Modal, inputClass } from '../../components/ui'
+import { usePersistedState } from '../../hooks/usePersistedState'
 import { formatDate, formatPeso, toISODate } from '../../lib/amortization'
 import {
   BANKS,
@@ -166,11 +167,12 @@ export default function LoanTracker() {
     txnDate: today,
     firstPaymentDate: '',
   }
-  const [form, setForm] = useState(blank)
+  // Form + collapse state survive navigating to other tabs; reset only on Refresh.
+  const [form, setForm] = usePersistedState('trk.form', blank)
   const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(null)
   // Per-card collapse: ids in the set are collapsed (header + principal only).
-  const [collapsedIds, setCollapsedIds] = useState(() => new Set())
+  const [collapsedIds, setCollapsedIds] = usePersistedState('trk.collapsed', () => new Set())
   const update = (patch) => setForm((f) => ({ ...f, ...patch }))
 
   const toggleCollapse = (id) =>

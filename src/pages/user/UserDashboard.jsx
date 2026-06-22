@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
 import { PageHeader } from '../../components/AppShell'
 import { Badge, Card, CardHeader, EmptyState, StatCard, Switch } from '../../components/ui'
@@ -6,11 +6,13 @@ import Icon from '../../components/Icon'
 import PaymentList from '../../components/PaymentList'
 import RefreshButton from '../../components/RefreshButton'
 import { usePersistedState } from '../../hooks/usePersistedState'
+import { setPageEntry } from '../../lib/pageStateStore'
 import { formatDate, formatPeso, toISODate } from '../../lib/amortization'
 import { effectiveStatus } from '../../lib/transactions'
 
 export default function UserDashboard() {
   const { session, loans, payments, transactions } = useApp()
+  const navigate = useNavigate()
   const [hidePaid, setHidePaid] = usePersistedState('dashboard.hidePaid', true)
   const myPayments = payments.filter((p) => p.userId === session.user.id)
   // Balances and progress derive from the shared transactions store, which the
@@ -73,6 +75,23 @@ export default function UserDashboard() {
   const straightTotal = straightTxns.reduce((s, t) => s + t.amount, 0)
   const installmentTotal = installmentTxns.reduce((s, t) => s + t.amount, 0)
 
+  // Clickable tiles: pre-seed the destination page's persisted filters (read on
+  // mount by usePersistedState), then navigate.
+  const goNextDue = () => {
+    setPageEntry('consolidated.statusSel', new Set(['past_due', 'due', 'upcoming']))
+    setPageEntry('consolidated.dueDateSel', new Set(nextDueItems.map((t) => t.dueDate)))
+    setPageEntry('consolidated.typeSel', new Set())
+    setPageEntry('consolidated.hideSettled', true)
+    navigate('/portal/consolidated')
+  }
+  const goInstallments = () => {
+    setPageEntry('consolidated.statusSel', new Set())
+    setPageEntry('consolidated.dueDateSel', new Set())
+    setPageEntry('consolidated.typeSel', new Set(['Installment']))
+    setPageEntry('consolidated.hideSettled', false) // show all installments, incl. settled
+    navigate('/portal/consolidated')
+  }
+
   return (
     <>
       <PageHeader
@@ -112,6 +131,7 @@ export default function UserDashboard() {
               : 'No upcoming payments'
           }
           accent="text-sky-700 bg-sky-50"
+          onClick={goNextDue}
         />
         <StatCard
           icon="wallet"
@@ -119,6 +139,7 @@ export default function UserDashboard() {
           value={formatPeso(installmentTotal)}
           hint={`${installmentTxns.length} installment${installmentTxns.length === 1 ? '' : 's'}`}
           accent="text-navy-800 bg-navy-50"
+          onClick={goInstallments}
         />
         <StatCard
           icon="list"
@@ -126,6 +147,7 @@ export default function UserDashboard() {
           value={formatPeso(straightTotal)}
           hint={`${straightTxns.length} item${straightTxns.length === 1 ? '' : 's'}`}
           accent="text-violet-700 bg-violet-50"
+          onClick={() => navigate('/portal/straight')}
         />
       </div>
 

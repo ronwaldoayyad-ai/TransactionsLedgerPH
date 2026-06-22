@@ -68,12 +68,33 @@ export function CardHeader({ title, subtitle, action }) {
   )
 }
 
-export function StatCard({ icon, label, value, hint, accent = 'text-navy-800 bg-navy-50' }) {
+export function StatCard({ icon, label, value, hint, accent = 'text-navy-800 bg-navy-50', onClick }) {
+  const clickable = typeof onClick === 'function'
+  const clickProps = clickable
+    ? {
+        onClick,
+        role: 'button',
+        tabIndex: 0,
+        'aria-label': `${label}: ${value}`,
+        onKeyDown: (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            onClick(e)
+          }
+        },
+      }
+    : {}
   return (
-    <Card className="p-5">
+    <Card
+      className={`p-5 ${clickable ? 'cursor-pointer transition-[box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:shadow-md hover:ring-1 hover:ring-navy-200 focus-visible:outline-2 focus-visible:outline-navy-600' : ''}`}
+      {...clickProps}
+    >
       <div className="flex items-start justify-between">
         <div className="min-w-0">
-          <p className="text-sm font-medium text-slate-600">{label}</p>
+          <p className="text-sm font-medium text-slate-600">
+            {label}
+            {clickable && <Icon name="chevron" className="ml-1 inline h-3.5 w-3.5 -rotate-90 align-text-top text-slate-400" />}
+          </p>
           <p className="mt-1.5 truncate font-mono text-2xl font-semibold text-slate-900">{value}</p>
           {hint && <p className="mt-1 text-xs text-slate-500">{hint}</p>}
         </div>

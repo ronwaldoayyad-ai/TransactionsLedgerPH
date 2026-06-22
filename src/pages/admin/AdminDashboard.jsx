@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
 import { PageHeader } from '../../components/AppShell'
-import { Badge, Button, Card, CardHeader, EmptyState, MultiSelect, StatCard, inputClass } from '../../components/ui'
+import { Badge, Button, Card, CardHeader, EmptyState, MultiSelect, StatCard, Switch, inputClass } from '../../components/ui'
 import Icon from '../../components/Icon'
 import PaymentList from '../../components/PaymentList'
 import RefreshButton from '../../components/RefreshButton'
@@ -94,7 +94,14 @@ export default function AdminDashboard() {
   const [grandFrom, setGrandFrom] = useState('')
   const [grandTo, setGrandTo] = useState('')
   const [grandStatusSel, setGrandStatusSel] = useState(() => new Set())
+  const [grandBorrowerSel, setGrandBorrowerSel] = useState(() => new Set())
+  // Default ON: hide fully paid/refunded/cancelled. Label flips to "Show all".
+  const [grandHideSettled, setGrandHideSettled] = useState(true)
   const grandTouched = grandFrom !== '' || grandTo !== '' || grandStatusSel.size > 0
+  const grandBorrowers = useMemo(
+    () => users.filter((u) => u.role === 'user').map((u) => ({ value: u.id, label: u.name })),
+    [users],
+  )
   const grandRows = useMemo(() => {
     const sortRows = (rows) =>
       [...rows].sort(
@@ -103,6 +110,8 @@ export default function AdminDashboard() {
           nameOf(a.userId).localeCompare(nameOf(b.userId)) ||
           a.id.localeCompare(b.id),
       )
+    // Base set: the default attention view, or an explicit due-date/status filter.
+    let base
     if (!grandTouched) {
       const pastDue = transactions.filter((t) => effectiveStatus(t, today) === 'past_due')
       const unpaid = transactions.filter((t) => effectiveStatus(t, today) === 'unpaid')
@@ -111,18 +120,26 @@ export default function AdminDashboard() {
         null,
       )
       const nextUnpaid = nextDate ? unpaid.filter((t) => t.dueDate === nextDate) : []
-      return sortRows([...pastDue, ...nextUnpaid])
-    }
-    return sortRows(
-      transactions.filter((t) => {
+      base = [...pastDue, ...nextUnpaid]
+    } else {
+      base = transactions.filter((t) => {
         if (grandFrom && t.dueDate < grandFrom) return false
         if (grandTo && t.dueDate > grandTo) return false
         if (grandStatusSel.size > 0 && !grandStatusSel.has(effectiveStatus(t, today))) return false
         return true
+      })
+    }
+    // Borrower filter + hide-settled apply on top of whichever base set.
+    return sortRows(
+      base.filter((t) => {
+        if (grandBorrowerSel.size > 0 && !grandBorrowerSel.has(t.userId)) return false
+        if (grandHideSettled && ['paid', 'refunded', 'cancelled'].includes(effectiveStatus(t, today)))
+          return false
+        return true
       }),
     )
     // eslint-disable-next-line react-hooks/exhaustive-deps -- nameOf derives from users
-  }, [transactions, grandFrom, grandTo, grandStatusSel, grandTouched, today, users],
+  }, [transactions, grandFrom, grandTo, grandStatusSel, grandBorrowerSel, grandHideSettled, grandTouched, today, users],
   )
 
   return (
@@ -318,6 +335,22 @@ export default function AdminDashboard() {
           subtitle="By default: all past-due items plus the next unpaid due date. Filter by due-date range or status to see more."
           action={
             <div className="flex flex-wrap items-center gap-2">
+              <label className="mr-1 flex cursor-pointer items-center gap-2 text-sm text-slate-600">
+                <Switch
+                  checked={grandHideSettled}
+                  onChange={setGrandHideSettled}
+                  label={grandHideSettled ? 'Show all transactions' : 'Hide paid, refunded, and cancelled transactions'}
+                />
+                {grandHideSettled ? 'Show all transactions' : 'Hide paid/refunded/cancelled'}
+              </label>
+              <span className="text-xs font-medium text-slate-500">Borrower</span>
+              <MultiSelect
+                label="Borrower"
+                options={grandBorrowers}
+                selected={grandBorrowerSel}
+                onChange={setGrandBorrowerSel}
+                className="w-44"
+              />
               <label htmlFor="grand-from" className="text-xs font-medium text-slate-500">
                 Due Date
               </label>
@@ -346,12 +379,13 @@ export default function AdminDashboard() {
                 onChange={setGrandStatusSel}
                 className="w-36"
               />
-              {(grandFrom || grandTo || grandStatusSel.size > 0) && (
+              {(grandFrom || grandTo || grandStatusSel.size > 0 || grandBorrowerSel.size > 0) && (
                 <button
                   onClick={() => {
                     setGrandFrom('')
                     setGrandTo('')
                     setGrandStatusSel(new Set())
+                    setGrandBorrowerSel(new Set())
                   }}
                   className="cursor-pointer text-xs font-medium text-navy-700 transition-colors duration-200 hover:text-navy-900"
                 >

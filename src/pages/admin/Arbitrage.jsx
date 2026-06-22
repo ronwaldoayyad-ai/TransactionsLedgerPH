@@ -4,6 +4,7 @@ import { PageHeader } from '../../components/AppShell'
 import Icon from '../../components/Icon'
 import RefreshButton from '../../components/RefreshButton'
 import { Button, Card, CardHeader, CurrencyInput, EmptyState, Field, Modal, StatCard, inputClass } from '../../components/ui'
+import { usePersistedState } from '../../hooks/usePersistedState'
 import { formatPeso, toISODate } from '../../lib/amortization'
 import {
   DEFAULT_PROCESSING_FEE,
@@ -41,25 +42,28 @@ export default function Arbitrage() {
     [interestRates],
   )
 
-  const [tab, setTab] = useState('ledger') // ledger | summary
+  // tab + form survive navigating to other tabs; reset only on Refresh.
+  const [tab, setTab] = usePersistedState('arb.tab', 'ledger') // ledger | summary
   const [saving, setSaving] = useState(false)
   const [ratesOpen, setRatesOpen] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(null)
 
+  // Rate fields start empty so the full dropdown of stored rates shows on focus
+  // (a pre-filled value would filter the datalist down to a single match).
   const blank = {
     userId: '',
     principal: 0,
     txnDate: today,
     durationMonths: '',
     firstPaymentDate: '',
-    borrowerRate: borrowerRates[0] ? String(borrowerRates[0].rate) : '',
-    costRate: costRates[0] ? String(costRates[0].rate) : '',
+    borrowerRate: '',
+    costRate: '',
     dst: 0,
     processingFee: DEFAULT_PROCESSING_FEE,
     notarialFee: 0,
     dstTouched: false,
   }
-  const [form, setForm] = useState(blank)
+  const [form, setForm] = usePersistedState('arb.form', blank)
 
   // Setting principal re-derives DST unless the admin has overridden it.
   const update = (patch) =>
@@ -230,8 +234,11 @@ export default function Arbitrage() {
                 <input
                   id="arb-brate"
                   type="number"
+                  min="0"
                   step="0.0001"
+                  inputMode="decimal"
                   list="arb-borrower-rates"
+                  placeholder="Select or type a rate"
                   className={inputClass}
                   value={form.borrowerRate}
                   onChange={(e) => update({ borrowerRate: e.target.value })}
@@ -246,8 +253,11 @@ export default function Arbitrage() {
                 <input
                   id="arb-crate"
                   type="number"
+                  min="0"
                   step="0.0001"
+                  inputMode="decimal"
                   list="arb-cost-rates"
+                  placeholder="Select or type a rate"
                   className={inputClass}
                   value={form.costRate}
                   onChange={(e) => update({ costRate: e.target.value })}
