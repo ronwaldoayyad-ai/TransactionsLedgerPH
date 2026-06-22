@@ -544,11 +544,13 @@ export default function Transactions() {
                     <tr
                       key={t.id}
                       className={`border-b border-slate-100 transition-colors duration-150 ${
-                        isPastDue
-                          ? 'bg-red-50/70 hover:bg-red-50'
-                          : selected.has(t.id)
-                            ? 'bg-navy-50/60 hover:bg-navy-50/40'
-                            : 'hover:bg-navy-50/40'
+                        t.amount < 0
+                          ? 'bg-emerald-50/70 hover:bg-emerald-50'
+                          : isPastDue
+                            ? 'bg-red-50/70 hover:bg-red-50'
+                            : selected.has(t.id)
+                              ? 'bg-navy-50/60 hover:bg-navy-50/40'
+                              : 'hover:bg-navy-50/40'
                       }`}
                     >
                       <td className="px-2.5 py-2.5">

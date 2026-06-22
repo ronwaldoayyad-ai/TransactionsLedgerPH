@@ -55,7 +55,11 @@ export default function BorrowerScheduleTable({
               <tr
                 key={t.id}
                 className={`border-b border-slate-100 transition-colors duration-150 ${
-                  status === 'past_due' ? 'bg-red-50/70 hover:bg-red-50' : 'hover:bg-navy-50/50'
+                  t.amount < 0
+                    ? 'bg-emerald-50/70 hover:bg-emerald-50'
+                    : status === 'past_due'
+                      ? 'bg-red-50/70 hover:bg-red-50'
+                      : 'hover:bg-navy-50/50'
                 }`}
               >
                 <td className="px-4 py-2.5 font-mono text-slate-500">{t.n}</td>
