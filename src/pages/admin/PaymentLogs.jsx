@@ -3,7 +3,7 @@ import { useApp } from '../../context/AppContext'
 import { PageHeader } from '../../components/AppShell'
 import Icon from '../../components/Icon'
 import RefreshButton from '../../components/RefreshButton'
-import { Badge, Button, Card, CardHeader, CurrencyInput, EmptyState, Field, Modal, inputClass } from '../../components/ui'
+import { Badge, Button, Card, CardHeader, CurrencyInput, EmptyState, Field, Modal, MultiSelect, inputClass } from '../../components/ui'
 import { formatDate, formatPeso, toISODate } from '../../lib/amortization'
 import {
   PAY_LOG_METHODS,
@@ -33,6 +33,8 @@ export default function PaymentLogs() {
   const nameOf = (userId) => users.find((u) => u.id === userId)?.name ?? userId
 
   const [filterBorrower, setFilterBorrower] = useState('all')
+  const [statusSel, setStatusSel] = useState(() => new Set()) // empty = all statuses
+  const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
   const [editingId, setEditingId] = useState(null) // null = creating
   const [saving, setSaving] = useState(false)
@@ -123,12 +125,25 @@ export default function PaymentLogs() {
   }
 
   const rows = useMemo(() => {
+    const q = query.trim().toLowerCase()
     // Only acknowledgement rows — there are no "carried forward" entries.
-    const list = paymentLogs.filter(
-      (l) => l.kind === 'payment' && (filterBorrower === 'all' || l.userId === filterBorrower),
-    )
+    const list = paymentLogs.filter((l) => {
+      if (l.kind !== 'payment') return false
+      if (filterBorrower !== 'all' && l.userId !== filterBorrower) return false
+      if (statusSel.size > 0 && !statusSel.has(l.allocStatus)) return false
+      if (q) {
+        const name = users.find((u) => u.id === l.userId)?.name ?? l.userId
+        const hay = [name, l.reference, l.subject, l.method, l.allocStatus, l.txnDate,
+          l.dueDate, l.amountOwed, l.fundsApplied, l.remainingBalance]
+          .map((v) => String(v ?? ''))
+          .join(' ')
+          .toLowerCase()
+        if (!hay.includes(q)) return false
+      }
+      return true
+    })
     return [...list].sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')))
-  }, [paymentLogs, filterBorrower])
+  }, [paymentLogs, filterBorrower, statusSel, query, users])
 
   const totals = useMemo(
     () =>
@@ -164,26 +179,47 @@ export default function PaymentLogs() {
           title="Recorded payments"
           subtitle={`${rows.filter((r) => r.kind === 'payment').length} payment${rows.filter((r) => r.kind === 'payment').length === 1 ? '' : 's'} logged`}
           action={
-            <select
-              aria-label="Filter by borrower"
-              className={`${inputClass} max-w-56`}
-              value={filterBorrower}
-              onChange={(e) => setFilterBorrower(e.target.value)}
-            >
-              <option value="all">All borrowers</option>
-              {borrowers.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
-                </option>
-              ))}
-            </select>
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                type="search"
+                aria-label="Search payment logs"
+                placeholder="Search…"
+                className={`${inputClass} max-w-44`}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+              <MultiSelect
+                label="Status"
+                options={PAY_LOG_STATUSES.map((s) => ({ value: s, label: s }))}
+                selected={statusSel}
+                onChange={setStatusSel}
+                className="w-40"
+              />
+              <select
+                aria-label="Filter by borrower"
+                className={`${inputClass} max-w-48`}
+                value={filterBorrower}
+                onChange={(e) => setFilterBorrower(e.target.value)}
+              >
+                <option value="all">All borrowers</option>
+                {borrowers.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           }
         />
         {rows.length === 0 ? (
           <EmptyState
             icon="scroll"
-            title="No payment logs yet"
-            body="Use Record Payment to acknowledge a payment received from a borrower."
+            title="No payment logs found"
+            body={
+              paymentLogs.some((l) => l.kind === 'payment')
+                ? 'No logs match your search or status filter.'
+                : 'Use Record Payment to acknowledge a payment received from a borrower.'
+            }
           />
         ) : (
           <div className="overflow-x-auto px-1 py-2">
