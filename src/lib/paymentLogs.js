@@ -6,6 +6,10 @@ import { isReceivable } from './transactions'
 
 export const PAY_LOG_METHODS = ['GCash', 'Maya', 'Bank Transfer', 'Cash']
 
+// Allocation statuses. Settled/Overpayment/Underpayment are computed by
+// `allocate`; "Credited" is set manually by the admin when editing a log.
+export const PAY_LOG_STATUSES = ['Settled', 'Overpayment', 'Underpayment', 'Credited']
+
 const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100
 
 // Editable default for the Subject field (3).

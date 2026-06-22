@@ -7,26 +7,35 @@ import { Badge, Button, Card, CardHeader, CurrencyInput, EmptyState, Field, Moda
 import { formatDate, formatPeso, toISODate } from '../../lib/amortization'
 import {
   PAY_LOG_METHODS,
+  PAY_LOG_STATUSES,
   allocate,
   defaultSubject,
   netCarry,
   suggestedAmountOwed,
 } from '../../lib/paymentLogs'
 
-const allocBadge = { Settled: 'paid', Overpayment: 'refunded', Underpayment: 'past_due' }
+// Settled & Credited render green; Overpayment blue; Underpayment red.
+const allocBadge = {
+  Settled: 'paid',
+  Overpayment: 'refunded',
+  Underpayment: 'past_due',
+  Credited: 'active',
+}
 
 // Admin Payment Logs: a dedicated ledger of payments received from borrowers.
 // Independent of the amortization ledger — recording a payment never writes the
 // transactions table. Over/under payments produce a separate carry entry that
 // auto-nets into the next log.
 export default function PaymentLogs() {
-  const { users, transactions, paymentLogs, createPaymentLog, deletePaymentLog } = useApp()
+  const { users, transactions, paymentLogs, createPaymentLog, updatePaymentLog, deletePaymentLog } =
+    useApp()
   const borrowers = useMemo(() => users.filter((u) => u.role === 'user'), [users])
   const today = toISODate(new Date())
   const nameOf = (userId) => users.find((u) => u.id === userId)?.name ?? userId
 
   const [filterBorrower, setFilterBorrower] = useState('all')
   const [open, setOpen] = useState(false)
+  const [editingId, setEditingId] = useState(null) // null = creating
   const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(null) // log id
   const blank = {
@@ -38,16 +47,37 @@ export default function PaymentLogs() {
     amountOwed: 0,
     method: PAY_LOG_METHODS[0],
     fundsApplied: 0,
+    statusOverride: null, // null = use the computed allocation status
     subjectTouched: false,
     owedTouched: false,
   }
   const [form, setForm] = useState(blank)
 
   const pendingCarry = form.userId ? netCarry(paymentLogs, form.userId) : 0
-  const { remaining, status } = allocate(form.amountOwed, form.fundsApplied)
+  const { remaining, status: computedStatus } = allocate(form.amountOwed, form.fundsApplied)
+  const effectiveStatus = form.statusOverride ?? computedStatus
 
   const openForm = () => {
     setForm(blank)
+    setEditingId(null)
+    setOpen(true)
+  }
+
+  const openEdit = (l) => {
+    setForm({
+      userId: l.userId,
+      txnDate: l.txnDate,
+      reference: l.reference,
+      subject: l.subject,
+      dueDate: l.dueDate,
+      amountOwed: l.amountOwed,
+      method: l.method ?? PAY_LOG_METHODS[0],
+      fundsApplied: l.fundsApplied,
+      statusOverride: l.allocStatus,
+      subjectTouched: true,
+      owedTouched: true,
+    })
+    setEditingId(l.id)
     setOpen(true)
   }
 
@@ -65,16 +95,31 @@ export default function PaymentLogs() {
   const handleSave = async () => {
     if (!form.userId) return
     setSaving(true)
-    await createPaymentLog({
-      userId: form.userId,
-      txnDate: form.txnDate,
-      reference: form.reference,
-      subject: form.subject,
-      dueDate: form.dueDate,
-      amountOwed: form.amountOwed,
-      method: form.method,
-      fundsApplied: form.fundsApplied,
-    })
+    if (editingId) {
+      await updatePaymentLog(editingId, {
+        txnDate: form.txnDate,
+        reference: form.reference,
+        subject: form.subject,
+        dueDate: form.dueDate,
+        amountOwed: form.amountOwed,
+        method: form.method,
+        fundsApplied: form.fundsApplied,
+        remainingBalance: remaining,
+        allocStatus: effectiveStatus,
+      })
+    } else {
+      await createPaymentLog({
+        userId: form.userId,
+        txnDate: form.txnDate,
+        reference: form.reference,
+        subject: form.subject,
+        dueDate: form.dueDate,
+        amountOwed: form.amountOwed,
+        method: form.method,
+        fundsApplied: form.fundsApplied,
+        status: effectiveStatus,
+      })
+    }
     setSaving(false)
     setOpen(false)
   }
@@ -174,7 +219,16 @@ export default function PaymentLogs() {
                       <td className="px-3 py-2">
                         <Badge status={allocBadge[l.allocStatus] ?? 'upcoming'}>{l.allocStatus}</Badge>
                       </td>
-                      <td className="px-3 py-2 text-right">
+                      <td className="px-3 py-2 text-right whitespace-nowrap">
+                        {!isCarry && (
+                          <button
+                            onClick={() => openEdit(l)}
+                            aria-label="Edit log"
+                            className="mr-1 cursor-pointer rounded-md p-1.5 text-slate-400 transition-colors duration-200 hover:bg-slate-100 hover:text-navy-700"
+                          >
+                            <Icon name="pencil" className="h-4 w-4" />
+                          </button>
+                        )}
                         <button
                           onClick={() => setConfirmDelete(l.id)}
                           aria-label="Delete log"
@@ -194,7 +248,7 @@ export default function PaymentLogs() {
 
       <Modal
         open={open}
-        title="Record Payment"
+        title={editingId ? 'Edit Payment Log' : 'Record Payment'}
         onClose={() => setOpen(false)}
         footer={
           <>
@@ -202,7 +256,7 @@ export default function PaymentLogs() {
               Cancel
             </Button>
             <Button variant="gold" onClick={handleSave} disabled={!form.userId || saving}>
-              {saving ? 'Saving…' : 'Save log'}
+              {saving ? 'Saving…' : editingId ? 'Save changes' : 'Save log'}
             </Button>
           </>
         }
@@ -213,6 +267,7 @@ export default function PaymentLogs() {
               id="pl-borrower"
               className={inputClass}
               value={form.userId}
+              disabled={!!editingId}
               onChange={(e) => update({ userId: e.target.value })}
             >
               <option value="">Select a borrower…</option>
@@ -302,20 +357,40 @@ export default function PaymentLogs() {
             </Field>
           </div>
 
-          <Field label="Funds Applied" htmlFor="pl-funds">
-            <CurrencyInput
-              id="pl-funds"
-              value={form.fundsApplied}
-              onValueChange={(v) => update({ fundsApplied: v ?? 0 })}
-            />
-          </Field>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Funds Applied" htmlFor="pl-funds">
+              <CurrencyInput
+                id="pl-funds"
+                value={form.fundsApplied}
+                onValueChange={(v) => update({ fundsApplied: v ?? 0 })}
+              />
+            </Field>
+            <Field
+              label="Status"
+              htmlFor="pl-status"
+              hint="Auto from amounts; override to Credited if applicable."
+            >
+              <select
+                id="pl-status"
+                className={inputClass}
+                value={effectiveStatus}
+                onChange={(e) => setForm((f) => ({ ...f, statusOverride: e.target.value }))}
+              >
+                {PAY_LOG_STATUSES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </div>
 
           <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50/70 px-4 py-3">
             <div>
               <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Remaining Balance</p>
               <p className="mt-0.5 font-mono text-lg font-semibold text-slate-900">{formatPeso(remaining)}</p>
             </div>
-            <Badge status={allocBadge[status] ?? 'upcoming'}>{status}</Badge>
+            <Badge status={allocBadge[effectiveStatus] ?? 'upcoming'}>{effectiveStatus}</Badge>
           </div>
         </div>
       </Modal>

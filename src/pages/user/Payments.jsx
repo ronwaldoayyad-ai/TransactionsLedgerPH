@@ -26,13 +26,22 @@ export default function Payments() {
 
   const fileInputRef = useRef(null)
   const [file, setFile] = useState(null)
-  const [loanId, setLoanId] = useState(myLoans[0]?.id ?? '')
+  // Multi-select: one proof can cover several loans that fall on the same due date.
+  const [loanIds, setLoanIds] = useState(() => new Set())
   const [amount, setAmount] = useState(null)
   const [method, setMethod] = useState('GCash')
   const [reference, setReference] = useState('')
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
+  const [successCount, setSuccessCount] = useState(0)
   const [dragOver, setDragOver] = useState(false)
+
+  const toggleLoan = (id) =>
+    setLoanIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
 
   const acceptFile = (f) => {
     if (!f) return
@@ -53,30 +62,39 @@ export default function Payments() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!file) return setError('Please attach your proof of payment.')
-    if (!loanId) return setError('Please select which loan this payment is for.')
+    if (loanIds.size === 0) return setError('Please select at least one loan this payment is for.')
     if (!amount || amount <= 0) return setError('Please enter the amount you paid.')
-    const payment = await submitPayment(session.user.name, {
-      userId: session.user.id,
-      loanId,
-      amount,
-      method,
-      reference: reference.trim() || '—',
-      fileName: file.name,
-      fileType: /\.pdf$/i.test(file.name) ? 'pdf' : 'image',
-      file, // live mode uploads this to Storage
-      // Demo fallback: session-scoped object URL so view/download still work.
-      fileUrl: URL.createObjectURL(file),
-    })
-    if (!payment) {
-      setError('Upload failed — please try again.')
+    setError('')
+    // One proof can cover multiple loans (same due date) — record it against each.
+    const ids = [...loanIds]
+    const results = []
+    for (const id of ids) {
+      const payment = await submitPayment(session.user.name, {
+        userId: session.user.id,
+        loanId: id,
+        amount,
+        method,
+        reference: reference.trim() || '—',
+        fileName: file.name,
+        fileType: /\.pdf$/i.test(file.name) ? 'pdf' : 'image',
+        file, // live mode uploads this to Storage
+        // Demo fallback: session-scoped object URL so view/download still work.
+        fileUrl: URL.createObjectURL(file),
+      })
+      results.push(payment)
+    }
+    const saved = results.filter(Boolean).length
+    if (saved < ids.length) {
+      setError(`Only ${saved} of ${ids.length} submissions saved — please retry the rest.`)
       return
     }
     setFile(null)
     setAmount(null)
     setReference('')
+    setLoanIds(new Set())
     if (fileInputRef.current) fileInputRef.current.value = ''
-    setSuccess(true)
-    setTimeout(() => setSuccess(false), 5000)
+    setSuccessCount(saved)
+    setTimeout(() => setSuccessCount(0), 5000)
   }
 
   return (
@@ -164,19 +182,36 @@ export default function Payments() {
               />
             </div>
 
-            <Field label="Loan" htmlFor="pay-loan">
-              <select
-                id="pay-loan"
-                value={loanId}
-                onChange={(e) => setLoanId(e.target.value)}
-                className={inputClass}
+            <Field
+              label="Loan(s)"
+              htmlFor="pay-loans"
+              hint="Select every loan this payment covers — useful when several share a due date."
+            >
+              <div
+                id="pay-loans"
+                className="max-h-44 space-y-0.5 overflow-y-auto rounded-lg border border-slate-300/80 bg-white/70 p-2"
               >
-                {myLoans.map((l) => (
-                  <option key={l.id} value={l.id}>
-                    {l.label} ({l.id})
-                  </option>
-                ))}
-              </select>
+                {myLoans.length === 0 ? (
+                  <p className="px-1 py-1 text-xs text-slate-400">No outstanding loans to pay.</p>
+                ) : (
+                  myLoans.map((l) => (
+                    <label
+                      key={l.id}
+                      className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-slate-700 transition-colors duration-150 hover:bg-slate-50"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={loanIds.has(l.id)}
+                        onChange={() => toggleLoan(l.id)}
+                        className="h-4 w-4 cursor-pointer accent-[#1e3a8a]"
+                      />
+                      <span className="truncate">
+                        {l.label} ({l.id})
+                      </span>
+                    </label>
+                  ))
+                )}
+              </div>
             </Field>
 
             <div className="grid grid-cols-2 gap-4">
@@ -219,10 +254,11 @@ export default function Payments() {
                 {error}
               </p>
             )}
-            {success && (
+            {successCount > 0 && (
               <p role="status" className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2.5 text-sm text-emerald-700">
                 <Icon name="check" className="h-4 w-4" />
-                Proof submitted. Your administrator will verify it shortly.
+                Proof submitted for {successCount} loan{successCount === 1 ? '' : 's'}. Your administrator
+                will verify it shortly.
               </p>
             )}
 

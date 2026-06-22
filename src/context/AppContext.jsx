@@ -1114,7 +1114,11 @@ export function AppProvider({ children }) {
   const createPaymentLog = useCallback(
     async (input) => {
       const borrower = users.find((u) => u.id === input.userId)
-      const { remaining, status } = allocate(input.amountOwed, input.fundsApplied)
+      const { remaining, status: computedStatus } = allocate(input.amountOwed, input.fundsApplied)
+      // The admin may override the computed status (e.g. to "Credited").
+      const status = input.status ?? computedStatus
+      // Only true over/under payments carry forward; Settled and Credited do not.
+      const makesCarry = remaining !== 0 && (status === 'Overpayment' || status === 'Underpayment')
       const carryApplied = netCarry(paymentLogs, input.userId)
       const priorCarryIds = paymentLogs
         .filter((l) => l.kind === 'carry' && l.userId === input.userId && !l.consumed)
@@ -1158,7 +1162,7 @@ export function AppProvider({ children }) {
         const payment = mapPaymentLog(payRow)
 
         let carry = null
-        if (remaining !== 0) {
+        if (makesCarry) {
           const { data: carryRow, error: carryErr } = await supabase
             .from('payment_logs')
             .insert(
@@ -1212,7 +1216,7 @@ export function AppProvider({ children }) {
       // demo path: in-memory only
       const payment = { ...paymentDraft, id: nextId('plog'), createdAt: nowStamp() }
       const carry =
-        remaining !== 0
+        makesCarry
           ? {
               id: nextId('plog'),
               userId: input.userId,
@@ -1274,6 +1278,35 @@ export function AppProvider({ children }) {
           ),
       )
       log(actor, 'PAYMENT_LOG_DELETED', `Payment log ${id} deleted`)
+      return true
+    },
+    [isLive, log, actor],
+  )
+
+  // Edit an existing payment log (admin). Updates the editable detail fields and
+  // the (now admin-settable) allocation status. Carry entries are not
+  // regenerated — editing is a correction, not a re-recording.
+  const updatePaymentLog = useCallback(
+    async (id, patch) => {
+      if (isLive) {
+        supabase
+          .from('payment_logs')
+          .update({
+            txn_date: patch.txnDate,
+            reference: patch.reference,
+            subject: patch.subject,
+            due_date: patch.dueDate,
+            amount_owed: patch.amountOwed,
+            method: patch.method,
+            funds_applied: patch.fundsApplied,
+            remaining_balance: patch.remainingBalance,
+            alloc_status: patch.allocStatus,
+          })
+          .eq('id', id)
+          .then(logDbError('payment log update'))
+      }
+      setPaymentLogs((prev) => prev.map((l) => (l.id === id ? { ...l, ...patch } : l)))
+      log(actor, 'PAYMENT_LOG_UPDATED', `Payment log ${id} updated`)
       return true
     },
     [isLive, log, actor],
@@ -1435,6 +1468,7 @@ export function AppProvider({ children }) {
       payments,
       paymentLogs,
       createPaymentLog,
+      updatePaymentLog,
       deletePaymentLog,
       arbitrageLoans,
       interestRates,
@@ -1473,7 +1507,7 @@ export function AppProvider({ children }) {
     [
       session, effectiveSession, isViewingAs, startViewAs, stopViewAs, authLoading,
       refreshing, refreshData, syncError, getProofUrl, importLoans, updateMyProfile, setMyAvatar,
-      users, loans, payments, paymentLogs, createPaymentLog, deletePaymentLog,
+      users, loans, payments, paymentLogs, createPaymentLog, updatePaymentLog, deletePaymentLog,
       arbitrageLoans, interestRates, createArbitrageLoan, deleteArbitrageLoan,
       addInterestRate, deleteInterestRate,
       trackedLoans, createTrackedLoan, deleteTrackedLoan,

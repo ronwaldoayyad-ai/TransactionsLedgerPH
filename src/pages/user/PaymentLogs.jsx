@@ -4,7 +4,12 @@ import { PageHeader } from '../../components/AppShell'
 import { Badge, Card, CardHeader, EmptyState } from '../../components/ui'
 import { formatDate, formatPeso } from '../../lib/amortization'
 
-const allocBadge = { Settled: 'paid', Overpayment: 'refunded', Underpayment: 'past_due' }
+const allocBadge = {
+  Settled: 'paid',
+  Overpayment: 'refunded',
+  Underpayment: 'past_due',
+  Credited: 'active',
+}
 
 // Borrower view of their own Payment Logs — strictly read-only. RLS scopes the
 // data to the signed-in borrower; we also filter by the effective session id so
