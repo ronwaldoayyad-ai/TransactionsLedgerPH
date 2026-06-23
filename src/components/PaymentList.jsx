@@ -91,6 +91,30 @@ export default function PaymentList({
           {list.map((p) => {
             const borrower = users.find((u) => u.id === p.userId)
             const loan = loans.find((l) => l.id === p.loanId)
+            // Status-themed thumbnail (approved=green check, rejected=red x,
+            // pending=amber clock) instead of a flat gray file icon.
+            const thumb =
+              {
+                approved: {
+                  wrap: 'border-emerald-200 bg-emerald-50 hover:border-emerald-400',
+                  circle: 'bg-emerald-100 text-emerald-600',
+                  icon: 'check',
+                },
+                rejected: {
+                  wrap: 'border-red-200 bg-red-50 hover:border-red-400',
+                  circle: 'bg-red-100 text-red-600',
+                  icon: 'x',
+                },
+                pending: {
+                  wrap: 'border-amber-200 bg-amber-50 hover:border-amber-400',
+                  circle: 'bg-amber-100 text-amber-600',
+                  icon: 'clock',
+                },
+              }[p.status] ?? {
+                wrap: 'border-slate-200 bg-slate-50 hover:border-navy-400',
+                circle: 'bg-slate-100 text-slate-500',
+                icon: p.fileType === 'pdf' ? 'file' : 'image',
+              }
             return (
               <li key={p.id} className="px-5 py-4">
                 <div className="flex flex-wrap items-center gap-4">
@@ -98,12 +122,16 @@ export default function PaymentList({
                     type="button"
                     onClick={() => hasProof(p) && openProof(p)}
                     disabled={!hasProof(p)}
-                    aria-label={`View proof ${p.fileName}`}
+                    aria-label={`View proof ${p.fileName} (${p.status})`}
                     title={hasProof(p) ? 'View proof' : 'File unavailable'}
-                    className="flex h-14 w-14 shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-lg border border-slate-200 bg-slate-50 text-slate-400 transition-colors duration-200 hover:border-navy-400 hover:text-navy-700 disabled:cursor-not-allowed"
+                    className={`flex h-14 w-14 shrink-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-60 ${thumb.wrap}`}
                   >
-                    <Icon name={p.fileType === 'pdf' ? 'file' : 'image'} className="h-5 w-5" />
-                    <span className="text-[10px] font-medium uppercase">{p.fileType}</span>
+                    <span className={`flex h-7 w-7 items-center justify-center rounded-full ${thumb.circle}`}>
+                      <Icon name={thumb.icon} className="h-4 w-4" strokeWidth={2.5} />
+                    </span>
+                    <span className="text-[9px] font-semibold uppercase tracking-wide text-slate-500">
+                      {p.fileType}
+                    </span>
                   </button>
 
                   <div className="min-w-0 flex-1">
