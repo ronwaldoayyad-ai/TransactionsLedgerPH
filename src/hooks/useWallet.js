@@ -121,15 +121,15 @@ export function useWallet() {
           .single()
         if (e) {
           setError(e.message)
-          return null
+          return { error: e.message }
         }
         const card = mapCard(data)
         setCards((prev) => [...prev, card])
-        return card
+        return { card }
       }
       const card = { ...input, id: demoId() }
       setCards((prev) => [...prev, card])
-      return card
+      return { card }
     },
     [isLive],
   )
@@ -140,8 +140,12 @@ export function useWallet() {
       if (isLive) {
         const merged = { ...cards.find((c) => c.id === id), ...patch }
         const { error: e } = await supabase.from('wallet_cards').update(toDbCard(merged)).eq('id', id)
-        if (e) setError(e.message)
+        if (e) {
+          setError(e.message)
+          return e.message
+        }
       }
+      return null
     },
     [isLive, cards],
   )

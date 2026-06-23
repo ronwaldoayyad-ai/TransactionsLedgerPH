@@ -21,17 +21,19 @@ function NetworkLogo({ network, className }) {
   return <img src={src} alt="" onError={() => setFailed(true)} className={className} />
 }
 
-// The physical card face. Aspect ratio ~1.586 (ISO/IEC 7810 ID-1).
+// The physical card face. Aspect ratio ~1.586 (ISO/IEC 7810 ID-1). A flex
+// column distributes the three rows top/middle/bottom so nothing overlaps or
+// gets clipped, regardless of the card's rendered width.
 export function CardVisual({ card, onClick, className = '', style = {} }) {
   const text = readableText(card.primaryColor)
-  const muted = text === '#ffffff' ? 'rgba(255,255,255,0.75)' : 'rgba(15,23,42,0.7)'
+  const muted = text === '#ffffff' ? 'rgba(255,255,255,0.7)' : 'rgba(15,23,42,0.65)'
   const Comp = onClick ? 'button' : 'div'
   return (
     <Comp
       type={onClick ? 'button' : undefined}
       onClick={onClick}
       aria-label={onClick ? `${card.bankName} card ending ${card.last4}` : undefined}
-      className={`relative aspect-[1.586] w-full overflow-hidden rounded-2xl p-5 text-left shadow-lg ${onClick ? 'cursor-pointer' : ''} ${className}`}
+      className={`relative flex aspect-[1.586] w-full flex-col justify-between overflow-hidden rounded-2xl p-4 text-left shadow-lg ${onClick ? 'cursor-pointer' : ''} ${className}`}
       style={{
         backgroundImage: `linear-gradient(135deg, ${card.primaryColor}, ${card.secondaryColor})`,
         color: text,
@@ -39,40 +41,40 @@ export function CardVisual({ card, onClick, className = '', style = {} }) {
       }}
     >
       {/* Top: bank + menu glyph */}
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between gap-2">
         {card.bankLogo ? (
-          <img src={card.bankLogo} alt={card.bankName} className="h-7 max-w-[55%] object-contain" />
+          <img src={card.bankLogo} alt={card.bankName} className="h-6 max-w-[55%] object-contain object-left" />
         ) : (
-          <span className="text-lg font-bold tracking-wide">{card.bankName || 'Bank'}</span>
+          <span className="truncate text-base font-bold tracking-wide">{card.bankName || 'Bank'}</span>
         )}
-        <span aria-hidden className="text-lg leading-none opacity-70">≋</span>
+        <span aria-hidden className="shrink-0 text-base leading-none opacity-70">≋</span>
       </div>
 
-      {/* Chip */}
-      <div
-        className="mt-4 h-7 w-9 rounded-md"
-        style={{ background: text === '#ffffff' ? 'rgba(255,255,255,0.55)' : 'rgba(15,23,42,0.25)' }}
-      />
-
-      {/* Number */}
-      <div className="mt-3 font-mono text-lg tracking-[0.18em]" style={{ color: text }}>
-        {(card.first6 || '••••••').slice(0, 6)} •••• {(card.last4 || '••••').slice(0, 4)}
+      {/* Middle: chip + masked number */}
+      <div className="space-y-2">
+        <div
+          className="h-6 w-9 rounded-md"
+          style={{ background: text === '#ffffff' ? 'rgba(255,255,255,0.55)' : 'rgba(15,23,42,0.25)' }}
+        />
+        <div className="font-mono text-base tracking-[0.15em]" style={{ color: text }}>
+          {(card.first6 || '••••••').slice(0, 6)} •••• {(card.last4 || '••••').slice(0, 4)}
+        </div>
       </div>
 
       {/* Bottom: tier · category | network */}
-      <div className="absolute inset-x-5 bottom-4 flex items-end justify-between">
-        <div className="flex items-center gap-2 text-sm font-semibold">
-          <span>{card.tier}</span>
+      <div className="flex items-end justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-1.5 text-xs font-semibold sm:text-sm">
+          <span className="truncate">{card.tier}</span>
           {card.category ? (
             <>
               <span style={{ color: muted }}>|</span>
-              <span style={{ color: muted }} className="font-medium">
+              <span style={{ color: muted }} className="truncate font-medium">
                 {card.category}
               </span>
             </>
           ) : null}
         </div>
-        <NetworkLogo network={card.network} className="h-7 max-h-7 w-12 object-contain object-right" />
+        <NetworkLogo network={card.network} className="h-6 max-h-6 w-10 shrink-0 object-contain object-right" />
       </div>
     </Comp>
   )

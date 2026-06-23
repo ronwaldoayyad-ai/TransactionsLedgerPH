@@ -24,6 +24,7 @@ export default function CardForm({ open, initial, onClose, onSave }) {
   const [form, setForm] = useState(() => ({ ...BLANK, ...(initial ?? {}) }))
   const [logoName, setLogoName] = useState('')
   const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
   const set = (patch) => setForm((f) => ({ ...f, ...patch }))
 
   // FR1.5 dual logo input: URL and file are mutually exclusive.
@@ -45,9 +46,12 @@ export default function CardForm({ open, initial, onClose, onSave }) {
 
   const save = async () => {
     setSaving(true)
-    await onSave(form)
+    setSaveError('')
+    const err = await onSave(form)
     setSaving(false)
-    onClose()
+    // onSave returns an error message string on failure, or null/undefined on success.
+    if (err) setSaveError(typeof err === 'string' ? err : 'Could not save — please try again.')
+    else onClose()
   }
 
   return (
@@ -67,6 +71,11 @@ export default function CardForm({ open, initial, onClose, onSave }) {
       }
     >
       <div className="space-y-4">
+        {saveError && (
+          <p role="alert" className="rounded-lg bg-red-50 px-3 py-2.5 text-sm text-red-700">
+            Couldn&apos;t save the card: {saveError}
+          </p>
+        )}
         <Field label="Bank Name" htmlFor="wc-bank">
           <input id="wc-bank" className={inputClass} value={form.bankName} onChange={(e) => set({ bankName: e.target.value })} />
         </Field>

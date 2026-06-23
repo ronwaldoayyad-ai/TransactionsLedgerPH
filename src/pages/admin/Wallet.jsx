@@ -145,11 +145,11 @@ export default function Wallet() {
           initial={cardModal.initial}
           onClose={() => setCardModal(null)}
           onSave={async (data) => {
-            if (cardModal.initial) await wallet.updateCard(cardModal.initial.id, data)
-            else {
-              const c = await wallet.addCard(data)
-              if (c) setSelectedId(c.id)
-            }
+            if (cardModal.initial) return await wallet.updateCard(cardModal.initial.id, data)
+            const res = await wallet.addCard(data)
+            if (res?.error) return res.error
+            if (res?.card) setSelectedId(res.card.id)
+            return null
           }}
         />
       )}
@@ -184,9 +184,11 @@ function MyCards({ cards, selected, setSelectedId, onAdd, onEdit, onDelete }) {
   }
   return (
     <div className="space-y-5">
-      {/* Overlapping interactive stack */}
-      <div className="flex justify-center overflow-x-auto px-4 py-8">
-        <div className="flex">
+      {/* Overlapping interactive stack. The outer scroll area has generous top
+          padding (pt-16) so the active card's upward lift (-translate-y-10) is
+          never clipped; horizontal scroll kicks in only when cards overflow. */}
+      <div className="overflow-x-auto overflow-y-hidden">
+        <div className="mx-auto flex w-max px-6 pt-16 pb-8">
           {cards.map((c, i) => {
             const active = selected?.id === c.id
             return (
@@ -195,12 +197,12 @@ function MyCards({ cards, selected, setSelectedId, onAdd, onEdit, onDelete }) {
                 type="button"
                 onClick={() => setSelectedId(c.id)}
                 aria-label={`Select ${c.bankName} card`}
-                className={`w-64 shrink-0 transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${i > 0 ? '-ml-40' : ''} ${
-                  active ? '-translate-y-10 scale-105' : 'cursor-pointer hover:-translate-y-3'
+                className={`block w-80 shrink-0 transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${i > 0 ? '-ml-48' : ''} ${
+                  active ? '-translate-y-10 scale-[1.05]' : 'cursor-pointer hover:-translate-y-3'
                 }`}
                 style={{ zIndex: active ? 50 : i + 1 }}
               >
-                <CardVisual card={c} />
+                <CardVisual card={c} className={active ? 'ring-1 ring-black/10 shadow-2xl' : ''} />
               </button>
             )
           })}
