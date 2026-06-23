@@ -14,9 +14,8 @@ function readableText(hex) {
   return lum > 0.6 ? '#0f172a' : '#ffffff'
 }
 
-function NetworkLogo({ network, className }) {
+function NetworkLogo({ src, className }) {
   const [failed, setFailed] = useState(false)
-  const src = cardNetworkSvg(network)
   if (!src || failed) return null // FR1.6: hide on failure, no text fallback
   return <img src={src} alt="" onError={() => setFailed(true)} className={className} />
 }
@@ -74,7 +73,11 @@ export function CardVisual({ card, onClick, className = '', style = {} }) {
             </>
           ) : null}
         </div>
-        <NetworkLogo network={card.network} className="h-6 max-h-6 w-10 shrink-0 object-contain object-right" />
+        <NetworkLogo
+          key={card.networkLogo || card.network}
+          src={card.networkLogo || cardNetworkSvg(card.network)}
+          className="h-6 max-h-6 w-10 shrink-0 object-contain object-right"
+        />
       </div>
     </Comp>
   )

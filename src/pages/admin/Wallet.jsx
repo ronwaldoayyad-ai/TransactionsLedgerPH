@@ -7,8 +7,17 @@ import { CardVisual, MiniCard } from '../../components/wallet/CardVisual'
 import CardForm from '../../components/wallet/CardForm'
 import BillTracker from '../../components/wallet/BillTracker'
 import WalletAnalytics from '../../components/wallet/WalletAnalytics'
-import { formatPeso } from '../../lib/amortization'
+import { formatDate, formatPeso } from '../../lib/amortization'
 import { portfolioTotals } from '../../lib/wallet'
+
+// Black/white text for contrast against a banner color.
+function readable(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex || '')
+  if (!m) return '#ffffff'
+  const n = parseInt(m[1], 16)
+  const lum = (0.299 * ((n >> 16) & 255) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255
+  return lum > 0.6 ? '#0f172a' : '#ffffff'
+}
 
 const TABS = [
   ['cards', 'My Cards'],
@@ -109,28 +118,52 @@ export default function Wallet() {
           {cards.length === 0 ? (
             <EmptyState icon="wallet" title="No cards yet" body="Add a card to get started." />
           ) : (
-            <ul className="max-h-[32rem] space-y-2 overflow-y-auto p-3">
-              {cards.map((c) => (
-                <li key={c.id}>
-                  <button
-                    onClick={() => {
-                      setSelectedId(c.id)
-                      setTab('cards')
-                    }}
-                    className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition-colors duration-150 ${
-                      selected?.id === c.id ? 'border-navy-300 bg-navy-50/50' : 'cursor-pointer border-slate-200 hover:bg-slate-50'
+            // Dynamic height — grows to fit every card, no inner scrollbar. Hover
+            // a row to reveal ▲/▼ reorder controls (kept in sync with the stack).
+            <ul className="space-y-2 p-3">
+              {cards.map((c, i) => (
+                <li key={c.id} className="group relative">
+                  <div
+                    className={`flex items-center gap-2 rounded-xl border p-3 transition-colors duration-150 ${
+                      selected?.id === c.id ? 'border-navy-300 bg-navy-50/50' : 'border-slate-200 hover:bg-slate-50'
                     }`}
                   >
-                    <MiniCard card={c} />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-slate-900">{c.bankName} •••• {c.last4}</p>
-                      <p className="truncate text-xs text-slate-500">{c.network} {c.tier}</p>
+                    <button
+                      onClick={() => {
+                        setSelectedId(c.id)
+                        setTab('cards')
+                      }}
+                      className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left"
+                    >
+                      <MiniCard card={c} />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-slate-900">{c.bankName} •••• {c.last4}</p>
+                        <p className="truncate text-xs text-slate-500">{c.network} {c.tier}</p>
+                      </div>
+                      <div className="shrink-0 text-right text-[11px] leading-tight">
+                        <p className="text-slate-500">Limit: {formatPeso(c.creditLimit)}</p>
+                        <p className="font-semibold text-emerald-600">Avail: {formatPeso(c.availableLimit)}</p>
+                      </div>
+                    </button>
+                    <div className="flex shrink-0 flex-col gap-0.5 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+                      <button
+                        onClick={() => wallet.moveCard(c.id, 'up')}
+                        disabled={i === 0}
+                        aria-label="Move card up"
+                        className="flex h-5 w-5 cursor-pointer items-center justify-center rounded text-xs text-slate-400 transition-colors hover:bg-slate-100 hover:text-navy-700 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
+                      >
+                        ▲
+                      </button>
+                      <button
+                        onClick={() => wallet.moveCard(c.id, 'down')}
+                        disabled={i === cards.length - 1}
+                        aria-label="Move card down"
+                        className="flex h-5 w-5 cursor-pointer items-center justify-center rounded text-xs text-slate-400 transition-colors hover:bg-slate-100 hover:text-navy-700 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent"
+                      >
+                        ▼
+                      </button>
                     </div>
-                    <div className="shrink-0 text-right text-xs">
-                      <p className="text-slate-500">Limit: {formatPeso(c.creditLimit)}</p>
-                      <p className="font-semibold text-emerald-600">Avail: {formatPeso(c.availableLimit)}</p>
-                    </div>
-                  </button>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -182,61 +215,122 @@ function MyCards({ cards, selected, setSelectedId, onAdd, onEdit, onDelete }) {
       </Card>
     )
   }
+  const n = cards.length
+  const activeIndex = Math.max(0, cards.findIndex((c) => c.id === selected?.id))
+  // Custom circular index: wraps past either end (infinite loop).
+  const go = (i) => setSelectedId(cards[((i % n) + n) % n].id)
+
   return (
     <div className="space-y-5">
-      {/* Overlapping interactive stack. The outer scroll area has generous top
-          padding (pt-16) so the active card's upward lift (-translate-y-10) is
-          never clipped; horizontal scroll kicks in only when cards overflow. */}
-      <div className="overflow-x-auto overflow-y-hidden">
-        <div className="mx-auto flex w-max px-6 pt-16 pb-8">
-          {cards.map((c, i) => {
-            const active = selected?.id === c.id
-            return (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => setSelectedId(c.id)}
-                aria-label={`Select ${c.bankName} card`}
-                className={`block w-80 shrink-0 transition-transform duration-300 ease-[cubic-bezier(0.34,1.56,0.64,1)] ${i > 0 ? '-ml-48' : ''} ${
-                  active ? '-translate-y-10 scale-[1.05]' : 'cursor-pointer hover:-translate-y-3'
-                }`}
-                style={{ zIndex: active ? 50 : i + 1 }}
-              >
-                <CardVisual card={c} className={active ? 'ring-1 ring-black/10 shadow-2xl' : ''} />
-              </button>
-            )
-          })}
-        </div>
+      {/* Coverflow — 3D tilted carousel, no scrollbar. Each card's signed
+          circular offset from the active card drives a perspective rotateY +
+          depth + scale. Click a side card (or a nav arrow) to bring it center. */}
+      <div className="relative h-[280px] select-none" style={{ perspective: '1300px' }}>
+        {cards.map((c, i) => {
+          let off = i - activeIndex
+          if (off > n / 2) off -= n
+          if (off < -n / 2) off += n
+          const abs = Math.abs(off)
+          const hidden = abs > 2
+          return (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => go(i)}
+              aria-label={`Show ${c.bankName} card`}
+              className="absolute left-1/2 top-1/2 w-72 cursor-pointer transition-all duration-500 ease-[cubic-bezier(0.25,0.8,0.3,1)]"
+              style={{
+                transform: `translate(-50%, -50%) translateX(${off * 132}px) translateZ(${-abs * 90}px) rotateY(${off * -38}deg) scale(${1 - abs * 0.05})`,
+                zIndex: 100 - abs,
+                opacity: hidden ? 0 : 1 - abs * 0.18,
+                pointerEvents: hidden ? 'none' : 'auto',
+                filter: off === 0 ? 'none' : 'brightness(0.82)',
+              }}
+            >
+              <CardVisual card={c} className={off === 0 ? 'shadow-2xl ring-1 ring-black/10' : 'shadow-xl'} />
+            </button>
+          )
+        })}
+        {n > 1 && (
+          <>
+            <NavArrow side="left" onClick={() => go(activeIndex - 1)} />
+            <NavArrow side="right" onClick={() => go(activeIndex + 1)} />
+          </>
+        )}
       </div>
 
-      {/* Detail panel */}
-      {selected && (
-        <Card>
-          <div className="border-b border-slate-100 px-5 py-4">
-            <h2 className="text-lg font-bold text-slate-900">
-              {selected.bankName} {selected.network} {selected.tier} (•• {selected.last4})
-            </h2>
-          </div>
-          <dl className="grid grid-cols-2 gap-x-6 gap-y-4 px-5 py-5">
-            <Detail label="Credit Limit" value={formatPeso(selected.creditLimit)} />
-            <Detail label="Available Limit" value={formatPeso(selected.availableLimit)} valueClass="text-emerald-600" />
-            <Detail label="Card Tier" value={selected.tier} />
-            <Detail label="Network" value={selected.network} />
-            {selected.category ? <Detail label="Card Category" value={selected.category} /> : null}
-            <Detail label="Statement Date" value={selected.statementDate || '—'} />
-            <Detail label="Due Date" value={selected.dueDate || '—'} />
-          </dl>
-          <div className="flex flex-wrap gap-2 border-t border-slate-100 px-5 py-4">
-            <Button variant="secondary" onClick={() => onEdit(selected)}>Edit Card</Button>
-            <Button variant="danger" onClick={() => onDelete(selected.id)}>Delete Card</Button>
-          </div>
-        </Card>
-      )}
+      {selected && <CardDetail card={selected} onEdit={onEdit} onDelete={onDelete} />}
 
       <div className="flex justify-center">
         <Button onClick={onAdd}>+ Add New Card</Button>
       </div>
     </div>
+  )
+}
+
+// Apple-like frosted-glass navigation arrow.
+function NavArrow({ side, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={side === 'left' ? 'Previous card' : 'Next card'}
+      className={`absolute top-1/2 z-[200] flex h-11 w-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-white/60 bg-white/30 text-slate-700 shadow-lg backdrop-blur-md transition-all duration-200 hover:bg-white/70 active:scale-95 ${
+        side === 'left' ? 'left-1 sm:left-2' : 'right-1 sm:right-2'
+      }`}
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+        <path d={side === 'left' ? 'M15 18l-6-6 6-6' : 'M9 18l6-6-6-6'} />
+      </svg>
+    </button>
+  )
+}
+
+function CardDetail({ card, onEdit, onDelete }) {
+  return (
+    <Card className="overflow-hidden">
+      {/* Flush edge-to-edge banner. Gradient flows "to left" so the primary
+          color sits at the right, giving high contrast behind the bank logo. */}
+      <div
+        className="flex items-center justify-between gap-3 px-5 py-4"
+        style={{
+          background: `linear-gradient(to left, ${card.primaryColor}, ${card.secondaryColor})`,
+          color: readable(card.secondaryColor),
+        }}
+      >
+        <h2 className="min-w-0 truncate text-lg font-bold">
+          {[card.bankName, card.category, card.network, card.tier].filter(Boolean).join(' ')} (•• {card.last4})
+        </h2>
+        {card.bankLogo ? (
+          <img src={card.bankLogo} alt={card.bankName} className="h-8 max-w-[28%] shrink-0 object-contain object-right" />
+        ) : (
+          <span className="shrink-0 text-base font-bold" style={{ color: readable(card.primaryColor) }}>
+            {card.bankName}
+          </span>
+        )}
+      </div>
+      <dl className="grid grid-cols-2 gap-x-6 gap-y-4 px-5 py-5">
+        <Detail label="Credit Limit" value={formatPeso(card.creditLimit)} />
+        <Detail label="Available Limit" value={formatPeso(card.availableLimit)} valueClass="text-emerald-600" />
+        <Detail label="Card Tier" value={card.tier} />
+        <Detail label="Network" value={card.network} />
+        {card.category ? <Detail label="Card Category" value={card.category} /> : null}
+        <Detail label="Statement Date" value={card.statementDate || '—'} />
+        <Detail label="Due Date" value={card.dueDate || '—'} />
+        {card.naffl ? (
+          <Detail label="Annual Membership Fee" value="Waived for Life" valueClass="text-emerald-600" />
+        ) : (
+          <>
+            <Detail label="Annual Membership Fee" value={formatPeso(card.amf)} />
+            <Detail label="Anniversary Date" value={card.amfDate ? formatDate(card.amfDate) : '—'} />
+          </>
+        )}
+      </dl>
+      <div className="flex flex-wrap gap-2 border-t border-slate-100 px-5 py-4">
+        <Button variant="secondary" onClick={() => onEdit(card)}>Edit Card</Button>
+        <Button variant="danger" onClick={() => onDelete(card.id)}>Delete Card</Button>
+      </div>
+    </Card>
   )
 }
 

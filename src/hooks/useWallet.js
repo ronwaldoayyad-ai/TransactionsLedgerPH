@@ -15,6 +15,7 @@ const mapCard = (r) => ({
   id: r.id,
   bankName: r.bank_name ?? '',
   bankLogo: r.bank_logo ?? '',
+  networkLogo: r.network_logo ?? '',
   primaryColor: r.primary_color ?? '#1e3a8a',
   secondaryColor: r.secondary_color ?? '#0ea5e9',
   first6: r.first6 ?? '',
@@ -26,11 +27,18 @@ const mapCard = (r) => ({
   availableLimit: num(r.available_limit),
   statementDate: r.statement_date ?? '',
   dueDate: r.due_date ?? '',
+  naffl: !!r.naffl,
+  amf: num(r.amf),
+  amfDate: day(r.amf_date),
+  sortOrder: r.sort_order ?? 0,
   createdAt: r.created_at ?? null,
 })
+// Note: sort_order is managed separately (addCard / moveCard), never via the
+// edit form, so it is intentionally excluded here.
 const toDbCard = (c) => ({
   bank_name: c.bankName,
   bank_logo: c.bankLogo || null,
+  network_logo: c.networkLogo || null,
   primary_color: c.primaryColor,
   secondary_color: c.secondaryColor,
   first6: c.first6,
@@ -42,6 +50,9 @@ const toDbCard = (c) => ({
   available_limit: c.availableLimit,
   statement_date: c.statementDate,
   due_date: c.dueDate,
+  naffl: !!c.naffl,
+  amf: c.naffl ? 0 : c.amf || 0,
+  amf_date: c.naffl ? null : c.amfDate || null,
 })
 const mapBill = (r) => ({
   id: r.id,
@@ -74,7 +85,7 @@ export function useWallet() {
 
   const fetchAll = useCallback(async () => {
     const [c, b, p] = await Promise.all([
-      supabase.from('wallet_cards').select('*').order('created_at'),
+      supabase.from('wallet_cards').select('*').order('sort_order').order('created_at'),
       supabase.from('wallet_bills').select('*').order('due_date'),
       supabase.from('wallet_payments').select('*').order('paid_on', { ascending: false }),
     ])
@@ -113,10 +124,11 @@ export function useWallet() {
   // ---- Cards ----
   const addCard = useCallback(
     async (input) => {
+      const sortOrder = cards.length ? Math.max(...cards.map((c) => c.sortOrder ?? 0)) + 1 : 0
       if (isLive) {
         const { data, error: e } = await supabase
           .from('wallet_cards')
-          .insert(toDbCard(input))
+          .insert({ ...toDbCard(input), sort_order: sortOrder })
           .select()
           .single()
         if (e) {
@@ -127,11 +139,33 @@ export function useWallet() {
         setCards((prev) => [...prev, card])
         return { card }
       }
-      const card = { ...input, id: demoId() }
+      const card = { ...input, id: demoId(), sortOrder }
       setCards((prev) => [...prev, card])
       return { card }
     },
-    [isLive],
+    [isLive, cards],
+  )
+
+  // Reorder a card up/down. Reassigns sequential sort_order across all cards and
+  // persists, so the Coverflow stack and the list stay in sync (and survive reload).
+  const moveCard = useCallback(
+    async (id, dir) => {
+      const ordered = [...cards]
+      const i = ordered.findIndex((c) => c.id === id)
+      const j = i + (dir === 'up' ? -1 : 1)
+      if (i < 0 || j < 0 || j >= ordered.length) return
+      ;[ordered[i], ordered[j]] = [ordered[j], ordered[i]]
+      const reindexed = ordered.map((c, idx) => ({ ...c, sortOrder: idx }))
+      setCards(reindexed)
+      if (isLive) {
+        await Promise.all(
+          reindexed.map((c) =>
+            supabase.from('wallet_cards').update({ sort_order: c.sortOrder }).eq('id', c.id),
+          ),
+        )
+      }
+    },
+    [isLive, cards],
   )
 
   const updateCard = useCallback(
@@ -295,12 +329,13 @@ export function useWallet() {
       addCard,
       updateCard,
       deleteCard,
+      moveCard,
       addBill,
       updateBill,
       deleteBill,
       payBill,
       deletePayment,
     }),
-    [cards, bills, payments, loading, error, reload, addCard, updateCard, deleteCard, addBill, updateBill, deleteBill, payBill, deletePayment],
+    [cards, bills, payments, loading, error, reload, addCard, updateCard, deleteCard, moveCard, addBill, updateBill, deleteBill, payBill, deletePayment],
   )
 }

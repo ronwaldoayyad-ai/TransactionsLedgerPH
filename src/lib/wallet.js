@@ -9,13 +9,13 @@ export const CATEGORIES = ['Cashback', 'Travel', 'Rewards']
 // Card-network logos from public Wikimedia Commons SVGs (FR1.6). If a URL fails
 // to load the UI hides it entirely — there is no text fallback.
 export const NETWORK_SVG = {
-  Visa: 'https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg',
+  Visa: 'https://upload.wikimedia.org/wikipedia/commons/5/5c/Visa_Inc._logo_%282021%E2%80%93present%29.svg',
   Mastercard: 'https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg',
   Amex: 'https://upload.wikimedia.org/wikipedia/commons/3/30/American_Express_logo.svg',
   JCB: 'https://upload.wikimedia.org/wikipedia/commons/4/40/JCB_logo.svg',
-  Discover: 'https://upload.wikimedia.org/wikipedia/commons/d/d8/Discover_Card_logo.svg',
-  'Diners Club': 'https://upload.wikimedia.org/wikipedia/commons/a/a4/Diners_Club_Logo3.svg',
-  UnionPay: 'https://upload.wikimedia.org/wikipedia/commons/d/dc/UnionPay_logo.svg',
+  Discover: 'https://upload.wikimedia.org/wikipedia/commons/5/57/Discover_Card_logo.svg',
+  'Diners Club': 'https://upload.wikimedia.org/wikipedia/commons/a/a6/Diners_Club_Logo3.svg',
+  UnionPay: 'https://upload.wikimedia.org/wikipedia/commons/1/1b/UnionPay_logo.svg',
 }
 export const cardNetworkSvg = (network) => NETWORK_SVG[network] ?? null
 

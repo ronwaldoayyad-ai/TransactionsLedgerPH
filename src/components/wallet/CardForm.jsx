@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { Button, CurrencyInput, Field, Modal, inputClass } from '../ui'
+import { Button, CurrencyInput, Field, Modal, Switch, inputClass } from '../ui'
 import { CATEGORIES, NETWORKS, TIERS } from '../../lib/wallet'
 
 const BLANK = {
   bankName: '',
   bankLogo: '',
+  networkLogo: '',
   primaryColor: '#1e3a8a',
   secondaryColor: '#0ea5e9',
   first6: '',
@@ -16,6 +17,9 @@ const BLANK = {
   availableLimit: 0,
   statementDate: '',
   dueDate: '',
+  naffl: false,
+  amf: 0,
+  amfDate: '',
 }
 
 // Add/Edit card modal. Mounted with a `key` by the parent so it initializes
@@ -23,26 +27,33 @@ const BLANK = {
 export default function CardForm({ open, initial, onClose, onSave }) {
   const [form, setForm] = useState(() => ({ ...BLANK, ...(initial ?? {}) }))
   const [logoName, setLogoName] = useState('')
+  const [netLogoName, setNetLogoName] = useState('')
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
   const set = (patch) => setForm((f) => ({ ...f, ...patch }))
 
-  // FR1.5 dual logo input: URL and file are mutually exclusive.
+  // Dual logo inputs (bank + network override): URL and file are mutually exclusive.
+  const fileToField = (file, field, setName) => {
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      set({ [field]: String(reader.result) }) // base64 data URI (PRD §2)
+      setName(file.name)
+    }
+    reader.readAsDataURL(file)
+  }
   const urlValue = form.bankLogo.startsWith('data:') ? '' : form.bankLogo
   const onUrl = (e) => {
     set({ bankLogo: e.target.value })
     setLogoName('')
   }
-  const onFile = (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => {
-      set({ bankLogo: String(reader.result) }) // base64 data URI (PRD §2)
-      setLogoName(file.name)
-    }
-    reader.readAsDataURL(file)
+  const onFile = (e) => fileToField(e.target.files?.[0], 'bankLogo', setLogoName)
+  const netUrlValue = (form.networkLogo || '').startsWith('data:') ? '' : form.networkLogo || ''
+  const onNetUrl = (e) => {
+    set({ networkLogo: e.target.value })
+    setNetLogoName('')
   }
+  const onNetFile = (e) => fileToField(e.target.files?.[0], 'networkLogo', setNetLogoName)
 
   const save = async () => {
     setSaving(true)
@@ -133,6 +144,16 @@ export default function CardForm({ open, initial, onClose, onSave }) {
         </div>
 
         <div className="grid grid-cols-2 gap-4">
+          <Field label="Network Logo URL (override)" htmlFor="wc-net-url" hint="Optional — overrides the auto logo.">
+            <input id="wc-net-url" type="url" placeholder="https://…" className={inputClass} value={netUrlValue} onChange={onNetUrl} />
+          </Field>
+          <Field label="Or Upload Network Logo" htmlFor="wc-net-file">
+            <input id="wc-net-file" type="file" accept="image/*" onChange={onNetFile} className="block w-full text-xs text-slate-600 file:mr-2 file:rounded-md file:border file:border-slate-300 file:bg-slate-50 file:px-2 file:py-1.5 file:text-xs" />
+            {netLogoName && <p className="mt-1 truncate text-xs text-slate-500">{netLogoName}</p>}
+          </Field>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
           <Field label="Credit Limit (₱)" htmlFor="wc-credit">
             <CurrencyInput id="wc-credit" value={form.creditLimit} onValueChange={(v) => set({ creditLimit: v ?? 0 })} />
           </Field>
@@ -148,6 +169,28 @@ export default function CardForm({ open, initial, onClose, onSave }) {
           <Field label="Due Date" htmlFor="wc-due" hint="e.g. 21st">
             <input id="wc-due" className={inputClass} value={form.dueDate} onChange={(e) => set({ dueDate: e.target.value })} />
           </Field>
+        </div>
+
+        <div className="rounded-lg border border-slate-200 px-4 py-3">
+          <label className="flex items-center justify-between gap-3">
+            <span>
+              <span className="text-sm font-medium text-slate-700">No Annual Fee for Life (NAFFL)</span>
+              <span className="mt-0.5 block text-xs text-slate-500">
+                {form.naffl ? 'Annual fee waived for life.' : 'This card has an annual membership fee.'}
+              </span>
+            </span>
+            <Switch checked={form.naffl} onChange={(v) => set({ naffl: v })} label="No Annual Fee for Life" />
+          </label>
+          {!form.naffl && (
+            <div className="mt-3 grid grid-cols-2 gap-4">
+              <Field label="Annual Membership Fee (₱)" htmlFor="wc-amf">
+                <CurrencyInput id="wc-amf" value={form.amf} onValueChange={(v) => set({ amf: v ?? 0 })} />
+              </Field>
+              <Field label="Anniversary Date (AMF charged)" htmlFor="wc-amf-date">
+                <input id="wc-amf-date" type="date" className={inputClass} value={form.amfDate ?? ''} onChange={(e) => set({ amfDate: e.target.value })} />
+              </Field>
+            </div>
+          )}
         </div>
       </div>
     </Modal>
