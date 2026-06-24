@@ -7,8 +7,8 @@ import { CardVisual, MiniCard } from '../../components/wallet/CardVisual'
 import CardForm from '../../components/wallet/CardForm'
 import BillTracker from '../../components/wallet/BillTracker'
 import WalletAnalytics from '../../components/wallet/WalletAnalytics'
-import { formatDate, formatPeso } from '../../lib/amortization'
-import { portfolioTotals } from '../../lib/wallet'
+import { formatDate, formatPeso, toISODate } from '../../lib/amortization'
+import { cardAgeLabel, portfolioTotals } from '../../lib/wallet'
 
 // Black/white text for contrast against a banner color.
 function readable(hex) {
@@ -21,7 +21,7 @@ function readable(hex) {
 
 const TABS = [
   ['cards', 'My Cards'],
-  ['bills', 'Bill Tracker'],
+  ['bills', 'Bills Tracker'],
   ['analytics', 'Analytics'],
 ]
 
@@ -317,6 +317,13 @@ function CardDetail({ card, onEdit, onDelete }) {
         {card.category ? <Detail label="Card Category" value={card.category} /> : null}
         <Detail label="Statement Date" value={card.statementDate || '—'} />
         <Detail label="Due Date" value={card.dueDate || '—'} />
+        <Detail label="Card Activation Date" value={card.activationDate ? formatDate(card.activationDate) : '—'} />
+        <Detail label="Card Expiry Date" value={card.expiryDate ? formatDate(card.expiryDate) : '—'} />
+        <Detail
+          label="In Your Possession"
+          value={card.activationDate ? cardAgeLabel(card.activationDate, toISODate(new Date())) : '—'}
+          valueClass="text-navy-700"
+        />
         {card.naffl ? (
           <Detail label="Annual Membership Fee" value="Waived for Life" valueClass="text-emerald-600" />
         ) : (

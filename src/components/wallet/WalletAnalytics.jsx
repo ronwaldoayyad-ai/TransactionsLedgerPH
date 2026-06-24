@@ -14,7 +14,8 @@ const monthLabel = (ym) => {
 const DONUT = [
   { key: 'paid', name: 'Paid', color: '#10b981' },
   { key: 'partial', name: 'Partial', color: '#f59e0b' },
-  { key: 'pending', name: 'Pending/Past Due', color: '#3b82f6' },
+  { key: 'pending', name: 'Pending', color: '#3b82f6' },
+  { key: 'past_due', name: 'Past Due', color: '#ef4444' },
 ]
 
 export default function WalletAnalytics({ cards, bills, payments }) {
@@ -33,10 +34,11 @@ export default function WalletAnalytics({ cards, bills, payments }) {
   const progress = totalBilled > 0 ? Math.min(100, (totalPaid / totalBilled) * 100) : 0
 
   const counts = useMemo(() => {
-    const c = { paid: 0, partial: 0, pending: 0 }
+    const c = { paid: 0, partial: 0, pending: 0, past_due: 0 }
     states.forEach((s) => {
       if (s.status === 'paid') c.paid += 1
       else if (s.partial) c.partial += 1
+      else if (s.status === 'past_due') c.past_due += 1
       else c.pending += 1
     })
     return c

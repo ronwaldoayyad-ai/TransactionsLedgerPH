@@ -54,6 +54,28 @@ export function urgencyBadge(bill, today) {
   return { tone: 'blue', label: `${d} days left` }
 }
 
+// How long the card has been held — measured from the activation date to
+// today (the expiry date is deliberately ignored).
+export function cardAge(activationDate, today) {
+  if (!activationDate) return null
+  const a = parseISODate(activationDate)
+  const t = parseISODate(today)
+  if (a > t) return { years: 0, months: 0 }
+  let months = (t.getFullYear() - a.getFullYear()) * 12 + (t.getMonth() - a.getMonth())
+  if (t.getDate() < a.getDate()) months -= 1
+  if (months < 0) months = 0
+  return { years: Math.floor(months / 12), months: months % 12 }
+}
+
+export function cardAgeLabel(activationDate, today) {
+  const age = cardAge(activationDate, today)
+  if (!age) return '—'
+  const parts = []
+  if (age.years) parts.push(`${age.years} year${age.years === 1 ? '' : 's'}`)
+  parts.push(`${age.months} month${age.months === 1 ? '' : 's'}`)
+  return parts.join(', ')
+}
+
 // Global portfolio totals across all cards (FR3.1).
 export function portfolioTotals(cards) {
   return cards.reduce(

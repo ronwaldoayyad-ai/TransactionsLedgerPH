@@ -17,6 +17,8 @@ const BLANK = {
   availableLimit: 0,
   statementDate: '',
   dueDate: '',
+  activationDate: '',
+  expiryDate: '',
   naffl: false,
   amf: 0,
   amfDate: '',
@@ -168,6 +170,15 @@ export default function CardForm({ open, initial, onClose, onSave }) {
           </Field>
           <Field label="Due Date" htmlFor="wc-due" hint="e.g. 21st">
             <input id="wc-due" className={inputClass} value={form.dueDate} onChange={(e) => set({ dueDate: e.target.value })} />
+          </Field>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Card Activation Date" htmlFor="wc-activation" hint="Used to compute how long you've had the card.">
+            <input id="wc-activation" type="date" className={inputClass} value={form.activationDate ?? ''} onChange={(e) => set({ activationDate: e.target.value })} />
+          </Field>
+          <Field label="Card Expiry Date" htmlFor="wc-expiry">
+            <input id="wc-expiry" type="date" className={inputClass} value={form.expiryDate ?? ''} onChange={(e) => set({ expiryDate: e.target.value })} />
           </Field>
         </div>
 

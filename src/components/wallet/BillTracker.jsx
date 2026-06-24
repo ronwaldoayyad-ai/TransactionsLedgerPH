@@ -1,12 +1,11 @@
 import { useMemo, useState } from 'react'
 import { Button, CurrencyInput, EmptyState, Field, Modal, inputClass } from '../ui'
-import Icon from '../Icon'
 import { MiniCard } from './CardVisual'
 
-// Apple-like pill buttons used on each bill row.
-const PILL_BTN = 'inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-150 active:scale-[0.96] cursor-pointer'
+// Apple-like pill buttons, sized to match the urgency badge and status pill.
+const PILL_BTN = 'rounded-full px-3 py-0.5 text-xs font-semibold transition-all duration-150 active:scale-[0.94] cursor-pointer'
 const BILL_BTN = {
-  pay: `${PILL_BTN} bg-emerald-500 text-white shadow-sm hover:bg-emerald-600`,
+  pay: `${PILL_BTN} bg-emerald-500 text-white hover:bg-emerald-600`,
   edit: `${PILL_BTN} bg-slate-100 text-slate-700 hover:bg-slate-200`,
   delete: `${PILL_BTN} bg-red-50 text-red-600 hover:bg-red-100`,
 }
@@ -91,22 +90,26 @@ export default function BillTracker({ cards, bills, payments, wallet }) {
               .filter((p) => p.billId === bill.id)
               .sort((a, b) => String(b.paidOn).localeCompare(String(a.paidOn)))[0]
             return (
-              <div key={bill.id} className={`rounded-xl border border-l-4 border-slate-200 bg-white p-4 ${BORDER[status]}`}>
+              <div className={`rounded-xl border border-l-4 border-slate-200 p-4 ${BORDER[status]} ${status === 'paid' ? 'bg-[#f4f4ee]' : 'bg-white'}`} key={bill.id}>
                 <div className="flex items-start gap-3">
                   {card && <MiniCard card={card} />}
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="flex flex-wrap items-center gap-2">
-                        <span className={`font-bold ${status === 'past_due' ? 'text-red-600' : 'text-slate-900'}`}>
-                          Due: {formatDate(bill.dueDate)}
-                        </span>
-                        {status !== 'paid' && (
-                          <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${BADGE_TONE[badge.tone]}`}>{badge.label}</span>
-                        )}
-                      </p>
-                      <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold uppercase tracking-wide ${PILL[pill]}`}>{pill}</span>
+                    {/* Due date · days badge · action buttons · status pill — one row. */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`font-bold ${status === 'past_due' ? 'text-red-600' : 'text-slate-900'}`}>
+                        Due: {formatDate(bill.dueDate)}
+                      </span>
+                      {status !== 'paid' && (
+                        <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${BADGE_TONE[badge.tone]}`}>{badge.label}</span>
+                      )}
+                      {status !== 'paid' && (
+                        <button type="button" className={BILL_BTN.pay} onClick={() => setPayFor(bill)}>Pay Bill</button>
+                      )}
+                      <button type="button" className={BILL_BTN.edit} onClick={() => setBillModal({ initial: bill })}>Edit</button>
+                      <button type="button" className={BILL_BTN.delete} onClick={() => setConfirmDelete(bill.id)}>Delete</button>
+                      <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide ${PILL[pill]}`}>{pill}</span>
                     </div>
-                    <p className="truncate text-xs text-slate-500">{cardLabel(bill.cardId)}</p>
+                    <p className="mt-1 truncate text-xs text-slate-500">{cardLabel(bill.cardId)}</p>
                     <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 rounded-lg bg-slate-50 px-3 py-2 text-sm">
                       <span className="text-slate-500">Total: <span className="font-semibold text-slate-800">{formatPeso(bill.amountDue)}</span></span>
                       <span className="text-slate-500">
@@ -116,22 +119,6 @@ export default function BillTracker({ cards, bills, payments, wallet }) {
                       <span className="ml-auto text-slate-500">
                         Remaining: <span className={`font-semibold ${remaining > 0 ? 'text-red-600' : 'text-emerald-600'}`}>{formatPeso(remaining)}</span>
                       </span>
-                    </div>
-                    {/* Compact, Apple-like action row directly below the totals. */}
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {status !== 'paid' && (
-                        <button type="button" className={BILL_BTN.pay} onClick={() => setPayFor(bill)}>
-                          Pay Bill
-                        </button>
-                      )}
-                      <button type="button" className={BILL_BTN.edit} onClick={() => setBillModal({ initial: bill })}>
-                        <Icon name="pencil" className="h-3.5 w-3.5" />
-                        Edit
-                      </button>
-                      <button type="button" className={BILL_BTN.delete} onClick={() => setConfirmDelete(bill.id)}>
-                        <Icon name="trash" className="h-3.5 w-3.5" />
-                        Delete
-                      </button>
                     </div>
                   </div>
                 </div>
