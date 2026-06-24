@@ -71,7 +71,37 @@ const mapPayment = (r) => ({
   billId: r.bill_id,
   amount: num(r.amount),
   paidOn: day(r.paid_on),
+  note: r.note ?? '',
+  accountId: r.account_id ?? null,
   createdAt: r.created_at ?? null,
+})
+
+const mapAccount = (r) => ({
+  id: r.id,
+  accountNumber: r.account_number ?? '',
+  productType: r.product_type ?? '',
+  bankName: r.bank_name ?? '',
+  bankCode: r.bank_code ?? '',
+  swiftCode: r.swift_code ?? '',
+  branch: r.branch ?? '',
+  ownership: r.ownership ?? '',
+  availableBalance: num(r.available_balance),
+  maintainingBalance: num(r.maintaining_balance),
+  debitCardNumber: r.debit_card_number ?? '',
+  sortOrder: r.sort_order ?? 0,
+  createdAt: r.created_at ?? null,
+})
+const toDbAccount = (a) => ({
+  account_number: a.accountNumber,
+  product_type: a.productType,
+  bank_name: a.bankName,
+  bank_code: a.bankCode,
+  swift_code: a.swiftCode,
+  branch: a.branch,
+  ownership: a.ownership,
+  available_balance: a.availableBalance,
+  maintaining_balance: a.maintainingBalance,
+  debit_card_number: a.debitCardNumber,
 })
 
 let demoSeq = 0
@@ -82,23 +112,26 @@ export function useWallet() {
   const isLive = realSession?.source === 'supabase'
 
   const [cards, setCards] = useState([])
+  const [accounts, setAccounts] = useState([])
   const [bills, setBills] = useState([])
   const [payments, setPayments] = useState([])
   const [loading, setLoading] = useState(isLive)
   const [error, setError] = useState(null)
 
   const fetchAll = useCallback(async () => {
-    const [c, b, p] = await Promise.all([
+    const [c, ac, b, p] = await Promise.all([
       supabase.from('wallet_cards').select('*').order('sort_order').order('created_at'),
+      supabase.from('wallet_accounts').select('*').order('sort_order').order('created_at'),
       supabase.from('wallet_bills').select('*').order('due_date'),
       supabase.from('wallet_payments').select('*').order('paid_on', { ascending: false }),
     ])
-    const failed = c.error || b.error || p.error
+    const failed = c.error || ac.error || b.error || p.error
     if (failed) {
       console.error('[wallet] load failed:', failed.message)
       setError(`${failed.message} — a migration may be missing`)
     } else setError(null)
     setCards((c.data ?? []).map(mapCard))
+    setAccounts((ac.data ?? []).map(mapAccount))
     setBills((b.data ?? []).map(mapBill))
     setPayments((p.data ?? []).map(mapPayment))
   }, [])
@@ -206,6 +239,83 @@ export function useWallet() {
     [isLive, bills],
   )
 
+  // ---- Accounts ---- (mirror the card CRUD + sort_order)
+  const addAccount = useCallback(
+    async (input) => {
+      const sortOrder = accounts.length ? Math.max(...accounts.map((a) => a.sortOrder ?? 0)) + 1 : 0
+      if (isLive) {
+        const { data, error: e } = await supabase
+          .from('wallet_accounts')
+          .insert({ ...toDbAccount(input), sort_order: sortOrder })
+          .select()
+          .single()
+        if (e) {
+          setError(e.message)
+          return { error: e.message }
+        }
+        const account = mapAccount(data)
+        setAccounts((prev) => [...prev, account])
+        return { account }
+      }
+      const account = { ...input, id: demoId(), sortOrder }
+      setAccounts((prev) => [...prev, account])
+      return { account }
+    },
+    [isLive, accounts],
+  )
+
+  const updateAccount = useCallback(
+    async (id, patch) => {
+      setAccounts((prev) => prev.map((a) => (a.id === id ? { ...a, ...patch } : a)))
+      if (isLive) {
+        const merged = { ...accounts.find((a) => a.id === id), ...patch }
+        const { error: e } = await supabase.from('wallet_accounts').update(toDbAccount(merged)).eq('id', id)
+        if (e) {
+          setError(e.message)
+          return e.message
+        }
+      }
+      return null
+    },
+    [isLive, accounts],
+  )
+
+  const deleteAccount = useCallback(
+    async (id) => {
+      if (isLive) {
+        const { error: e } = await supabase.from('wallet_accounts').delete().eq('id', id)
+        if (e) {
+          setError(e.message)
+          return
+        }
+      }
+      // DB sets payments.account_id to null on delete; mirror locally.
+      setAccounts((prev) => prev.filter((a) => a.id !== id))
+      setPayments((prev) => prev.map((p) => (p.accountId === id ? { ...p, accountId: null } : p)))
+    },
+    [isLive],
+  )
+
+  const moveAccount = useCallback(
+    async (id, dir) => {
+      const ordered = [...accounts]
+      const i = ordered.findIndex((a) => a.id === id)
+      const j = i + (dir === 'up' ? -1 : 1)
+      if (i < 0 || j < 0 || j >= ordered.length) return
+      ;[ordered[i], ordered[j]] = [ordered[j], ordered[i]]
+      const reindexed = ordered.map((a, idx) => ({ ...a, sortOrder: idx }))
+      setAccounts(reindexed)
+      if (isLive) {
+        await Promise.all(
+          reindexed.map((a) =>
+            supabase.from('wallet_accounts').update({ sort_order: a.sortOrder }).eq('id', a.id),
+          ),
+        )
+      }
+    },
+    [isLive, accounts],
+  )
+
   // ---- Bills ----
   const addBill = useCallback(
     async (input) => {
@@ -278,15 +388,33 @@ export function useWallet() {
     [isLive, cards],
   )
 
+  // Debit/credit an account's available balance (delta negative = debit).
+  const bumpAccount = useCallback(
+    async (accountId, delta) => {
+      const account = accounts.find((a) => a.id === accountId)
+      if (!account) return
+      const next = round2((Number(account.availableBalance) || 0) + delta)
+      setAccounts((prev) => prev.map((a) => (a.id === accountId ? { ...a, availableBalance: next } : a)))
+      if (isLive) {
+        const { error: e } = await supabase
+          .from('wallet_accounts')
+          .update({ available_balance: next })
+          .eq('id', accountId)
+        if (e) setError(e.message)
+      }
+    },
+    [isLive, accounts],
+  )
+
   const payBill = useCallback(
-    async (billId, { amount, paidOn }) => {
+    async (billId, { amount, paidOn, note = '', accountId = null }) => {
       const bill = bills.find((b) => b.id === billId)
       if (!bill || !(amount > 0)) return null
       let payment
       if (isLive) {
         const { data, error: e } = await supabase
           .from('wallet_payments')
-          .insert({ bill_id: billId, amount, paid_on: paidOn })
+          .insert({ bill_id: billId, amount, paid_on: paidOn, note, account_id: accountId })
           .select()
           .single()
         if (e) {
@@ -295,13 +423,15 @@ export function useWallet() {
         }
         payment = mapPayment(data)
       } else {
-        payment = { id: demoId(), billId, amount: round2(amount), paidOn }
+        payment = { id: demoId(), billId, amount: round2(amount), paidOn, note, accountId }
       }
       setPayments((prev) => [payment, ...prev])
       await bumpAvailable(bill.cardId, amount)
+      // Deduct from the source account's available balance, if one was chosen.
+      if (accountId) await bumpAccount(accountId, -amount)
       return payment
     },
-    [isLive, bills, bumpAvailable],
+    [isLive, bills, bumpAvailable, bumpAccount],
   )
 
   const deletePayment = useCallback(
@@ -318,13 +448,15 @@ export function useWallet() {
       }
       setPayments((prev) => prev.filter((p) => p.id !== paymentId))
       if (bill) await bumpAvailable(bill.cardId, -payment.amount)
+      if (payment.accountId) await bumpAccount(payment.accountId, payment.amount) // refund
     },
-    [isLive, payments, bills, bumpAvailable],
+    [isLive, payments, bills, bumpAvailable, bumpAccount],
   )
 
   return useMemo(
     () => ({
       cards,
+      accounts,
       bills,
       payments,
       loading,
@@ -334,12 +466,16 @@ export function useWallet() {
       updateCard,
       deleteCard,
       moveCard,
+      addAccount,
+      updateAccount,
+      deleteAccount,
+      moveAccount,
       addBill,
       updateBill,
       deleteBill,
       payBill,
       deletePayment,
     }),
-    [cards, bills, payments, loading, error, reload, addCard, updateCard, deleteCard, moveCard, addBill, updateBill, deleteBill, payBill, deletePayment],
+    [cards, accounts, bills, payments, loading, error, reload, addCard, updateCard, deleteCard, moveCard, addAccount, updateAccount, deleteAccount, moveAccount, addBill, updateBill, deleteBill, payBill, deletePayment],
   )
 }

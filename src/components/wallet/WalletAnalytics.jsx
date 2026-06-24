@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts'
 import { Card, CardHeader, EmptyState } from '../ui'
 import { formatDate, formatPeso, toISODate } from '../../lib/amortization'
-import { billState } from '../../lib/wallet'
+import { accountTotals, billState, groupDeducted } from '../../lib/wallet'
 
 const round2 = (n) => Math.round((n + Number.EPSILON) * 100) / 100
 const monthKey = (iso) => (iso ? iso.slice(0, 7) : '')
@@ -18,7 +18,7 @@ const DONUT = [
   { key: 'past_due', name: 'Past Due', color: '#ef4444' },
 ]
 
-export default function WalletAnalytics({ cards, bills, payments }) {
+export default function WalletAnalytics({ cards, accounts, bills, payments }) {
   const today = toISODate(new Date())
   const cardOf = (id) => cards.find((c) => c.id === id)
   const cardLabel = (id) => {
@@ -67,6 +67,12 @@ export default function WalletAnalytics({ cards, bills, payments }) {
       .sort((a, b) => b.amount - a.amount)
   }, [states])
   const maxDebt = Math.max(1, ...debtByCard.map((d) => d.amount))
+
+  // Accounts analytics: totals + account-sourced deductions grouped 3 ways.
+  const accTotals = useMemo(() => accountTotals(accounts, payments), [accounts, payments])
+  const dedByAccount = useMemo(() => groupDeducted(payments, accounts, 'account'), [payments, accounts])
+  const dedByBank = useMemo(() => groupDeducted(payments, accounts, 'bank'), [payments, accounts])
+  const dedByMonth = useMemo(() => groupDeducted(payments, accounts, 'month'), [payments, accounts])
 
   return (
     <div className="space-y-6">
@@ -186,6 +192,55 @@ export default function WalletAnalytics({ cards, bills, payments }) {
           </div>
         )}
       </Card>
+
+      {/* Accounts summary + account-sourced deductions */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div className="rounded-lg bg-slate-50 p-4">
+          <p className="text-[13px] text-slate-500">Total Accounts</p>
+          <p className="mt-1 font-mono text-2xl font-semibold text-slate-900">{accTotals.count}</p>
+        </div>
+        <div className="rounded-lg bg-slate-50 p-4">
+          <p className="text-[13px] text-slate-500">Total Available Balance</p>
+          <p className="mt-1 font-mono text-2xl font-semibold text-emerald-600">{formatPeso(accTotals.available)}</p>
+        </div>
+        <div className="rounded-lg bg-slate-50 p-4">
+          <p className="text-[13px] text-slate-500">Total Deducted</p>
+          <p className="mt-1 font-mono text-2xl font-semibold text-red-600">{formatPeso(accTotals.deducted)}</p>
+        </div>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        <DeductionGroup title="Deducted by Account" groups={dedByAccount} />
+        <DeductionGroup title="Deducted by Bank" groups={dedByBank} />
+        <DeductionGroup title="Deducted by Month" groups={dedByMonth} labelFmt={monthLabel} />
+      </div>
     </div>
+  )
+}
+
+// A grouped horizontal-bar list of account-sourced deduction amounts.
+function DeductionGroup({ title, groups, labelFmt }) {
+  const max = Math.max(1, ...groups.map((g) => g.amount))
+  return (
+    <Card>
+      <CardHeader title={title} />
+      {groups.length === 0 ? (
+        <EmptyState icon="wallet" title="No deductions yet" />
+      ) : (
+        <div className="space-y-3 px-5 py-4">
+          {groups.map((g) => (
+            <div key={g.key}>
+              <div className="mb-1 flex items-center justify-between gap-2 text-sm">
+                <span className="min-w-0 truncate font-medium text-slate-700">{labelFmt ? labelFmt(g.label) : g.label}</span>
+                <span className="shrink-0 font-mono font-semibold text-slate-900">{formatPeso(g.amount)}</span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                <div className="h-2 rounded-full bg-red-400" style={{ width: `${(g.amount / max) * 100}%` }} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
   )
 }

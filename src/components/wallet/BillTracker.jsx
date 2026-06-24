@@ -10,7 +10,7 @@ const BILL_BTN = {
   delete: `${PILL_BTN} bg-red-50 text-red-600 hover:bg-red-100`,
 }
 import { formatDate, formatPeso, toISODate } from '../../lib/amortization'
-import { billState, urgencyBadge } from '../../lib/wallet'
+import { accountMask, billState, urgencyBadge } from '../../lib/wallet'
 
 const SUB_TABS = [
   ['pending', 'Pending'],
@@ -29,7 +29,7 @@ const PILL = {
   PAID: 'bg-emerald-50 text-emerald-700',
 }
 
-export default function BillTracker({ cards, bills, payments, wallet }) {
+export default function BillTracker({ cards, accounts, bills, payments, wallet }) {
   const today = toISODate(new Date())
   const [sub, setSub] = useState('pending')
   const [billModal, setBillModal] = useState(null) // { initial } | null
@@ -151,12 +151,12 @@ export default function BillTracker({ cards, bills, payments, wallet }) {
       {payFor && (
         <PaymentModal
           key={payFor.id}
-          bill={payFor}
+          accounts={accounts}
           remaining={billState(payFor, payments, today).remaining}
           today={today}
           onClose={() => setPayFor(null)}
-          onPay={async (amount, paidOn) => {
-            await wallet.payBill(payFor.id, { amount, paidOn })
+          onPay={async (amount, paidOn, note, accountId) => {
+            await wallet.payBill(payFor.id, { amount, paidOn, note, accountId })
           }}
         />
       )}
@@ -228,10 +228,12 @@ function BillForm({ cards, initial, today, onClose, onSave }) {
   )
 }
 
-function PaymentModal({ remaining, today, onClose, onPay }) {
+function PaymentModal({ accounts = [], remaining, today, onClose, onPay }) {
   const [mode, setMode] = useState('full') // full | partial
   const [amount, setAmount] = useState(remaining)
   const [paidOn, setPaidOn] = useState(today)
+  const [note, setNote] = useState('')
+  const [accountId, setAccountId] = useState('')
   const [saving, setSaving] = useState(false)
   const payAmount = mode === 'full' ? remaining : amount
   const canPay = payAmount > 0 && paidOn
@@ -249,7 +251,7 @@ function PaymentModal({ remaining, today, onClose, onPay }) {
             disabled={!canPay || saving}
             onClick={async () => {
               setSaving(true)
-              await onPay(payAmount, paidOn)
+              await onPay(payAmount, paidOn, note.trim(), accountId || null)
               setSaving(false)
               onClose()
             }}
@@ -281,6 +283,28 @@ function PaymentModal({ remaining, today, onClose, onPay }) {
         )}
         <Field label="Payment Date" htmlFor="wp-date">
           <input id="wp-date" type="date" className={inputClass} value={paidOn ?? ''} onChange={(e) => setPaidOn(e.target.value)} />
+        </Field>
+        <Field
+          label="Payment Account"
+          htmlFor="wp-account"
+          hint={accounts.length === 0 ? 'No accounts yet — add one in the Accounts tab.' : 'The amount is deducted from this account.'}
+        >
+          <select id="wp-account" className={inputClass} value={accountId} onChange={(e) => setAccountId(e.target.value)}>
+            <option value="">None</option>
+            {accounts.map((a) => (
+              <option key={a.id} value={a.id}>{accountMask(a)}</option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Notes" htmlFor="wp-note">
+          <textarea
+            id="wp-note"
+            rows={2}
+            className={inputClass}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Optional"
+          />
         </Field>
       </div>
     </Modal>

@@ -87,4 +87,67 @@ export function portfolioTotals(cards) {
   )
 }
 
+// ----- Accounts -----
+
+// Masked account label for dropdowns/tiles, e.g. "BPI******1234".
+export function accountMask(a) {
+  if (!a) return ''
+  const code = (a.bankCode || a.bankName || '').toUpperCase()
+  const digits = String(a.accountNumber || '').replace(/\s/g, '')
+  const last4 = digits.slice(-4) || '••••'
+  return `${code}******${last4}`
+}
+
+// Deterministic gradient pair from a seed (accounts carry no color fields), so
+// each bank's tile looks distinct.
+const ACCOUNT_PALETTE = [
+  ['#0f766e', '#14b8a6'], ['#1e3a8a', '#3b82f6'], ['#7c2d12', '#ea580c'],
+  ['#581c87', '#a855f7'], ['#0c4a6e', '#0ea5e9'], ['#134e4a', '#10b981'],
+  ['#3f3f46', '#71717a'], ['#7f1d1d', '#dc2626'],
+]
+export function accountColors(seed) {
+  const s = String(seed || '')
+  let h = 0
+  for (let i = 0; i < s.length; i += 1) h = (h * 31 + s.charCodeAt(i)) >>> 0
+  return ACCOUNT_PALETTE[h % ACCOUNT_PALETTE.length]
+}
+
+// Totals across accounts. "deducted" = sum of bill payments sourced from an
+// account (those carrying an accountId).
+export function accountTotals(accounts, payments) {
+  const available = accounts.reduce((s, a) => s + (Number(a.availableBalance) || 0), 0)
+  const deducted = payments.filter((p) => p.accountId).reduce((s, p) => s + (Number(p.amount) || 0), 0)
+  return { count: accounts.length, available: round2(available), deducted: round2(deducted) }
+}
+
+// Group account-sourced deductions by 'account' | 'bank' | 'month'.
+export function groupDeducted(payments, accounts, by) {
+  const byId = (id) => accounts.find((a) => a.id === id)
+  const groups = new Map()
+  payments
+    .filter((p) => p.accountId)
+    .forEach((p) => {
+      const a = byId(p.accountId)
+      let key
+      let label
+      if (by === 'bank') {
+        key = (a?.bankName || a?.bankCode || 'Unknown').trim() || 'Unknown'
+        label = key
+      } else if (by === 'month') {
+        key = String(p.paidOn || '').slice(0, 7)
+        label = key
+      } else {
+        key = p.accountId
+        label = a ? accountMask(a) : 'Unknown account'
+      }
+      const cur = groups.get(key) ?? { key, label, amount: 0 }
+      cur.amount = round2(cur.amount + (Number(p.amount) || 0))
+      groups.set(key, cur)
+    })
+  const arr = [...groups.values()]
+  return by === 'month'
+    ? arr.sort((x, y) => y.key.localeCompare(x.key))
+    : arr.sort((x, y) => y.amount - x.amount)
+}
+
 export { round2 as walletRound2 }
