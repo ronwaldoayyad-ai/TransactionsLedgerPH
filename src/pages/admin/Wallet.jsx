@@ -10,7 +10,7 @@ import AccountForm from '../../components/wallet/AccountForm'
 import BillTracker from '../../components/wallet/BillTracker'
 import WalletAnalytics from '../../components/wallet/WalletAnalytics'
 import { formatDate, formatPeso, toISODate } from '../../lib/amortization'
-import { accountColors, accountMask, cardAgeLabel, portfolioTotals } from '../../lib/wallet'
+import { accountColors, accountMask, accountTotals, cardAgeLabel, portfolioTotals } from '../../lib/wallet'
 
 // Black/white text for contrast against a banner color.
 function readable(hex) {
@@ -40,6 +40,7 @@ export default function Wallet() {
   const [confirmDeleteAccount, setConfirmDeleteAccount] = useState(null)
 
   const totals = portfolioTotals(cards)
+  const accTotals = accountTotals(accounts, payments)
   const selected = cards.find((c) => c.id === selectedId) ?? cards[0] ?? null
   const selectedAccount = accounts.find((a) => a.id === selectedAccountId) ?? accounts[0] ?? null
   const isAccounts = tab === 'accounts'
@@ -47,7 +48,7 @@ export default function Wallet() {
   return (
     <>
       <PageHeader
-        title="Card & Bills Wallet"
+        title="Cards & Bills Wallet"
         subtitle="Track your cards, accounts, bills, and payments. Private to your account."
         action={
           <button
@@ -81,6 +82,17 @@ export default function Wallet() {
           <p className="mt-1 font-mono text-3xl font-bold text-navy-800">
             {cards.length} · {accounts.length} · {bills.length}
           </p>
+        </Card>
+      </div>
+
+      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <Card className="p-5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total Available Balance</p>
+          <p className="mt-1 font-mono text-3xl font-bold text-emerald-600">{formatPeso(accTotals.available)}</p>
+        </Card>
+        <Card className="p-5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total Deducted</p>
+          <p className="mt-1 font-mono text-3xl font-bold text-red-600">{formatPeso(accTotals.deducted)}</p>
         </Card>
       </div>
 
