@@ -5,6 +5,7 @@ import Icon from '../../components/Icon'
 import RefreshButton from '../../components/RefreshButton'
 import { Badge, Button, Card, CardHeader, CurrencyInput, EmptyState, Field, Modal, MultiSelect, inputClass } from '../../components/ui'
 import { formatDate, formatPeso, toISODate } from '../../lib/amortization'
+import { isReceivable } from '../../lib/transactions'
 import {
   PAY_LOG_METHODS,
   PAY_LOG_STATUSES,
@@ -26,8 +27,15 @@ const allocBadge = {
 // transactions table. Over/under payments produce a separate carry entry that
 // auto-nets into the next log.
 export default function PaymentLogs() {
-  const { users, transactions, paymentLogs, createPaymentLog, updatePaymentLog, deletePaymentLog } =
-    useApp()
+  const {
+    users,
+    transactions,
+    paymentLogs,
+    createPaymentLog,
+    updatePaymentLog,
+    deletePaymentLog,
+    setTransactionStatus,
+  } = useApp()
   const borrowers = useMemo(() => users.filter((u) => u.role === 'user'), [users])
   const today = toISODate(new Date())
   const nameOf = (userId) => users.find((u) => u.id === userId)?.name ?? userId
@@ -108,7 +116,7 @@ export default function PaymentLogs() {
         allocStatus: effectiveStatus,
       })
     } else {
-      await createPaymentLog({
+      const created = await createPaymentLog({
         userId: form.userId,
         txnDate: form.txnDate,
         reference: form.reference,
@@ -119,6 +127,19 @@ export default function PaymentLogs() {
         fundsApplied: form.fundsApplied,
         status: effectiveStatus,
       })
+      // A Settled / Overpayment recording also marks the borrower's outstanding
+      // installments (up to this Due Date) as Paid with today's date.
+      if (created && (effectiveStatus === 'Settled' || effectiveStatus === 'Overpayment')) {
+        const ids = transactions
+          .filter(
+            (t) =>
+              t.userId === form.userId &&
+              isReceivable(t, today) &&
+              (!form.dueDate || t.dueDate <= form.dueDate),
+          )
+          .map((t) => t.id)
+        if (ids.length) setTransactionStatus(ids, 'paid')
+      }
     }
     setSaving(false)
     setOpen(false)
