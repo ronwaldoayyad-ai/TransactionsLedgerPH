@@ -111,6 +111,8 @@ export function Button({ variant = 'primary', className = '', type = 'button', .
     primary:
       'bg-navy-800 text-white hover:bg-navy-700 focus-visible:outline-navy-800 disabled:bg-slate-300',
     gold: 'bg-gold-500 text-white hover:bg-gold-600 focus-visible:outline-gold-600 disabled:bg-slate-300',
+    success:
+      'bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:outline-emerald-600 disabled:bg-slate-300',
     secondary:
       'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 focus-visible:outline-navy-800',
     danger: 'bg-red-600 text-white hover:bg-red-700 focus-visible:outline-red-600',

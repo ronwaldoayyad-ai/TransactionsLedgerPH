@@ -434,6 +434,65 @@ export function useWallet() {
     [isLive, bills, bumpAvailable, bumpAccount],
   )
 
+  // Edit a logged payment's note and/or source account. Changing the account
+  // re-balances both: the old account is refunded, the new one debited.
+  const updatePayment = useCallback(
+    async (paymentId, { note, accountId = null }) => {
+      const payment = payments.find((p) => p.id === paymentId)
+      if (!payment) return
+      const prevAccountId = payment.accountId ?? null
+      const nextAccountId = accountId || null
+      setPayments((prev) =>
+        prev.map((p) => (p.id === paymentId ? { ...p, note: note ?? p.note, accountId: nextAccountId } : p)),
+      )
+      if (isLive) {
+        const { error: e } = await supabase
+          .from('wallet_payments')
+          .update({ note: note ?? payment.note, account_id: nextAccountId })
+          .eq('id', paymentId)
+        if (e) {
+          setError(e.message)
+          return
+        }
+      }
+      if (prevAccountId !== nextAccountId) {
+        if (prevAccountId) await bumpAccount(prevAccountId, payment.amount) // refund old source
+        if (nextAccountId) await bumpAccount(nextAccountId, -payment.amount) // debit new source
+      }
+    },
+    [isLive, payments, bumpAccount],
+  )
+
+  // ---- Account transactions (Add Income / Add Expense) ----
+  // Standalone account ledger entries: an expense debits the account's available
+  // balance, an income credits it. The row is persisted for the record; the
+  // balance change is the user-visible effect (mirrors payBill's insert→bump).
+  const addAccountTxn = useCallback(
+    async ({ accountId, kind, amount, merchant = '', category = '', txnDate = null, note = '' }) => {
+      if (!accountId || !(amount > 0) || (kind !== 'expense' && kind !== 'income')) {
+        return { error: 'Enter a valid amount and account.' }
+      }
+      if (isLive) {
+        const { error: e } = await supabase.from('wallet_account_txns').insert({
+          account_id: accountId,
+          kind,
+          amount,
+          merchant,
+          category,
+          txn_date: txnDate,
+          note,
+        })
+        if (e) {
+          setError(e.message)
+          return { error: e.message }
+        }
+      }
+      await bumpAccount(accountId, kind === 'expense' ? -amount : amount)
+      return {}
+    },
+    [isLive, bumpAccount],
+  )
+
   const deletePayment = useCallback(
     async (paymentId) => {
       const payment = payments.find((p) => p.id === paymentId)
@@ -474,8 +533,10 @@ export function useWallet() {
       updateBill,
       deleteBill,
       payBill,
+      updatePayment,
       deletePayment,
+      addAccountTxn,
     }),
-    [cards, accounts, bills, payments, loading, error, reload, addCard, updateCard, deleteCard, moveCard, addAccount, updateAccount, deleteAccount, moveAccount, addBill, updateBill, deleteBill, payBill, deletePayment],
+    [cards, accounts, bills, payments, loading, error, reload, addCard, updateCard, deleteCard, moveCard, addAccount, updateAccount, deleteAccount, moveAccount, addBill, updateBill, deleteBill, payBill, updatePayment, deletePayment, addAccountTxn],
   )
 }

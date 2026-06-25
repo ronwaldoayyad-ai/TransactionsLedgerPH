@@ -482,7 +482,7 @@ export default function Transactions() {
 
       <Card>
         <CardHeader
-          title="All Installments"
+          title="All Transactions"
           subtitle={`${filtered.length} records · Amount total ${formatPeso(filteredTotal)}${Object.entries(statusCounts)
             .map(([s, c]) => ` · ${c} ${STATUS_LABELS[s].toLowerCase()}`)
             .join('')}`}

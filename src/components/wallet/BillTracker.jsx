@@ -105,7 +105,7 @@ export default function BillTracker({ cards, accounts, bills, payments, wallet }
                       {status !== 'paid' && (
                         <button type="button" className={BILL_BTN.pay} onClick={() => setPayFor(bill)}>Pay Bill</button>
                       )}
-                      <button type="button" className={BILL_BTN.edit} onClick={() => setBillModal({ initial: bill })}>Edit</button>
+                      <button type="button" className={BILL_BTN.edit} onClick={() => setBillModal({ initial: bill, payment: status === 'paid' ? lastPaid : null })}>Edit</button>
                       <button type="button" className={BILL_BTN.delete} onClick={() => setConfirmDelete(bill.id)}>Delete</button>
                       <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide ${PILL[pill]}`}>{pill}</span>
                     </div>
@@ -138,12 +138,17 @@ export default function BillTracker({ cards, accounts, bills, payments, wallet }
         <BillForm
           key={billModal.initial?.id ?? 'new'}
           cards={cards}
+          accounts={accounts}
           initial={billModal.initial}
+          payment={billModal.payment}
           today={today}
           onClose={() => setBillModal(null)}
           onSave={async (data) => {
             if (billModal.initial) await wallet.updateBill(billModal.initial.id, data)
             else await wallet.addBill(data)
+          }}
+          onSavePayment={async (patch) => {
+            if (billModal.payment) await wallet.updatePayment(billModal.payment.id, patch)
           }}
         />
       )}
@@ -178,10 +183,13 @@ export default function BillTracker({ cards, accounts, bills, payments, wallet }
   )
 }
 
-function BillForm({ cards, initial, today, onClose, onSave }) {
+function BillForm({ cards, accounts = [], initial, payment = null, today, onClose, onSave, onSavePayment }) {
   const [cardId, setCardId] = useState(initial?.cardId ?? cards[0]?.id ?? '')
   const [amountDue, setAmountDue] = useState(initial?.amountDue ?? 0)
   const [dueDate, setDueDate] = useState(initial?.dueDate ?? today)
+  // When editing a paid bill, also edit its latest payment's source + note.
+  const [accountId, setAccountId] = useState(payment?.accountId ?? '')
+  const [note, setNote] = useState(payment?.note ?? '')
   const [saving, setSaving] = useState(false)
   const canSave = cardId && amountDue > 0 && dueDate
 
@@ -198,6 +206,7 @@ function BillForm({ cards, initial, today, onClose, onSave }) {
             onClick={async () => {
               setSaving(true)
               await onSave({ cardId, amountDue, dueDate })
+              if (payment) await onSavePayment({ note: note.trim(), accountId: accountId || null })
               setSaving(false)
               onClose()
             }}
@@ -223,6 +232,25 @@ function BillForm({ cards, initial, today, onClose, onSave }) {
             <input id="wb-due" type="date" className={inputClass} value={dueDate ?? ''} onChange={(e) => setDueDate(e.target.value)} />
           </Field>
         </div>
+        {payment && (
+          <>
+            <Field
+              label="Payment Account"
+              htmlFor="wb-account"
+              hint="Changing this refunds the old account and debits the new one."
+            >
+              <select id="wb-account" className={inputClass} value={accountId} onChange={(e) => setAccountId(e.target.value)}>
+                <option value="">None</option>
+                {accounts.map((a) => (
+                  <option key={a.id} value={a.id}>{accountMask(a)}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Notes" htmlFor="wb-note">
+              <textarea id="wb-note" rows={2} className={inputClass} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Optional" />
+            </Field>
+          </>
+        )}
       </div>
     </Modal>
   )

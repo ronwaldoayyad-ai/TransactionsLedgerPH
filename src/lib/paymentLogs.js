@@ -4,7 +4,9 @@
 import { formatDate } from './amortization'
 import { isReceivable } from './transactions'
 
-export const PAY_LOG_METHODS = ['GCash', 'Maya', 'Bank Transfer', 'Cash']
+// "Manual Credit" = the borrower's overpayment is credited against their amount
+// due rather than received as new funds.
+export const PAY_LOG_METHODS = ['GCash', 'Maya', 'Bank Transfer', 'Cash', 'Manual Credit']
 
 // Allocation statuses. Settled/Overpayment/Underpayment are computed by
 // `allocate`; "Credited" is set manually by the admin when editing a log.

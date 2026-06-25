@@ -7,6 +7,7 @@ import { CardVisual, MiniCard } from '../../components/wallet/CardVisual'
 import { AccountVisual, MiniAccount } from '../../components/wallet/AccountVisual'
 import CardForm from '../../components/wallet/CardForm'
 import AccountForm from '../../components/wallet/AccountForm'
+import AccountTxnForm from '../../components/wallet/AccountTxnForm'
 import BillTracker from '../../components/wallet/BillTracker'
 import WalletAnalytics from '../../components/wallet/WalletAnalytics'
 import { formatDate, formatPeso, toISODate } from '../../lib/amortization'
@@ -36,6 +37,7 @@ export default function Wallet() {
   const [selectedAccountId, setSelectedAccountId] = useState(null)
   const [cardModal, setCardModal] = useState(null)
   const [accountModal, setAccountModal] = useState(null)
+  const [txnModal, setTxnModal] = useState(null) // { kind, account } | null
   const [confirmDelete, setConfirmDelete] = useState(null)
   const [confirmDeleteAccount, setConfirmDeleteAccount] = useState(null)
 
@@ -132,6 +134,7 @@ export default function Wallet() {
               onAdd={() => setAccountModal({ initial: null })}
               onEdit={(a) => setAccountModal({ initial: a })}
               onDelete={(id) => setConfirmDeleteAccount(id)}
+              onAddTxn={(kind, account) => setTxnModal({ kind, account })}
             />
           ) : tab === 'bills' ? (
             <BillTracker cards={cards} accounts={accounts} bills={bills} payments={payments} wallet={wallet} />
@@ -222,6 +225,18 @@ export default function Wallet() {
             if (res?.account) setSelectedAccountId(res.account.id)
             return null
           }}
+        />
+      )}
+
+      {txnModal && (
+        <AccountTxnForm
+          key={`${txnModal.kind}-${txnModal.account?.id}`}
+          kind={txnModal.kind}
+          accounts={accounts}
+          defaultAccountId={txnModal.account?.id}
+          today={toISODate(new Date())}
+          onClose={() => setTxnModal(null)}
+          onSave={(data) => wallet.addAccountTxn(data)}
         />
       )}
 
@@ -322,7 +337,7 @@ function MyCards({ cards, selected, setSelectedId, onAdd, onEdit, onDelete }) {
   )
 }
 
-function AccountsView({ accounts, selected, setSelectedAccountId, onAdd, onEdit, onDelete }) {
+function AccountsView({ accounts, selected, setSelectedAccountId, onAdd, onEdit, onDelete, onAddTxn }) {
   if (accounts.length === 0) {
     return (
       <Card>
@@ -340,7 +355,7 @@ function AccountsView({ accounts, selected, setSelectedAccountId, onAdd, onEdit,
         onSelect={(i) => setSelectedAccountId(accounts[i].id)}
         renderItem={(a, active) => <AccountVisual account={a} className={active ? 'shadow-2xl ring-1 ring-black/10' : 'shadow-xl'} />}
       />
-      {selected && <AccountDetail account={selected} onEdit={onEdit} onDelete={onDelete} />}
+      {selected && <AccountDetail account={selected} onEdit={onEdit} onDelete={onDelete} onAddTxn={onAddTxn} />}
       <div className="flex justify-center"><Button onClick={onAdd}>+ Add Account</Button></div>
     </div>
   )
@@ -439,7 +454,7 @@ function CardDetail({ card, onEdit, onDelete }) {
   )
 }
 
-function AccountDetail({ account, onEdit, onDelete }) {
+function AccountDetail({ account, onEdit, onDelete, onAddTxn }) {
   const [c1, c2] = accountColors(account.bankCode || account.bankName)
   return (
     <Card className="overflow-hidden">
@@ -464,9 +479,17 @@ function AccountDetail({ account, onEdit, onDelete }) {
         <Detail label="Available Balance" value={formatPeso(account.availableBalance)} valueClass="text-emerald-600" />
         <Detail label="Maintaining Balance" value={formatPeso(account.maintainingBalance)} />
       </dl>
-      <div className="flex flex-wrap gap-2 border-t border-slate-100 px-5 py-4">
-        <Button variant="secondary" onClick={() => onEdit(account)}>Edit Account</Button>
-        <Button variant="danger" onClick={() => onDelete(account.id)}>Delete Account</Button>
+      <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 px-5 py-4">
+        <Button variant="success" onClick={() => onAddTxn('income', account)}>
+          <Icon name="plus" className="h-4 w-4" />Add Income
+        </Button>
+        <Button variant="secondary" onClick={() => onAddTxn('expense', account)}>
+          <Icon name="plus" className="h-4 w-4" />Add Expense
+        </Button>
+        <span className="ml-auto flex flex-wrap gap-2">
+          <Button variant="secondary" onClick={() => onEdit(account)}>Edit Account</Button>
+          <Button variant="danger" onClick={() => onDelete(account.id)}>Delete Account</Button>
+        </span>
       </div>
     </Card>
   )

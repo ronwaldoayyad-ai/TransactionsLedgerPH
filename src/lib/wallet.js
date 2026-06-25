@@ -6,6 +6,15 @@ export const NETWORKS = ['Visa', 'Mastercard', 'Amex', 'JCB', 'Discover', 'Diner
 export const TIERS = ['Classic', 'Gold', 'Platinum', 'Signature', 'World', 'World Elite', 'Infinite', 'Prestige']
 export const CATEGORIES = ['Cashback', 'Travel', 'Rewards']
 
+// Income categories for the Accounts "Add Income" flow.
+export const INCOME_CATEGORIES = ['Salary', 'Funds Transfer', 'Business Profit', 'Dividends', 'Others']
+
+// Last 4 digits of an account number (e.g. "7890"), used as a compact account label.
+export function accountLast4(a) {
+  const digits = String(a?.accountNumber || '').replace(/\s/g, '')
+  return digits.slice(-4) || '••••'
+}
+
 // Card-network logos from public Wikimedia Commons SVGs (FR1.6). If a URL fails
 // to load the UI hides it entirely — there is no text fallback.
 export const NETWORK_SVG = {
@@ -131,14 +140,16 @@ export function groupDeducted(payments, accounts, by) {
       let key
       let label
       if (by === 'bank') {
-        key = (a?.bankName || a?.bankCode || 'Unknown').trim() || 'Unknown'
+        // Group/label by bank code (fall back to bank name only if no code).
+        key = (a?.bankCode || a?.bankName || 'Unknown').trim() || 'Unknown'
         label = key
       } else if (by === 'month') {
         key = String(p.paidOn || '').slice(0, 7)
         label = key
       } else {
+        // Label accounts by their last 4 digits only.
         key = p.accountId
-        label = a ? accountMask(a) : 'Unknown account'
+        label = a ? accountLast4(a) : 'Unknown account'
       }
       const cur = groups.get(key) ?? { key, label, amount: 0 }
       cur.amount = round2(cur.amount + (Number(p.amount) || 0))
