@@ -123,7 +123,7 @@ export default function StraightTransactions() {
             }
           />
         ) : (
-          <BorrowerScheduleTable transactions={filtered} showTxnDate />
+          <BorrowerScheduleTable transactions={filtered} showTxnDate pageSize={15} />
         )}
       </Card>
     </>

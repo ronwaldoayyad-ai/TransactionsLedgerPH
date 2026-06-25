@@ -4,6 +4,8 @@ import { PageHeader } from '../../components/AppShell'
 import Icon from '../../components/Icon'
 import RefreshButton from '../../components/RefreshButton'
 import { Badge, Button, Card, CardHeader, CurrencyInput, EmptyState, Field, Modal, MultiSelect, inputClass } from '../../components/ui'
+import Pagination from '../../components/Pagination'
+import { usePagination } from '../../hooks/usePagination'
 import { formatDate, formatPeso, toISODate } from '../../lib/amortization'
 import { isReceivable } from '../../lib/transactions'
 import {
@@ -166,6 +168,8 @@ export default function PaymentLogs() {
     return [...list].sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')))
   }, [paymentLogs, filterBorrower, statusSel, query, users])
 
+  const pag = usePagination(rows, 10)
+
   const totals = useMemo(
     () =>
       rows.reduce(
@@ -260,7 +264,7 @@ export default function PaymentLogs() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((l) => {
+                {pag.pageItems.map((l) => {
                   const isCarry = l.kind === 'carry'
                   return (
                     <tr
@@ -321,6 +325,19 @@ export default function PaymentLogs() {
               </tfoot>
             </table>
           </div>
+        )}
+        {rows.length > 0 && (
+          <Pagination
+            page={pag.page}
+            pageCount={pag.pageCount}
+            pageSize={pag.pageSize}
+            total={pag.total}
+            start={pag.start}
+            end={pag.end}
+            onPageChange={pag.setPage}
+            onPageSizeChange={pag.setPageSize}
+            itemLabel="payments"
+          />
         )}
       </Card>
 

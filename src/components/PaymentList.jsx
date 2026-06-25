@@ -3,6 +3,8 @@ import { useApp } from '../context/AppContext'
 import Icon from './Icon'
 import { Badge, Button, EmptyState, Field, Modal, inputClass } from './ui'
 import { formatDate, formatPeso } from '../lib/amortization'
+import Pagination from './Pagination'
+import { usePagination } from '../hooks/usePagination'
 
 const TABS = ['pending', 'approved', 'rejected', 'all']
 
@@ -16,6 +18,7 @@ export default function PaymentList({
   showBorrower = false,
   defaultTab,
   emptyBody = 'No submissions yet.',
+  pageSize = 0, // 0 = no pagination (default); >0 paginates the list
 }) {
   const { users, loans, reviewPayment, getProofUrl, deletePayment } = useApp()
   // Admin queue defaults to "pending" (work to do); the borrower's own history
@@ -29,6 +32,9 @@ export default function PaymentList({
 
   const list = payments.filter((p) => filter === 'all' || p.status === filter)
   const pendingCount = payments.filter((p) => p.status === 'pending').length
+  const paginate = pageSize > 0
+  const pag = usePagination(list, paginate ? pageSize : 1)
+  const rows = paginate ? pag.pageItems : list
 
   const hasProof = (p) => !!(p.fileUrl || p.filePath)
   const openProof = async (p) => {
@@ -88,7 +94,7 @@ export default function PaymentList({
         <EmptyState icon="upload" title="Nothing here" body={emptyBody} />
       ) : (
         <ul className="divide-y divide-slate-100">
-          {list.map((p) => {
+          {rows.map((p) => {
             const borrower = users.find((u) => u.id === p.userId)
             const loan = loans.find((l) => l.id === p.loanId)
             // Status-themed thumbnail (approved=green check, rejected=red x,
@@ -219,6 +225,20 @@ export default function PaymentList({
             )
           })}
         </ul>
+      )}
+      {paginate && list.length > 0 && (
+        <Pagination
+          page={pag.page}
+          pageCount={pag.pageCount}
+          pageSize={pag.pageSize}
+          total={pag.total}
+          start={pag.start}
+          end={pag.end}
+          onPageChange={pag.setPage}
+          onPageSizeChange={pag.setPageSize}
+          pageSizeOptions={[8, 15, 25, 50]}
+          itemLabel="proofs"
+        />
       )}
 
       {/* Reject reason (admin only) */}

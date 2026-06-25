@@ -1,6 +1,8 @@
 import { formatDate, formatPeso, toISODate } from '../lib/amortization'
 import { BORROWER_STATUS_LABELS, STATUS_LABELS, borrowerStatus } from '../lib/transactions'
 import { Badge, inputClass } from './ui'
+import Pagination from './Pagination'
+import { usePagination } from '../hooks/usePagination'
 
 // Uncontrolled input that commits to the parent only on blur (so each
 // keystroke doesn't fire a persist+audit write). `key={value}` remounts it
@@ -30,11 +32,16 @@ export default function BorrowerScheduleTable({
   showTxnDate = false,
   editable = false,
   onUpdate,
+  pageSize = 0, // 0 = show all; >0 paginates rows while the footer keeps full totals
 }) {
   const today = toISODate(new Date())
   const total = transactions.reduce((s, t) => s + t.amount, 0)
   const colCount = 2 + (showTxnDate ? 1 : 0) + 2 // # + desc + [txn] + due + paid, before amount
+  const paginate = pageSize > 0
+  const pag = usePagination(transactions, paginate ? pageSize : 1)
+  const rows = paginate ? pag.pageItems : transactions
   return (
+    <>
     <div className="overflow-x-auto">
       <table className={`w-full text-sm ${editable ? 'min-w-[820px]' : 'min-w-[640px]'}`}>
         <thead>
@@ -49,7 +56,7 @@ export default function BorrowerScheduleTable({
           </tr>
         </thead>
         <tbody>
-          {transactions.map((t) => {
+          {rows.map((t) => {
             const status = borrowerStatus(t, today)
             return (
               <tr
@@ -146,5 +153,20 @@ export default function BorrowerScheduleTable({
         </tfoot>
       </table>
     </div>
+    {paginate && transactions.length > 0 && (
+      <Pagination
+        page={pag.page}
+        pageCount={pag.pageCount}
+        pageSize={pag.pageSize}
+        total={pag.total}
+        start={pag.start}
+        end={pag.end}
+        onPageChange={pag.setPage}
+        onPageSizeChange={pag.setPageSize}
+        pageSizeOptions={[15, 25, 50, 100]}
+        itemLabel="items"
+      />
+    )}
+    </>
   )
 }

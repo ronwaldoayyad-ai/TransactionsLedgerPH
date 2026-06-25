@@ -4,6 +4,8 @@ import { PageHeader } from '../../components/AppShell'
 import Icon from '../../components/Icon'
 import RefreshButton from '../../components/RefreshButton'
 import { Button, Card, CardHeader, CurrencyInput, EmptyState, Field, Modal, StatCard, inputClass } from '../../components/ui'
+import Pagination from '../../components/Pagination'
+import { usePagination } from '../../hooks/usePagination'
 import { usePersistedState } from '../../hooks/usePersistedState'
 import { formatPeso, toISODate } from '../../lib/amortization'
 import {
@@ -85,6 +87,7 @@ export default function Arbitrage() {
       ),
     [arbitrageLoans],
   )
+  const ledgerPag = usePagination(ledger, 10)
 
   const canSave =
     form.userId &&
@@ -352,6 +355,7 @@ export default function Arbitrage() {
               body="Log an arbitrage loan to start tracking your interest spread and net gain."
             />
           ) : tab === 'ledger' ? (
+            <>
             <div className="overflow-x-auto px-1 py-2">
               <table className="w-full min-w-[820px] text-sm">
                 <thead>
@@ -367,7 +371,7 @@ export default function Arbitrage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {ledger.map((r) => {
+                  {ledgerPag.pageItems.map((r) => {
                     const c = computeArbitrage(r)
                     return (
                       <tr key={r.id} className="border-b border-slate-50">
@@ -399,6 +403,20 @@ export default function Arbitrage() {
                 </tbody>
               </table>
             </div>
+            {ledger.length > 0 && (
+              <Pagination
+                page={ledgerPag.page}
+                pageCount={ledgerPag.pageCount}
+                pageSize={ledgerPag.pageSize}
+                total={ledgerPag.total}
+                start={ledgerPag.start}
+                end={ledgerPag.end}
+                onPageChange={ledgerPag.setPage}
+                onPageSizeChange={ledgerPag.setPageSize}
+                itemLabel="loans"
+              />
+            )}
+            </>
           ) : (
             <div className="overflow-x-auto px-1 py-2">
               <table className="w-full min-w-[560px] text-sm">

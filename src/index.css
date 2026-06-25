@@ -91,6 +91,31 @@ body {
   pointer-events: none;
 }
 
+/* Toast: slide up + fade in, with a left-anchored countdown bar that shrinks. */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.98);
+  }
+}
+.toast-in {
+  animation: toast-in 280ms var(--ease-out-strong) backwards;
+}
+@keyframes toast-progress {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+.toast-progress {
+  transform-origin: left;
+  animation-name: toast-progress;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

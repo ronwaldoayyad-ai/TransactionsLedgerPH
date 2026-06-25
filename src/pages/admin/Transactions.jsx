@@ -5,6 +5,8 @@ import { PageHeader } from '../../components/AppShell'
 import Icon from '../../components/Icon'
 import RefreshButton from '../../components/RefreshButton'
 import { Badge, Button, Card, CardHeader, EmptyState, Modal, MultiSelect, Switch, inputClass } from '../../components/ui'
+import Pagination from '../../components/Pagination'
+import { usePagination } from '../../hooks/usePagination'
 import { downloadCSV, formatDate, formatPeso, toISODate } from '../../lib/amortization'
 import { STATUS_LABELS, effectiveStatus } from '../../lib/transactions'
 import { parseCSV, parseCSVAmount, parseCSVDate } from '../../lib/csv'
@@ -107,6 +109,10 @@ export default function Transactions() {
 
   // Live aggregate of the Amount column for whatever filters are applied.
   const filteredTotal = useMemo(() => filtered.reduce((s, t) => s + t.amount, 0), [filtered])
+
+  // Paginate the visible rows; select-all / totals still operate on the full
+  // filtered set, so paging never changes what an action applies to.
+  const pag = usePagination(filtered, 15)
 
   const filteredIds = filtered.map((t) => t.id)
   const allSelected = filtered.length > 0 && filteredIds.every((id) => selected.has(id))
@@ -537,7 +543,7 @@ export default function Transactions() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((t) => {
+                {pag.pageItems.map((t) => {
                   const effective = effectiveStatus(t, today)
                   const isPastDue = effective === 'past_due'
                   return (
@@ -639,6 +645,20 @@ export default function Transactions() {
               </tfoot>
             </table>
           </div>
+        )}
+        {filtered.length > 0 && (
+          <Pagination
+            page={pag.page}
+            pageCount={pag.pageCount}
+            pageSize={pag.pageSize}
+            total={pag.total}
+            start={pag.start}
+            end={pag.end}
+            onPageChange={pag.setPage}
+            onPageSizeChange={pag.setPageSize}
+            pageSizeOptions={[15, 25, 50, 100]}
+            itemLabel="records"
+          />
         )}
       </Card>
 

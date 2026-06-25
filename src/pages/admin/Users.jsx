@@ -5,6 +5,8 @@ import { PageHeader } from '../../components/AppShell'
 import Icon from '../../components/Icon'
 import RefreshButton from '../../components/RefreshButton'
 import { Badge, Button, Card, CardHeader, Field, Modal, inputClass } from '../../components/ui'
+import Pagination from '../../components/Pagination'
+import { usePagination } from '../../hooks/usePagination'
 import { formatDate } from '../../lib/amortization'
 
 const emptyForm = { name: '', email: '', phone: '' }
@@ -50,6 +52,7 @@ export default function Users() {
   const [toast, setToast] = useState('')
 
   const borrowers = users.filter((u) => u.role === 'user')
+  const pag = usePagination(borrowers, 10)
 
   const openInvite = () => {
     setForm(emptyForm)
@@ -129,7 +132,7 @@ export default function Users() {
               </tr>
             </thead>
             <tbody>
-              {borrowers.map((u) => {
+              {pag.pageItems.map((u) => {
                 const c = countsFor(u.id)
                 return (
                   <tr
@@ -221,6 +224,19 @@ export default function Users() {
             </tbody>
           </table>
         </div>
+        {borrowers.length > 0 && (
+          <Pagination
+            page={pag.page}
+            pageCount={pag.pageCount}
+            pageSize={pag.pageSize}
+            total={pag.total}
+            start={pag.start}
+            end={pag.end}
+            onPageChange={pag.setPage}
+            onPageSizeChange={pag.setPageSize}
+            itemLabel="accounts"
+          />
+        )}
       </Card>
 
       {/* Invite / Edit modal */}

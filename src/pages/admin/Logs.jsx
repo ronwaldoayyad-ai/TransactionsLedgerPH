@@ -3,6 +3,8 @@ import { useApp } from '../../context/AppContext'
 import { PageHeader } from '../../components/AppShell'
 import Icon from '../../components/Icon'
 import { Badge, Button, Card, CardHeader, EmptyState, Modal, inputClass } from '../../components/ui'
+import Pagination from '../../components/Pagination'
+import { usePagination } from '../../hooks/usePagination'
 import { downloadCSV, formatDate, formatPeso, toISODate } from '../../lib/amortization'
 import { STATUS_LABELS } from '../../lib/transactions'
 import Analytics from './Analytics'
@@ -72,6 +74,7 @@ export default function Logs() {
       (query === '' ||
         `${e.actor} ${e.detail}`.toLowerCase().includes(query.toLowerCase())),
   )
+  const auditPag = usePagination(list, 15)
 
   const exportCSV = () => {
     if (tab === 'archives') {
@@ -287,7 +290,7 @@ export default function Logs() {
                 </tr>
               </thead>
               <tbody>
-                {list.map((e) => (
+                {auditPag.pageItems.map((e) => (
                   <tr
                     key={e.id}
                     className={`border-b border-slate-100 transition-colors duration-150 hover:bg-navy-50/40 ${
@@ -318,6 +321,19 @@ export default function Logs() {
               </tbody>
             </table>
           </div>
+        )}
+        {list.length > 0 && (
+          <Pagination
+            page={auditPag.page}
+            pageCount={auditPag.pageCount}
+            pageSize={auditPag.pageSize}
+            total={auditPag.total}
+            start={auditPag.start}
+            end={auditPag.end}
+            onPageChange={auditPag.setPage}
+            onPageSizeChange={auditPag.setPageSize}
+            itemLabel="entries"
+          />
         )}
       </Card>
       )}

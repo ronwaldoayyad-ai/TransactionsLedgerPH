@@ -4,6 +4,7 @@ import { PageHeader } from '../../components/AppShell'
 import Icon from '../../components/Icon'
 import PaymentList from '../../components/PaymentList'
 import RefreshButton from '../../components/RefreshButton'
+import Toast from '../../components/Toast'
 import { Button, Card, CardHeader, CurrencyInput, Field, inputClass } from '../../components/ui'
 
 const ACCEPTED = '.jpg,.jpeg,.png,.pdf'
@@ -34,8 +35,16 @@ export default function Payments() {
   const [method, setMethod] = useState('GCash')
   const [reference, setReference] = useState('')
   const [error, setError] = useState('')
-  const [successCount, setSuccessCount] = useState(0)
+  const [toast, setToast] = useState(null)
   const [dragOver, setDragOver] = useState(false)
+  const toastTimer = useRef(null)
+
+  // Show an auto-dismissing toast; replaces any toast already on screen.
+  const showToast = (next) => {
+    if (toastTimer.current) clearTimeout(toastTimer.current)
+    setToast({ ...next, id: Date.now() })
+    toastTimer.current = setTimeout(() => setToast(null), 4500)
+  }
 
   const toggleLoan = (id) =>
     setLoanIds((prev) => {
@@ -69,25 +78,35 @@ export default function Payments() {
     setError('')
     // One proof can cover multiple loans (same due date) — record it against each.
     const ids = [...loanIds]
-    const results = []
-    for (const id of ids) {
-      const payment = await submitPayment(session.user.name, {
-        userId: session.user.id,
-        loanId: id,
-        amount,
-        method,
-        reference: reference.trim() || '—',
-        fileName: file.name,
-        fileType: /\.pdf$/i.test(file.name) ? 'pdf' : 'image',
-        file, // live mode uploads this to Storage
-        // Demo fallback: session-scoped object URL so view/download still work.
-        fileUrl: URL.createObjectURL(file),
-      })
-      results.push(payment)
+    let saved
+    try {
+      const results = []
+      for (const id of ids) {
+        const payment = await submitPayment(session.user.name, {
+          userId: session.user.id,
+          loanId: id,
+          amount,
+          method,
+          reference: reference.trim() || '—',
+          fileName: file.name,
+          fileType: /\.pdf$/i.test(file.name) ? 'pdf' : 'image',
+          file, // live mode uploads this to Storage
+          // Demo fallback: session-scoped object URL so view/download still work.
+          fileUrl: URL.createObjectURL(file),
+        })
+        results.push(payment)
+      }
+      saved = results.filter(Boolean).length
+    } catch {
+      saved = 0
     }
-    const saved = results.filter(Boolean).length
+    // Any shortfall (thrown error or a rejected save) is an upload failure.
     if (saved < ids.length) {
-      setError(`Only ${saved} of ${ids.length} submissions saved — please retry the rest.`)
+      showToast({
+        variant: 'error',
+        title: 'Upload Failed',
+        message: 'Please try uploading again.',
+      })
       return
     }
     setFile(null)
@@ -95,8 +114,11 @@ export default function Payments() {
     setReference('')
     setLoanIds(new Set())
     if (fileInputRef.current) fileInputRef.current.value = ''
-    setSuccessCount(saved)
-    setTimeout(() => setSuccessCount(0), 5000)
+    showToast({
+      variant: 'success',
+      title: 'Upload Complete',
+      message: 'Your proof of payment has been uploaded and now being verified.',
+    })
   }
 
   return (
@@ -256,14 +278,6 @@ export default function Payments() {
                 {error}
               </p>
             )}
-            {successCount > 0 && (
-              <p role="status" className="flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2.5 text-sm text-emerald-700">
-                <Icon name="check" className="h-4 w-4" />
-                Proof submitted for {successCount} loan{successCount === 1 ? '' : 's'}. Your administrator
-                will verify it shortly.
-              </p>
-            )}
-
             <Button type="submit" className="w-full" disabled={myLoans.length === 0}>
               <Icon name="send" className="h-4 w-4" />
               Submit for verification
@@ -294,6 +308,14 @@ export default function Payments() {
           />
         </Card>
       </div>
+
+      <Toast
+        open={!!toast}
+        variant={toast?.variant}
+        title={toast?.title}
+        message={toast?.message}
+        onClose={() => setToast(null)}
+      />
     </>
   )
 }

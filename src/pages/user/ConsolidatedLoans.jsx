@@ -189,7 +189,7 @@ export default function ConsolidatedLoans() {
             }
           />
         ) : (
-          <BorrowerScheduleTable transactions={filtered} showTxnDate />
+          <BorrowerScheduleTable transactions={filtered} showTxnDate pageSize={15} />
         )}
       </Card>
     </>

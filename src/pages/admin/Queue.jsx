@@ -19,6 +19,7 @@ export default function Queue() {
           payments={payments}
           canReview
           showBorrower
+          pageSize={8}
           emptyBody="No payment proofs match this filter."
         />
       </Card>
