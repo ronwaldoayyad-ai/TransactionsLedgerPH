@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import Icon from '../components/Icon'
-import { Button, Field, inputClass } from '../components/ui'
+import { Button, FloatingInput } from '../components/ui'
 
 // Invite-only sign-in against Supabase (AUTH-5/AUTH-7: no public
 // registration, no demo backdoor).
@@ -98,32 +98,26 @@ export default function Login() {
             style={{ animationDelay: '140ms' }}
             noValidate
           >
-            <Field label="Email address" htmlFor="email">
-              <input
-                id="email"
-                type="email"
-                autoComplete="email"
-                required
-                value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value)
-                  setError('')
-                }}
-                className={inputClass}
-                placeholder="you@example.com"
-              />
-            </Field>
-            <Field label="Password" htmlFor="password">
-              <input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className={inputClass}
-                placeholder="••••••••"
-              />
-            </Field>
+            <FloatingInput
+              id="email"
+              label="Email address"
+              type="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value)
+                setError('')
+              }}
+            />
+            <FloatingInput
+              id="password"
+              label="Password"
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
             {error && (
               <p role="alert" className="flex items-start gap-2 rounded-lg bg-red-50 px-3 py-2.5 text-sm text-red-700">
                 <Icon name="alert" className="mt-0.5 h-4 w-4 shrink-0" />

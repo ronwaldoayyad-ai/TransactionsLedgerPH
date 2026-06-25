@@ -140,6 +140,45 @@ export function Field({ label, htmlFor, children, hint }) {
 export const inputClass =
   'w-full min-h-10 rounded-lg border border-slate-300/80 bg-white/70 px-3 py-2 text-sm text-slate-900 backdrop-blur-sm placeholder:text-slate-400 focus:border-navy-600 focus:outline-2 focus:outline-navy-600/20 disabled:bg-slate-100/60 disabled:text-slate-500'
 
+// Input with a floating label: the label sits inside the field as a placeholder
+// when empty, then animates up to a small caption on focus or once filled (the
+// empty state is detected via the `placeholder=" "` + `:placeholder-shown`
+// trick, so it stays in sync without extra React state). When `type="password"`
+// a show/hide eye toggle is rendered inside the field.
+export function FloatingInput({ id, label, type = 'text', className = '', ...props }) {
+  const [show, setShow] = useState(false)
+  const isPassword = type === 'password'
+  const resolvedType = isPassword && show ? 'text' : type
+  return (
+    <div className="relative">
+      <input
+        id={id}
+        type={resolvedType}
+        placeholder=" "
+        className={`peer block w-full rounded-lg border border-slate-300/80 bg-white/70 px-3 pb-2 pt-6 text-sm text-slate-900 backdrop-blur-sm transition-colors duration-200 focus:border-navy-600 focus:outline-2 focus:outline-navy-600/20 disabled:bg-slate-100/60 disabled:text-slate-500 ${isPassword ? 'pr-11' : ''} ${className}`}
+        {...props}
+      />
+      <label
+        htmlFor={id}
+        className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-500 transition-all duration-200 ease-out peer-focus:top-2 peer-focus:translate-y-0 peer-focus:text-xs peer-focus:font-medium peer-focus:text-navy-700 peer-[:not(:placeholder-shown)]:top-2 peer-[:not(:placeholder-shown)]:translate-y-0 peer-[:not(:placeholder-shown)]:text-xs peer-[:not(:placeholder-shown)]:font-medium"
+      >
+        {label}
+      </label>
+      {isPassword && (
+        <button
+          type="button"
+          onClick={() => setShow((s) => !s)}
+          aria-label={show ? 'Hide password' : 'Show password'}
+          aria-pressed={show}
+          className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer rounded-lg p-2 text-slate-400 transition-colors duration-200 hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-2 focus-visible:outline-navy-600"
+        >
+          <Icon name={show ? 'eyeOff' : 'eye'} className="h-5 w-5" />
+        </button>
+      )}
+    </div>
+  )
+}
+
 // Modern iOS-style toggle. Knob slides with a transform (GPU, 200ms ease-out).
 export function Switch({ checked, onChange, label }) {
   return (
