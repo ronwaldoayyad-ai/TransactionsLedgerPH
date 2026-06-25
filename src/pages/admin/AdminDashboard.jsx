@@ -5,6 +5,8 @@ import { PageHeader } from '../../components/AppShell'
 import { Badge, Button, Card, CardHeader, EmptyState, MultiSelect, StatCard, Switch, inputClass } from '../../components/ui'
 import Icon from '../../components/Icon'
 import PaymentList from '../../components/PaymentList'
+import Pagination from '../../components/Pagination'
+import { usePagination } from '../../hooks/usePagination'
 import RefreshButton from '../../components/RefreshButton'
 import { formatDate, formatPeso, toISODate } from '../../lib/amortization'
 import { STATUS_LABELS, effectiveStatus, isReceivable } from '../../lib/transactions'
@@ -142,6 +144,28 @@ export default function AdminDashboard() {
   }, [transactions, grandFrom, grandTo, grandStatusSel, grandBorrowerSel, grandHideSettled, grandTouched, today, users],
   )
 
+  // Pagination for each dashboard section.
+  const statusPag = usePagination(byStatus, 5)
+  const borrowerPag = usePagination(byBorrower, 5)
+  const dueDatePag = usePagination(byDueDate, 5)
+  const activityPag = usePagination(auditLog, 5)
+  const grandPag = usePagination(grandRows, 15)
+
+  const pager = (pag, itemLabel, pageSizeOptions = [5, 10, 15, 25]) => (
+    <Pagination
+      page={pag.page}
+      pageCount={pag.pageCount}
+      pageSize={pag.pageSize}
+      total={pag.total}
+      start={pag.start}
+      end={pag.end}
+      onPageChange={pag.setPage}
+      onPageSizeChange={pag.setPageSize}
+      pageSizeOptions={pageSizeOptions}
+      itemLabel={itemLabel}
+    />
+  )
+
   return (
     <>
       <PageHeader
@@ -212,7 +236,7 @@ export default function AdminDashboard() {
         <Card>
           <CardHeader title="Receivables by Status" subtitle="All ledger amounts grouped by status" />
           <ul className="divide-y divide-slate-100">
-            {byStatus.map(({ status, count, amount }) => (
+            {statusPag.pageItems.map(({ status, count, amount }) => (
               <li key={status} className="flex items-center justify-between px-5 py-3">
                 <span className="flex items-center gap-2">
                   <Badge status={status}>{STATUS_LABELS[status]}</Badge>
@@ -222,6 +246,7 @@ export default function AdminDashboard() {
               </li>
             ))}
           </ul>
+          {byStatus.length > 0 && pager(statusPag, 'statuses')}
           <div className="flex items-center justify-between border-t border-slate-200 bg-navy-50/70 px-5 py-3">
             <span className="text-sm font-semibold text-navy-900">Total Receivables</span>
             <span className="font-mono text-sm font-bold text-navy-900">{formatPeso(outstanding)}</span>
@@ -233,22 +258,25 @@ export default function AdminDashboard() {
           {byBorrower.length === 0 ? (
             <EmptyState icon="check" title="Nothing outstanding" />
           ) : (
-            <ul className="divide-y divide-slate-100">
-              {byBorrower.map(({ userId, count, amount }) => (
-                <li key={userId} className="flex items-center justify-between px-5 py-3">
-                  <span className="flex items-center gap-2.5">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-full bg-navy-100 text-xs font-semibold text-navy-800">
-                      {nameOf(userId).charAt(0)}
+            <>
+              <ul className="divide-y divide-slate-100">
+                {borrowerPag.pageItems.map(({ userId, count, amount }) => (
+                  <li key={userId} className="flex items-center justify-between px-5 py-3">
+                    <span className="flex items-center gap-2.5">
+                      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-navy-100 text-xs font-semibold text-navy-800">
+                        {nameOf(userId).charAt(0)}
+                      </span>
+                      <span>
+                        <span className="block text-sm font-medium text-slate-900">{nameOf(userId)}</span>
+                        <span className="text-xs text-slate-500">{count} installments</span>
+                      </span>
                     </span>
-                    <span>
-                      <span className="block text-sm font-medium text-slate-900">{nameOf(userId)}</span>
-                      <span className="text-xs text-slate-500">{count} installments</span>
-                    </span>
-                  </span>
-                  <span className="font-mono text-sm font-medium text-slate-900">{formatPeso(amount)}</span>
-                </li>
-              ))}
-            </ul>
+                    <span className="font-mono text-sm font-medium text-slate-900">{formatPeso(amount)}</span>
+                  </li>
+                ))}
+              </ul>
+              {pager(borrowerPag, 'borrowers')}
+            </>
           )}
         </Card>
 
@@ -257,20 +285,23 @@ export default function AdminDashboard() {
           {byDueDate.length === 0 ? (
             <EmptyState icon="check" title="Nothing outstanding" />
           ) : (
-            <ul className="max-h-72 divide-y divide-slate-100 overflow-y-auto">
-              {byDueDate.map(({ dueDate, count, amount }) => (
-                <li key={dueDate} className="flex items-center justify-between px-5 py-3">
-                  <span>
-                    <span className={`block text-sm font-medium ${dueDate < today ? 'text-red-700' : 'text-slate-900'}`}>
-                      {formatDate(dueDate)}
-                      {dueDate < today && ' · overdue'}
+            <>
+              <ul className="divide-y divide-slate-100">
+                {dueDatePag.pageItems.map(({ dueDate, count, amount }) => (
+                  <li key={dueDate} className="flex items-center justify-between px-5 py-3">
+                    <span>
+                      <span className={`block text-sm font-medium ${dueDate < today ? 'text-red-700' : 'text-slate-900'}`}>
+                        {formatDate(dueDate)}
+                        {dueDate < today && ' · overdue'}
+                      </span>
+                      <span className="text-xs text-slate-500">{count} installments</span>
                     </span>
-                    <span className="text-xs text-slate-500">{count} installments</span>
-                  </span>
-                  <span className="font-mono text-sm font-medium text-slate-900">{formatPeso(amount)}</span>
-                </li>
-              ))}
-            </ul>
+                    <span className="font-mono text-sm font-medium text-slate-900">{formatPeso(amount)}</span>
+                  </li>
+                ))}
+              </ul>
+              {pager(dueDatePag, 'dates')}
+            </>
           )}
         </Card>
       </div>
@@ -293,6 +324,7 @@ export default function AdminDashboard() {
           payments={payments}
           canReview
           showBorrower
+          pageSize={5}
           emptyBody="No payment proofs match this filter."
         />
       </Card>
@@ -311,7 +343,7 @@ export default function AdminDashboard() {
           }
         />
         <ul className="divide-y divide-slate-100">
-          {auditLog.slice(0, 6).map((entry) => (
+          {activityPag.pageItems.map((entry) => (
             <li key={entry.id} className="flex items-start gap-3 px-5 py-3">
               <span className="mt-0.5 rounded-lg bg-slate-100 p-1.5 text-slate-500">
                 <Icon name="scroll" className="h-3.5 w-3.5" />
@@ -326,6 +358,7 @@ export default function AdminDashboard() {
             </li>
           ))}
         </ul>
+        {auditLog.length > 0 && pager(activityPag, 'entries')}
       </Card>
 
       {/* Grand view — past due + next unpaid date by default */}
@@ -414,7 +447,7 @@ export default function AdminDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {grandRows.map((t) => {
+                {grandPag.pageItems.map((t) => {
                   const effective = effectiveStatus(t, today)
                   return (
                     <tr
@@ -448,6 +481,7 @@ export default function AdminDashboard() {
             </table>
           </div>
         )}
+        {grandRows.length > 0 && pager(grandPag, 'records', [15, 25, 50, 100])}
       </Card>
     </>
   )

@@ -17,6 +17,12 @@ const SUB_TABS = [
   ['past_due', 'Past Due'],
   ['paid', 'Paid'],
 ]
+// Per-status colour coding for the sub-tabs (dot + active fill + count badge).
+const SUB_COLOR = {
+  pending: { dot: 'bg-blue-500', active: 'border-blue-300 bg-blue-50 text-blue-700', badge: 'bg-blue-100 text-blue-700' },
+  past_due: { dot: 'bg-red-500', active: 'border-red-300 bg-red-50 text-red-700', badge: 'bg-red-100 text-red-700' },
+  paid: { dot: 'bg-emerald-500', active: 'border-emerald-300 bg-emerald-50 text-emerald-700', badge: 'bg-emerald-100 text-emerald-700' },
+}
 const BADGE_TONE = {
   blue: 'bg-blue-600 text-white',
   orange: 'bg-amber-500 text-white',
@@ -67,11 +73,12 @@ export default function BillTracker({ cards, accounts, bills, payments, wallet }
             key={key}
             onClick={() => setSub(key)}
             className={`flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors duration-150 ${
-              sub === key ? 'border-navy-300 bg-navy-50 text-navy-800' : 'cursor-pointer border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+              sub === key ? SUB_COLOR[key].active : 'cursor-pointer border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
             }`}
           >
+            <span className={`h-2 w-2 shrink-0 rounded-full ${SUB_COLOR[key].dot}`} />
             {label}
-            <span className={`rounded-full px-1.5 text-xs font-semibold ${key === 'past_due' && counts[key] ? 'bg-red-100 text-red-700' : 'bg-slate-200 text-slate-600'}`}>
+            <span className={`rounded-full px-1.5 text-xs font-semibold ${SUB_COLOR[key].badge}`}>
               {counts[key]}
             </span>
           </button>
@@ -94,7 +101,7 @@ export default function BillTracker({ cards, accounts, bills, payments, wallet }
                 <div className="flex items-start gap-3">
                   {card && <MiniCard card={card} />}
                   <div className="min-w-0 flex-1">
-                    {/* Due date · days badge · action buttons · status pill — one row. */}
+                    {/* Due date · days badge · action buttons — one row. */}
                     <div className="flex flex-wrap items-center gap-2">
                       <span className={`font-bold ${status === 'past_due' ? 'text-red-600' : 'text-slate-900'}`}>
                         Due: {formatDate(bill.dueDate)}
@@ -107,7 +114,6 @@ export default function BillTracker({ cards, accounts, bills, payments, wallet }
                       )}
                       <button type="button" className={BILL_BTN.edit} onClick={() => setBillModal({ initial: bill, payment: status === 'paid' ? lastPaid : null })}>Edit</button>
                       <button type="button" className={BILL_BTN.delete} onClick={() => setConfirmDelete(bill.id)}>Delete</button>
-                      <span className={`rounded-full px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide ${PILL[pill]}`}>{pill}</span>
                     </div>
                     <p className="mt-1 truncate text-xs text-slate-500">{cardLabel(bill.cardId)}</p>
                     <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 rounded-lg bg-slate-50 px-3 py-2 text-sm">
@@ -121,6 +127,7 @@ export default function BillTracker({ cards, accounts, bills, payments, wallet }
                       </span>
                     </div>
                   </div>
+                  <span className={`shrink-0 self-start rounded-full px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide ${PILL[pill]}`}>{pill}</span>
                 </div>
               </div>
             )
