@@ -4,25 +4,53 @@ import { useApp } from '../context/AppContext'
 import Icon from './Icon'
 import ProfileModal from './ProfileModal'
 
+// Nav is grouped into labelled sections for visual hierarchy. The first group
+// is title-less (a standalone Overview entry); the rest render an uppercase
+// caption above a subtly-contained set of links, separated by a faint divider.
 const adminNav = [
-  { to: '/admin', label: 'Overview', icon: 'dashboard', end: true },
-  { to: '/admin/transactions', label: 'Overall Transactions', icon: 'list' },
-  { to: '/admin/calculator', label: 'Loan Calculator', icon: 'calculator' },
-  { to: '/admin/queue', label: 'Verification Queue', icon: 'inbox' },
-  { to: '/admin/users', label: 'User Management', icon: 'users' },
-  { to: '/admin/payment-logs', label: 'Payment Logs', icon: 'wallet' },
-  { to: '/admin/arbitrage', label: 'Interest / Arbitrage', icon: 'chart' },
-  { to: '/admin/loan-tracker', label: 'Loan Tracker', icon: 'wallet' },
-  { to: '/admin/wallet', label: 'Cards & Bills Wallet', icon: 'wallet' },
-  { to: '/admin/logs', label: 'Reports & Logs', icon: 'scroll' },
+  { items: [{ to: '/admin', label: 'Overview', icon: 'dashboard', end: true }] },
+  {
+    title: 'Operations',
+    items: [
+      { to: '/admin/transactions', label: 'Overall Transactions', icon: 'list' },
+      { to: '/admin/payment-logs', label: 'Payment Logs', icon: 'wallet' },
+      { to: '/admin/arbitrage', label: 'Interest / Arbitrage', icon: 'chart' },
+      { to: '/admin/wallet', label: 'Cards & Bills Wallet', icon: 'wallet' },
+    ],
+  },
+  {
+    title: 'Loans',
+    items: [
+      { to: '/admin/calculator', label: 'Loan Calculator', icon: 'calculator' },
+      { to: '/admin/loan-tracker', label: 'Loan Tracker', icon: 'wallet' },
+    ],
+  },
+  {
+    title: 'Admin',
+    items: [
+      { to: '/admin/queue', label: 'Verification Queue', icon: 'inbox' },
+      { to: '/admin/users', label: 'User Management', icon: 'users' },
+      { to: '/admin/logs', label: 'Reports & Logs', icon: 'scroll' },
+    ],
+  },
 ]
 
 const userNav = [
-  { to: '/portal', label: 'My Dashboard', icon: 'dashboard', end: true },
-  { to: '/portal/straight', label: 'Straight Transactions', icon: 'wallet' },
-  { to: '/portal/consolidated', label: 'Consolidated Transactions', icon: 'list' },
-  { to: '/portal/payments', label: 'My Payments', icon: 'upload' },
-  { to: '/portal/payment-logs', label: 'Payment Logs', icon: 'scroll' },
+  { items: [{ to: '/portal', label: 'My Dashboard', icon: 'dashboard', end: true }] },
+  {
+    title: 'Transactions',
+    items: [
+      { to: '/portal/straight', label: 'Straight Transactions', icon: 'wallet' },
+      { to: '/portal/consolidated', label: 'Consolidated Transactions', icon: 'list' },
+    ],
+  },
+  {
+    title: 'Payments',
+    items: [
+      { to: '/portal/payments', label: 'My Payments', icon: 'upload' },
+      { to: '/portal/payment-logs', label: 'Payment Logs', icon: 'scroll' },
+    ],
+  },
 ]
 
 export default function AppShell({ children }) {
@@ -47,30 +75,46 @@ export default function AppShell({ children }) {
     navigate('/login')
   }
 
+  const renderLink = (item) => (
+    <NavLink
+      key={item.to}
+      to={item.to}
+      end={item.end}
+      onClick={() => setMenuOpen(false)}
+      className={({ isActive }) =>
+        `flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-200 ${
+          isActive
+            ? 'bg-white/10 text-white shadow-sm ring-1 ring-white/10'
+            : 'text-navy-200 hover:bg-white/5 hover:text-white'
+        }`
+      }
+    >
+      <Icon name={item.icon} className="h-5 w-5 shrink-0" />
+      {item.label}
+      {item.icon === 'inbox' && pendingCount > 0 && (
+        <span className="ml-auto rounded-full bg-gold-500 px-2 py-0.5 text-xs font-semibold text-white">
+          {pendingCount}
+        </span>
+      )}
+    </NavLink>
+  )
+
   const navItems = (
-    <nav className="flex flex-1 flex-col gap-1 px-3" aria-label="Main navigation">
-      {nav.map((item) => (
-        <NavLink
-          key={item.to}
-          to={item.to}
-          end={item.end}
-          onClick={() => setMenuOpen(false)}
-          className={({ isActive }) =>
-            `flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-200 ${
-              isActive
-                ? 'bg-white/10 text-white'
-                : 'text-navy-200 hover:bg-white/5 hover:text-white'
-            }`
-          }
+    <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 pb-3" aria-label="Main navigation">
+      {nav.map((group, gi) => (
+        <div
+          key={group.title ?? 'overview'}
+          className={gi > 0 ? 'mt-3 border-t border-white/[0.06] pt-3' : ''}
         >
-          <Icon name={item.icon} className="h-5 w-5 shrink-0" />
-          {item.label}
-          {item.icon === 'inbox' && pendingCount > 0 && (
-            <span className="ml-auto rounded-full bg-gold-500 px-2 py-0.5 text-xs font-semibold text-white">
-              {pendingCount}
-            </span>
+          {group.title && (
+            <p className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-navy-400">
+              {group.title}
+            </p>
           )}
-        </NavLink>
+          <div className={group.title ? 'flex flex-col gap-1 rounded-xl bg-white/[0.03] p-1' : 'flex flex-col gap-1'}>
+            {group.items.map(renderLink)}
+          </div>
+        </div>
       ))}
     </nav>
   )
