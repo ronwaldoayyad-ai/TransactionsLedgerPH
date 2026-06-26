@@ -1,6 +1,7 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { useApp } from './AppContext'
 import { supabase } from '../supabaseClient'
+import { playReaction, playReceive } from '../lib/chatSounds'
 
 // Isolated data layer for in-app messaging (borrower ⇄ lender). Mirrors the
 // app's dual-mode pattern: live sessions read/write the `messages` table and
@@ -88,6 +89,31 @@ export function MessagesProvider({ children }) {
       supabase.removeChannel(channel)
     }
   }, [isLive, meId, fetchMessages])
+
+  // Notification sounds for INCOMING activity: messages received from the other
+  // party, and reactions they add. My own send/reaction sounds play locally in
+  // ChatThread. The initial load and identity switches are silent (baseline only).
+  const soundRef = useRef({ meId: null, map: new Map() })
+  useEffect(() => {
+    const prev = soundRef.current
+    const snapshot = () => new Map(messages.map((m) => [m.id, m]))
+    if (prev.meId !== meId) {
+      soundRef.current = { meId, map: snapshot() }
+      return
+    }
+    const otherRole = isAdmin ? 'borrower' : 'admin'
+    messages.forEach((m) => {
+      const before = prev.map.get(m.id)
+      if (!before) {
+        if (m.fromAdmin !== isAdmin) playReceive()
+      } else {
+        const had = before.reactions || {}
+        const now = m.reactions || {}
+        if (now[otherRole] && now[otherRole] !== had[otherRole]) playReaction()
+      }
+    })
+    prev.map = snapshot()
+  }, [messages, meId, isAdmin])
 
   const sendMessage = useCallback(
     async (borrowerId, body) => {

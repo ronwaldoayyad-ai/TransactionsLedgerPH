@@ -3,6 +3,7 @@ import Icon from '../Icon'
 import Avatar from '../Avatar'
 import EmojiPicker from './EmojiPicker'
 import { QUICK_REACTIONS } from './emoji'
+import { isMuted, playReaction, playSend, setMuted } from '../../lib/chatSounds'
 
 const timeLabel = (iso) => {
   if (!iso) return ''
@@ -37,6 +38,7 @@ export default function ChatThread({
   const [text, setText] = useState('')
   const [activeId, setActiveId] = useState(null) // message whose toolbar is tapped open (mobile)
   const [emojiOpen, setEmojiOpen] = useState(false)
+  const [muted, setMutedState] = useState(() => isMuted())
   const scrollRef = useRef(null)
 
   useEffect(() => {
@@ -48,6 +50,7 @@ export default function ChatThread({
     const t = text.trim()
     if (!t || disabled) return
     onSend(t)
+    playSend()
     setText('')
     setEmojiOpen(false)
   }
@@ -99,6 +102,12 @@ export default function ChatThread({
             )
             const reacts = reactionCounts(m.reactions)
             const open = activeId === m.id
+            // Toggle my reaction; chime only when adding (not when clearing).
+            const react = (emoji) => {
+              const removing = m.reactions?.[myRole] === emoji
+              onReact?.(m.id, emoji)
+              if (!removing) playReaction()
+            }
             return (
               <div key={m.id} className={`group flex items-end gap-2 py-1 ${mine ? 'justify-end' : 'justify-start'}`}>
                 {!mine && gutter}
@@ -113,7 +122,7 @@ export default function ChatThread({
                       <button
                         key={e}
                         type="button"
-                        onClick={() => onReact?.(m.id, e)}
+                        onClick={() => react(e)}
                         className={`flex h-7 w-7 cursor-pointer items-center justify-center rounded-full text-base transition-transform hover:scale-110 ${
                           m.reactions?.[myRole] === e ? 'bg-navy-100' : 'hover:bg-slate-100'
                         }`}
@@ -165,7 +174,7 @@ export default function ChatThread({
                         <button
                           key={emoji}
                           type="button"
-                          onClick={() => onReact?.(m.id, emoji)}
+                          onClick={() => react(emoji)}
                           className={`flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-xs transition-colors ${
                             m.reactions?.[myRole] === emoji
                               ? 'border-navy-300 bg-navy-50'
@@ -200,6 +209,19 @@ export default function ChatThread({
           />
         )}
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              const next = !muted
+              setMuted(next)
+              setMutedState(next)
+            }}
+            aria-label={muted ? 'Unmute chat sounds' : 'Mute chat sounds'}
+            title={muted ? 'Chat sounds off' : 'Chat sounds on'}
+            className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
+          >
+            <Icon name={muted ? 'volumeOff' : 'volume'} className="h-5 w-5" />
+          </button>
           <button
             type="button"
             onClick={() => setEmojiOpen((o) => !o)}
