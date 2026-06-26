@@ -4,6 +4,8 @@ import { useApp } from '../context/AppContext'
 import { useMessages } from '../context/MessagesContext'
 import Icon from './Icon'
 import ProfileModal from './ProfileModal'
+import AnnouncementBanner from './announcements/AnnouncementBanner'
+import AnnouncementToasts from './announcements/AnnouncementToasts'
 
 // Nav is grouped into labelled sections for visual hierarchy. The first group
 // is title-less (a standalone Overview entry); the rest render an uppercase
@@ -20,8 +22,11 @@ const adminNav = [
     ],
   },
   {
-    title: 'Messages',
-    items: [{ to: '/admin/messages', label: 'Messages', icon: 'mail' }],
+    title: 'Communication',
+    items: [
+      { to: '/admin/messages', label: 'Messages', icon: 'mail' },
+      { to: '/admin/announcements', label: 'Announcements', icon: 'alert' },
+    ],
   },
   {
     title: 'Loans',
@@ -237,6 +242,8 @@ export default function AppShell({ children }) {
       )}
 
       <main className="flex-1 lg:ml-64">
+        {/* Push-down announcement banner(s) for borrowers */}
+        <AnnouncementBanner />
         {isViewingAs && (
           <div className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-3 border-b border-amber-300/70 bg-amber-50/80 px-4 py-2.5 backdrop-blur-xl sm:px-6 lg:px-8">
             <p className="flex items-center gap-2 text-sm text-amber-900">
@@ -259,6 +266,7 @@ export default function AppShell({ children }) {
       </main>
 
       <ProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
+      <AnnouncementToasts />
     </div>
   )
 }
