@@ -68,7 +68,7 @@ export function CardHeader({ title, subtitle, action }) {
   )
 }
 
-export function StatCard({ icon, label, value, hint, accent = 'text-navy-800 bg-navy-50', onClick }) {
+export function StatCard({ icon, label, value, hint, accent = 'text-navy-800 bg-navy-50', onClick, highlight = false }) {
   const clickable = typeof onClick === 'function'
   const clickProps = clickable
     ? {
@@ -84,9 +84,16 @@ export function StatCard({ icon, label, value, hint, accent = 'text-navy-800 bg-
         },
       }
     : {}
-  return (
+  // When highlighted, drop the lift/ring hover (it would clip inside the spinning
+  // border wrapper) and use an opaque, borderless card so the colour ring reads.
+  const interactive = !clickable
+    ? ''
+    : highlight
+      ? 'cursor-pointer focus-visible:outline-2 focus-visible:outline-navy-600'
+      : 'cursor-pointer transition-[box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:shadow-md hover:ring-1 hover:ring-navy-200 focus-visible:outline-2 focus-visible:outline-navy-600'
+  const card = (
     <Card
-      className={`p-5 ${clickable ? 'cursor-pointer transition-[box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:shadow-md hover:ring-1 hover:ring-navy-200 focus-visible:outline-2 focus-visible:outline-navy-600' : ''}`}
+      className={`p-5 ${highlight ? '!border-0 !bg-white' : ''} ${interactive}`}
       {...clickProps}
     >
       <div className="flex items-start justify-between">
@@ -104,6 +111,7 @@ export function StatCard({ icon, label, value, hint, accent = 'text-navy-800 bg-
       </div>
     </Card>
   )
+  return highlight ? <div className="rainbow-border shadow-sm">{card}</div> : card
 }
 
 export function Button({ variant = 'primary', className = '', type = 'button', ...props }) {

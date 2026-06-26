@@ -132,6 +132,7 @@ export default function UserDashboard() {
           }
           accent="text-sky-700 bg-sky-50"
           onClick={goNextDue}
+          highlight
         />
         <StatCard
           icon="wallet"

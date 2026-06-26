@@ -116,6 +116,40 @@ body {
   animation-fill-mode: forwards;
 }
 
+/* Continuous rotating multicolour border (Google-style) for highlighting a tile.
+   A wrapper with 3px padding holds an oversized rotating 4-quadrant gradient
+   behind an opaque inner card, leaving a spinning colour ring. */
+@keyframes rainbow-rotate {
+  100% {
+    transform: rotate(1turn);
+  }
+}
+.rainbow-border {
+  position: relative;
+  z-index: 0;
+  overflow: hidden;
+  border-radius: 15px;
+  padding: 3px;
+}
+.rainbow-border::before {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  left: -50%;
+  top: -50%;
+  width: 200%;
+  height: 200%;
+  background-repeat: no-repeat;
+  background-size: 50% 50%, 50% 50%;
+  background-position: 0 0, 100% 0, 100% 100%, 0 100%;
+  background-image:
+    linear-gradient(#399953, #399953),
+    linear-gradient(#fbb300, #fbb300),
+    linear-gradient(#d53e33, #d53e33),
+    linear-gradient(#377af5, #377af5);
+  animation: rainbow-rotate 4s linear infinite;
+}
+
 /* Announcement toast: slide in from the right with a soft ease-out. */
 @keyframes announce-in {
   from {
