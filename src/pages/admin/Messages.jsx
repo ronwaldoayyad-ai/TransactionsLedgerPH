@@ -5,18 +5,20 @@ import { PageHeader } from '../../components/AppShell'
 import Avatar from '../../components/Avatar'
 import Icon from '../../components/Icon'
 import ChatThread from '../../components/messaging/ChatThread'
-import { Card } from '../../components/ui'
+import { Button, Card, Modal } from '../../components/ui'
 import { toISODate } from '../../lib/amortization'
 import { isReceivable } from '../../lib/transactions'
 
 export default function AdminMessages() {
   const { session, users, transactions } = useApp()
-  const { messagesFor, sendMessage, markRead, unreadByBorrower } = useMessages()
+  const { messagesFor, sendMessage, markRead, reactToMessage, togglePin, deleteMessage, clearConversation, unreadByBorrower } =
+    useMessages()
   const today = toISODate(new Date())
   const firstName = (session.user.name || 'My').split(' ')[0]
 
   const [selectedId, setSelectedId] = useState(null)
   const [collapsed, setCollapsed] = useState({}) // group key → bool
+  const [clearing, setClearing] = useState(false) // confirm clear-chat modal
 
   // Borrowers split into those with live receivables vs. everyone else.
   const { active, archived } = useMemo(() => {
@@ -111,10 +113,20 @@ export default function AdminMessages() {
                   <Icon name="chevron" className="h-5 w-5 rotate-90" />
                 </button>
                 <Avatar user={selected} size={36} />
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-slate-900">Conversation with {selected.name}</p>
                   <p className="truncate text-xs text-slate-500">{selected.email}</p>
                 </div>
+                {thread.length > 0 && (
+                  <button
+                    onClick={() => setClearing(true)}
+                    title="Clear chat history"
+                    aria-label="Clear chat history"
+                    className="shrink-0 cursor-pointer rounded-lg p-2 text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600"
+                  >
+                    <Icon name="trash" className="h-4 w-4" />
+                  </button>
+                )}
               </div>
               <ChatThread
                 messages={thread}
@@ -122,6 +134,9 @@ export default function AdminMessages() {
                 meUser={session.user}
                 otherUser={selected}
                 onSend={(t) => sendMessage(selectedId, t)}
+                onReact={reactToMessage}
+                onTogglePin={togglePin}
+                onDeleteMessage={deleteMessage}
                 placeholder={`Message ${selected.name.split(' ')[0]}…`}
               />
             </>
@@ -136,6 +151,32 @@ export default function AdminMessages() {
           )}
         </section>
       </Card>
+
+      <Modal
+        open={clearing}
+        title="Clear chat history?"
+        onClose={() => setClearing(false)}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setClearing(false)}>Cancel</Button>
+            <Button
+              variant="danger"
+              onClick={async () => {
+                await clearConversation(selectedId)
+                setClearing(false)
+              }}
+            >
+              <Icon name="trash" className="h-4 w-4" />
+              Delete all messages
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-slate-600">
+          This permanently deletes the entire conversation with{' '}
+          <span className="font-semibold">{selected?.name}</span> for both of you. This can&apos;t be undone.
+        </p>
+      </Modal>
     </>
   )
 }

@@ -18,6 +18,8 @@ const mapMessage = (r) => ({
   body: r.body,
   createdAt: r.created_at,
   readAt: r.read_at ?? null,
+  reactions: r.reactions ?? {},
+  pinned: !!r.pinned,
 })
 
 // Demo store: module-scoped so it survives navigation within the tab.
@@ -112,6 +114,8 @@ export function MessagesProvider({ children }) {
             body: text,
             createdAt: new Date().toISOString(),
             readAt: null,
+            reactions: {},
+            pinned: false,
           },
         ]
         setDemoVersion((v) => v + 1)
@@ -151,6 +155,97 @@ export function MessagesProvider({ children }) {
     [isLive, isAdmin, meId, fetchMessages],
   )
 
+  // Toggle my emoji reaction on a message (one per party; same emoji clears it).
+  const reactToMessage = useCallback(
+    async (messageId, emoji) => {
+      const base = isLive ? liveMessages : demoMessages
+      const msg = base.find((m) => m.id === messageId)
+      if (!msg) return
+      const role = isAdmin ? 'admin' : 'borrower'
+      const next = { ...(msg.reactions || {}) }
+      if (next[role] === emoji) delete next[role]
+      else next[role] = emoji
+      if (isLive) {
+        const { error } = await supabase.from('messages').update({ reactions: next }).eq('id', messageId)
+        if (error) {
+          console.error('[messages] react failed:', error.message)
+          return
+        }
+        await fetchMessages()
+      } else {
+        demoMessages = demoMessages.map((m) => (m.id === messageId ? { ...m, reactions: next } : m))
+        setDemoVersion((v) => v + 1)
+      }
+    },
+    [isLive, isAdmin, liveMessages, fetchMessages],
+  )
+
+  // Pin/unpin a message. Pinning makes it the single pinned one in its thread.
+  const togglePin = useCallback(
+    async (messageId) => {
+      const base = isLive ? liveMessages : demoMessages
+      const msg = base.find((m) => m.id === messageId)
+      if (!msg) return
+      const next = !msg.pinned
+      if (isLive) {
+        if (next) {
+          await supabase.from('messages').update({ pinned: false }).eq('borrower_id', msg.borrowerId).eq('pinned', true)
+        }
+        const { error } = await supabase.from('messages').update({ pinned: next }).eq('id', messageId)
+        if (error) {
+          console.error('[messages] pin failed:', error.message)
+          return
+        }
+        await fetchMessages()
+      } else {
+        demoMessages = demoMessages.map((m) => {
+          if (m.id === messageId) return { ...m, pinned: next }
+          if (next && m.borrowerId === msg.borrowerId) return { ...m, pinned: false }
+          return m
+        })
+        setDemoVersion((v) => v + 1)
+      }
+    },
+    [isLive, liveMessages, fetchMessages],
+  )
+
+  const deleteMessage = useCallback(
+    async (messageId) => {
+      if (isLive) {
+        const { error } = await supabase.from('messages').delete().eq('id', messageId)
+        if (error) {
+          console.error('[messages] delete failed:', error.message)
+          return
+        }
+        await fetchMessages()
+      } else {
+        demoMessages = demoMessages.filter((m) => m.id !== messageId)
+        setDemoVersion((v) => v + 1)
+      }
+    },
+    [isLive, fetchMessages],
+  )
+
+  // Delete the whole conversation history.
+  const clearConversation = useCallback(
+    async (borrowerId) => {
+      const target = isAdmin ? borrowerId : meId
+      if (!target) return
+      if (isLive) {
+        const { error } = await supabase.from('messages').delete().eq('borrower_id', target)
+        if (error) {
+          console.error('[messages] clear failed:', error.message)
+          return
+        }
+        await fetchMessages()
+      } else {
+        demoMessages = demoMessages.filter((m) => m.borrowerId !== target)
+        setDemoVersion((v) => v + 1)
+      }
+    },
+    [isLive, isAdmin, meId, fetchMessages],
+  )
+
   // Unread counts (messages directed AT me that are still unread).
   const unreadByBorrower = useMemo(() => {
     const map = {}
@@ -182,11 +277,15 @@ export function MessagesProvider({ children }) {
       me,
       sendMessage,
       markRead,
+      reactToMessage,
+      togglePin,
+      deleteMessage,
+      clearConversation,
       messagesFor,
       unreadByBorrower,
       unreadTotal,
     }),
-    [messages, loading, isAdmin, me, sendMessage, markRead, messagesFor, unreadByBorrower, unreadTotal],
+    [messages, loading, isAdmin, me, sendMessage, markRead, reactToMessage, togglePin, deleteMessage, clearConversation, messagesFor, unreadByBorrower, unreadTotal],
   )
 
   return <MessagesContext.Provider value={value}>{children}</MessagesContext.Provider>
