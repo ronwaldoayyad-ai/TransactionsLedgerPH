@@ -139,10 +139,11 @@ export function AppProvider({ children }) {
           .select()
           .single()
           .then(({ data, error }) => {
-            if (error) {
-              console.error('[supabase] audit insert failed:', error.message)
-              reportDbError?.(`audit log (${error.message}) — a database migration may be missing`)
-            } else setAuditLog((prev) => [mapAudit(data), ...prev])
+            // Audit logging is best-effort: a failure here must never block the
+            // user's action (their payment/etc. already saved) nor surface as a
+            // scary sync banner — just record it to the console.
+            if (error) console.error('[supabase] audit insert failed:', error.message)
+            else setAuditLog((prev) => [mapAudit(data), ...prev])
           })
         return
       }
