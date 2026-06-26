@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
+import { useMessages } from '../context/MessagesContext'
 import Icon from './Icon'
 import ProfileModal from './ProfileModal'
 
@@ -17,6 +18,10 @@ const adminNav = [
       { to: '/admin/arbitrage', label: 'Interest / Arbitrage', icon: 'chart' },
       { to: '/admin/wallet', label: 'Cards & Bills Wallet', icon: 'wallet' },
     ],
+  },
+  {
+    title: 'Messages',
+    items: [{ to: '/admin/messages', label: 'Messages', icon: 'mail' }],
   },
   {
     title: 'Loans',
@@ -38,6 +43,10 @@ const adminNav = [
 const userNav = [
   { items: [{ to: '/portal', label: 'My Dashboard', icon: 'dashboard', end: true }] },
   {
+    title: 'Messages',
+    items: [{ to: '/portal/messages', label: 'Messages', icon: 'mail' }],
+  },
+  {
     title: 'Transactions',
     items: [
       { to: '/portal/straight', label: 'Straight Transactions', icon: 'wallet' },
@@ -53,8 +62,22 @@ const userNav = [
   },
 ]
 
+// iOS-style unread count: a small red pill anchored to an icon's top-right, with
+// a ring in the sidebar colour so it reads as "punched out" over the icon.
+function UnreadBadge({ count, className = '' }) {
+  return (
+    <span
+      aria-label={`${count} unread`}
+      className={`pointer-events-none absolute -right-2 -top-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white shadow-sm ring-2 ring-navy-950 ${className}`}
+    >
+      {count > 99 ? '99+' : count}
+    </span>
+  )
+}
+
 export default function AppShell({ children }) {
   const { session, realSession, isViewingAs, stopViewAs, signOut, payments } = useApp()
+  const { unreadTotal } = useMessages()
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
@@ -75,29 +98,37 @@ export default function AppShell({ children }) {
     navigate('/login')
   }
 
-  const renderLink = (item) => (
-    <NavLink
-      key={item.to}
-      to={item.to}
-      end={item.end}
-      onClick={() => setMenuOpen(false)}
-      className={({ isActive }) =>
-        `flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-200 ${
-          isActive
-            ? 'bg-white/10 text-white shadow-sm ring-1 ring-white/10'
-            : 'text-navy-200 hover:bg-white/5 hover:text-white'
-        }`
-      }
-    >
-      <Icon name={item.icon} className="h-5 w-5 shrink-0" />
-      {item.label}
-      {item.icon === 'inbox' && pendingCount > 0 && (
-        <span className="ml-auto rounded-full bg-gold-500 px-2 py-0.5 text-xs font-semibold text-white">
-          {pendingCount}
+  const renderLink = (item) => {
+    const unread = item.to.endsWith('/messages') ? unreadTotal : 0
+    const pending = item.icon === 'inbox' ? pendingCount : 0
+    return (
+      <NavLink
+        key={item.to}
+        to={item.to}
+        end={item.end}
+        onClick={() => setMenuOpen(false)}
+        className={({ isActive }) =>
+          `flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-200 ${
+            isActive
+              ? 'bg-white/10 text-white shadow-sm ring-1 ring-white/10'
+              : 'text-navy-200 hover:bg-white/5 hover:text-white'
+          }`
+        }
+      >
+        {/* iOS-style unread badge: red pill on the icon's top-right corner. */}
+        <span className="relative shrink-0">
+          <Icon name={item.icon} className="h-5 w-5" />
+          {unread > 0 && <UnreadBadge count={unread} />}
         </span>
-      )}
-    </NavLink>
-  )
+        {item.label}
+        {pending > 0 && (
+          <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-gold-500 px-1.5 text-xs font-semibold text-white">
+            {pending}
+          </span>
+        )}
+      </NavLink>
+    )
+  }
 
   const navItems = (
     <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 pb-3" aria-label="Main navigation">
@@ -188,11 +219,12 @@ export default function AppShell({ children }) {
         </div>
         <button
           onClick={() => setMenuOpen((v) => !v)}
-          aria-label="Toggle navigation menu"
+          aria-label={unreadTotal > 0 ? `Toggle navigation menu, ${unreadTotal} unread` : 'Toggle navigation menu'}
           aria-expanded={menuOpen}
-          className="cursor-pointer rounded-lg p-2 text-white transition-colors duration-200 hover:bg-white/10"
+          className="relative cursor-pointer rounded-lg p-2 text-white transition-colors duration-200 hover:bg-white/10"
         >
           <Icon name={menuOpen ? 'x' : 'menu'} className="h-6 w-6" />
+          {!menuOpen && unreadTotal > 0 && <UnreadBadge count={unreadTotal} />}
         </button>
       </header>
 
