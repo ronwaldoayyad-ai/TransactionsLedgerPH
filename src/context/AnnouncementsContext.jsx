@@ -20,6 +20,7 @@ const mapAnnouncement = (r) => ({
   targetUserIds: r.target_user_ids ?? [],
   startsAt: r.starts_at ?? null,
   expiresAt: r.expires_at ?? null,
+  oneTime: !!r.one_time,
   createdAt: r.created_at ?? null,
 })
 
@@ -39,6 +40,9 @@ const demoId = () => `a-${Date.now()}-${++demoSeq}`
 let demoTemplates = [
   { id: 't-demo-1', name: 'Scheduled maintenance', type: 'banner', title: '🔧 Scheduled maintenance', body: 'The portal will be briefly unavailable tonight from 10:00 PM to 11:00 PM. Thank you for your patience.' },
   { id: 't-demo-2', name: 'Payment reminder', type: 'toast', title: '⏰ Payment reminder', body: 'Your next installment is due soon. Please settle on or before the due date to avoid penalties.' },
+  // Used by the auto toast triggers on proof-of-payment approve / reject.
+  { id: 't-demo-3', name: 'Payment posted', type: 'toast', title: '✅ Payment posted', body: 'Your proof of payment was verified and posted to your account. Thank you!' },
+  { id: 't-demo-4', name: 'Payment unsuccessful', type: 'toast', title: '⚠️ Payment unsuccessful', body: 'Your proof of payment could not be verified. Please review the note on your submission and re-upload.' },
 ]
 let demoTplSeq = 0
 const demoTplId = () => `t-${Date.now()}-${++demoTplSeq}`
@@ -227,16 +231,38 @@ export function AnnouncementsProvider({ children }) {
     }
   }, [announcements, dismissed, isAdmin, meId])
 
-  const dismiss = useCallback((id) => {
-    setDismissed((prev) => {
-      const next = new Set(prev)
-      next.add(id)
-      return next
-    })
-  }, [])
+  // Dismiss takes the announcement object. One-time (auto) announcements are
+  // CONSUMED — deleted so they never reappear on the next login, on any device.
+  // Regular ones are only hidden for the session (reappear until they expire).
+  const dismiss = useCallback(
+    async (a) => {
+      if (!a) return
+      if (a.oneTime) {
+        if (isLive) {
+          const { error } = await supabase.from('announcements').delete().eq('id', a.id)
+          if (error) {
+            console.error('[announcements] consume failed:', error.message)
+            setDismissed((prev) => new Set(prev).add(a.id)) // at least hide it this session
+            return
+          }
+          await fetchAll()
+        } else {
+          demoAnnouncements = demoAnnouncements.filter((x) => x.id !== a.id)
+          setDemoVersion((v) => v + 1)
+        }
+        return
+      }
+      setDismissed((prev) => {
+        const next = new Set(prev)
+        next.add(a.id)
+        return next
+      })
+    },
+    [isLive, fetchAll],
+  )
 
   const createAnnouncement = useCallback(
-    async ({ type, title = '', body, audience = 'all', targetUserIds = [], expiresAt = null }) => {
+    async ({ type, title = '', body, audience = 'all', targetUserIds = [], expiresAt = null, oneTime = false }) => {
       const ids = audience === 'targeted' ? targetUserIds : []
       if (isLive) {
         const { error } = await supabase.from('announcements').insert({
@@ -246,6 +272,7 @@ export function AnnouncementsProvider({ children }) {
           audience,
           target_user_ids: ids,
           expires_at: expiresAt || null,
+          one_time: oneTime,
         })
         if (error) {
           console.error('[announcements] create failed:', error.message)
@@ -263,6 +290,7 @@ export function AnnouncementsProvider({ children }) {
             targetUserIds: ids,
             startsAt: new Date().toISOString(),
             expiresAt: expiresAt || null,
+            oneTime,
             createdAt: new Date().toISOString(),
           },
           ...demoAnnouncements,
@@ -272,6 +300,30 @@ export function AnnouncementsProvider({ children }) {
       return {}
     },
     [isLive, fetchAll],
+  )
+
+  // Fire a one-time toast to a specific borrower from a named template (used by
+  // the proof-of-payment approve / reject flow). Falls back to a built-in
+  // message if the admin hasn't created the named template yet.
+  const triggerTemplateToast = useCallback(
+    async ({ templateName, userId, fallback }) => {
+      if (!userId) return
+      const wanted = String(templateName ?? '').trim().toLowerCase()
+      const tpl = templates.find((t) => t.type === 'toast' && t.name.trim().toLowerCase() === wanted)
+      const title = tpl?.title ?? fallback?.title ?? ''
+      const body = tpl?.body ?? fallback?.body ?? ''
+      if (!body) return
+      await createAnnouncement({
+        type: 'toast',
+        title,
+        body,
+        audience: 'targeted',
+        targetUserIds: [userId],
+        oneTime: true,
+        expiresAt: new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString(),
+      })
+    },
+    [templates, createAnnouncement],
   )
 
   const deleteAnnouncement = useCallback(
@@ -307,10 +359,11 @@ export function AnnouncementsProvider({ children }) {
       createTemplate,
       updateTemplate,
       deleteTemplate,
+      triggerTemplateToast,
     }),
     [
       announcements, toasts, banners, isAdmin, createAnnouncement, deleteAnnouncement, dismiss, getById,
-      templates, createTemplate, updateTemplate, deleteTemplate,
+      templates, createTemplate, updateTemplate, deleteTemplate, triggerTemplateToast,
     ],
   )
 

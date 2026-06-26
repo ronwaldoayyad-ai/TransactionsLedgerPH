@@ -56,7 +56,7 @@ export default function AnnouncementBanner() {
   return (
     <div>
       {banners.map((a) => (
-        <BannerBar key={a.id} a={a} onDismiss={() => dismiss(a.id)} />
+        <BannerBar key={a.id} a={a} onDismiss={() => dismiss(a)} />
       ))}
     </div>
   )

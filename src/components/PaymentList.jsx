@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useApp } from '../context/AppContext'
+import { useAnnouncements } from '../context/AnnouncementsContext'
 import Icon from './Icon'
 import { Badge, Button, EmptyState, Field, Modal, inputClass } from './ui'
 import { formatDate, formatPeso } from '../lib/amortization'
@@ -7,6 +8,17 @@ import Pagination from './Pagination'
 import { usePagination } from '../hooks/usePagination'
 
 const TABS = ['pending', 'approved', 'rejected', 'all']
+
+// Auto toast templates fired on review, with built-in fallbacks if the admin
+// hasn't created the named templates in the Announcements tab yet.
+const APPROVE_TOAST = {
+  templateName: 'Payment posted',
+  fallback: { title: '✅ Payment posted', body: 'Your proof of payment was verified and posted to your account. Thank you!' },
+}
+const REJECT_TOAST = {
+  templateName: 'Payment unsuccessful',
+  fallback: { title: '⚠️ Payment unsuccessful', body: 'Your proof of payment could not be verified. Please review the note on your submission and re-upload.' },
+}
 
 // Shared proof-of-payment list used by the admin Verification Queue (and the
 // Overview mirror) with review actions, and by the borrower's My Payments /
@@ -21,6 +33,17 @@ export default function PaymentList({
   pageSize = 0, // 0 = no pagination (default); >0 paginates the list
 }) {
   const { users, loans, reviewPayment, getProofUrl, deletePayment } = useApp()
+  const { triggerTemplateToast } = useAnnouncements()
+
+  // Approve / reject, then push the matching one-time toast to that borrower.
+  const approve = (p) => {
+    reviewPayment(p.id, 'approved')
+    triggerTemplateToast({ ...APPROVE_TOAST, userId: p.userId })
+  }
+  const reject = (p, note) => {
+    reviewPayment(p.id, 'rejected', note)
+    triggerTemplateToast({ ...REJECT_TOAST, userId: p.userId })
+  }
   // Admin queue defaults to "pending" (work to do); the borrower's own history
   // defaults to "all" so approved/rejected proofs aren't hidden.
   const [filter, setFilter] = useState(defaultTab ?? (showTabs ? 'pending' : 'all'))
@@ -50,7 +73,7 @@ export default function PaymentList({
     a.click()
   }
   const confirmReject = () => {
-    reviewPayment(rejecting.id, 'rejected', note.trim())
+    reject(rejecting, note.trim())
     setRejecting(null)
     setNote('')
   }
@@ -191,7 +214,7 @@ export default function PaymentList({
                           <Button
                             variant="primary"
                             className="!min-h-9 !px-3"
-                            onClick={() => reviewPayment(p.id, 'approved')}
+                            onClick={() => approve(p)}
                           >
                             <Icon name="check" className="h-4 w-4" />
                             Approve

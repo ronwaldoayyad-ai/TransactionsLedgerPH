@@ -6,11 +6,12 @@ import Icon from '../Icon'
 const LONG = 140 // chars beyond which we truncate and show "Read more"
 
 function ToastCard({ a, dismiss }) {
-  // Auto-dismiss after 30 seconds; manual close also available.
+  // Auto-dismiss: one-time (auto) toasts after 20s, regular ones after 30s.
+  // Manual close is always available.
   useEffect(() => {
-    const t = setTimeout(() => dismiss(a.id), 30000)
+    const t = setTimeout(() => dismiss(a), a.oneTime ? 20000 : 30000)
     return () => clearTimeout(t)
-  }, [a.id, dismiss])
+  }, [a, dismiss])
 
   const long = a.body.length > LONG
   const preview = long ? `${a.body.slice(0, LONG).trimEnd()}…` : a.body
@@ -35,7 +36,7 @@ function ToastCard({ a, dismiss }) {
           )}
         </div>
         <button
-          onClick={() => dismiss(a.id)}
+          onClick={() => dismiss(a)}
           aria-label="Close announcement"
           className="-mr-1 -mt-1 shrink-0 cursor-pointer rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
         >

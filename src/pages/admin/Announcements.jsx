@@ -236,6 +236,7 @@ export default function Announcements() {
                       {a.audience === 'all' ? 'All borrowers' : `${a.targetUserIds.length} recipient${a.targetUserIds.length === 1 ? '' : 's'}: ${a.targetUserIds.map(nameOf).join(', ')}`}
                       {' · '}
                       {expired ? <span className="font-medium text-red-600">Expired</span> : a.expiresAt ? `Until ${fmt(a.expiresAt)}` : 'No expiry'}
+                      {a.oneTime && <span className="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-slate-500">one-time</span>}
                     </p>
                   </div>
                   <button
