@@ -3,6 +3,7 @@ import { useApp } from '../../context/AppContext'
 import { useAnnouncements } from '../../context/AnnouncementsContext'
 import { PageHeader } from '../../components/AppShell'
 import Icon from '../../components/Icon'
+import TemplatesModal from '../../components/announcements/TemplatesModal'
 import { Button, Card, CardHeader, EmptyState, Field, MultiSelect, inputClass } from '../../components/ui'
 
 const TYPES = [
@@ -14,7 +15,8 @@ const fmt = (iso) => (iso ? new Date(iso).toLocaleString('en-PH', { dateStyle: '
 
 export default function Announcements() {
   const { users } = useApp()
-  const { announcements, createAnnouncement, deleteAnnouncement } = useAnnouncements()
+  const { announcements, createAnnouncement, deleteAnnouncement, templates, createTemplate, updateTemplate, deleteTemplate } =
+    useAnnouncements()
 
   const borrowers = useMemo(() => users.filter((u) => u.role === 'user'), [users])
   const options = useMemo(() => borrowers.map((b) => ({ value: b.id, label: b.name })), [borrowers])
@@ -27,6 +29,16 @@ export default function Announcements() {
   const [targetSel, setTargetSel] = useState(() => new Set())
   const [until, setUntil] = useState('')
   const [saving, setSaving] = useState(false)
+  const [tplOpen, setTplOpen] = useState(false)
+  const [tplDraft, setTplDraft] = useState(null)
+
+  const templatesForType = templates.filter((t) => t.type === type)
+  const applyTemplate = (id) => {
+    const t = templates.find((x) => x.id === id)
+    if (!t) return
+    setTitle(t.title)
+    setBody(t.body)
+  }
 
   const canSave = body.trim().length > 0 && (audience === 'all' || targetSel.size > 0)
 
@@ -81,6 +93,27 @@ export default function Announcements() {
               </div>
             </Field>
 
+            <Field label="Start from a template" htmlFor="ann-tpl" hint="Pick a saved message to fill the fields below.">
+              <div className="flex gap-2">
+                <select
+                  id="ann-tpl"
+                  className={inputClass}
+                  value=""
+                  onChange={(e) => applyTemplate(e.target.value)}
+                >
+                  <option value="">— Select a {type} template —</option>
+                  {templatesForType.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name || t.title || 'Untitled'}
+                    </option>
+                  ))}
+                </select>
+                <Button variant="secondary" onClick={() => { setTplDraft(null); setTplOpen(true) }}>
+                  Manage
+                </Button>
+              </div>
+            </Field>
+
             <Field label="Title (optional)" htmlFor="ann-title">
               <input
                 id="ann-title"
@@ -125,7 +158,7 @@ export default function Announcements() {
               </Field>
             )}
 
-            <Field label="Show until (optional)" htmlFor="ann-until" hint="Leave blank to keep showing until each borrower dismisses it.">
+            <Field label="Show until (optional)" htmlFor="ann-until" hint="Reappears on every login until this date. Leave blank to keep showing until you delete it.">
               <input
                 id="ann-until"
                 type="date"
@@ -135,7 +168,15 @@ export default function Announcements() {
               />
             </Field>
 
-            <div className="flex justify-end">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => { setTplDraft({ type, title: title.trim(), body: body.trim() }); setTplOpen(true) }}
+                disabled={!body.trim()}
+              >
+                <Icon name="plus" className="h-4 w-4" />
+                Save as template
+              </Button>
               <Button variant="gold" onClick={submit} disabled={!canSave || saving}>
                 <Icon name="send" className="h-4 w-4" />
                 {saving ? 'Publishing…' : 'Publish announcement'}
@@ -211,6 +252,17 @@ export default function Announcements() {
           </ul>
         )}
       </Card>
+
+      {tplOpen && (
+        <TemplatesModal
+          initialDraft={tplDraft}
+          templates={templates}
+          onCreate={createTemplate}
+          onUpdate={updateTemplate}
+          onDelete={deleteTemplate}
+          onClose={() => setTplOpen(false)}
+        />
+      )}
     </>
   )
 }

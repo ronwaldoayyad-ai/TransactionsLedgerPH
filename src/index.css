@@ -127,6 +127,40 @@ body {
   animation: announce-in 320ms var(--ease-out-strong) backwards;
 }
 
+/* Announcement banner marquee: two copies, translate one full copy width for a
+   seamless loop. Pauses on hover so the reader can stop it. */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+.marquee-track {
+  display: inline-flex;
+  flex-wrap: nowrap;
+  width: max-content;
+  white-space: nowrap;
+  animation-name: marquee;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+.marquee-track:hover {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* No scrolling: show a single static copy. */
+  .marquee-track {
+    animation: none;
+    transform: none;
+  }
+  .marquee-track > :nth-child(2) {
+    display: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

@@ -23,9 +23,25 @@ const mapAnnouncement = (r) => ({
   createdAt: r.created_at ?? null,
 })
 
+const mapTemplate = (r) => ({
+  id: r.id,
+  name: r.name ?? '',
+  type: r.type ?? 'toast',
+  title: r.title ?? '',
+  body: r.body ?? '',
+})
+
 let demoAnnouncements = []
 let demoSeq = 0
 const demoId = () => `a-${Date.now()}-${++demoSeq}`
+
+// A couple of seeded demo templates so the feature is usable without the DB.
+let demoTemplates = [
+  { id: 't-demo-1', name: 'Scheduled maintenance', type: 'banner', title: '🔧 Scheduled maintenance', body: 'The portal will be briefly unavailable tonight from 10:00 PM to 11:00 PM. Thank you for your patience.' },
+  { id: 't-demo-2', name: 'Payment reminder', type: 'toast', title: '⏰ Payment reminder', body: 'Your next installment is due soon. Please settle on or before the due date to avoid penalties.' },
+]
+let demoTplSeq = 0
+const demoTplId = () => `t-${Date.now()}-${++demoTplSeq}`
 
 const isActive = (a, now) => {
   const start = a.startsAt ? new Date(a.startsAt).getTime() : 0
@@ -103,6 +119,89 @@ export function AnnouncementsProvider({ children }) {
       supabase.removeChannel(channel)
     }
   }, [isLive, meId, fetchAll])
+
+  // ---- Templates (admin-only reusable messages) ----
+  const [liveTemplates, setLiveTemplates] = useState([])
+  const [tplVersion, setTplVersion] = useState(0)
+
+  const fetchTemplates = useCallback(async () => {
+    if (!isLive || !isAdmin) return
+    const { data, error } = await supabase
+      .from('announcement_templates')
+      .select('*')
+      .order('created_at', { ascending: false })
+    if (error) {
+      console.error('[announcements] templates load failed:', error.message)
+      return
+    }
+    setLiveTemplates((data ?? []).map(mapTemplate))
+  }, [isLive, isAdmin])
+
+  useEffect(() => {
+    if (!isLive || !isAdmin) return undefined
+    let active = true
+    ;(async () => {
+      await fetchTemplates()
+      if (!active) return
+    })()
+    return () => {
+      active = false
+    }
+  }, [isLive, isAdmin, fetchTemplates])
+
+  const templates = useMemo(() => {
+    if (!isAdmin) return []
+    return isLive ? liveTemplates : demoTemplates
+    // tplVersion forces recompute after in-memory demo mutations.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLive, liveTemplates, tplVersion, isAdmin])
+
+  const createTemplate = useCallback(
+    async ({ name = '', type = 'toast', title = '', body = '' }) => {
+      if (isLive) {
+        const { error } = await supabase.from('announcement_templates').insert({ name, type, title, body })
+        if (error) return { error: error.message }
+        await fetchTemplates()
+      } else {
+        demoTemplates = [{ id: demoTplId(), name, type, title, body }, ...demoTemplates]
+        setTplVersion((v) => v + 1)
+      }
+      return {}
+    },
+    [isLive, fetchTemplates],
+  )
+
+  const updateTemplate = useCallback(
+    async (id, { name, type, title, body }) => {
+      if (isLive) {
+        const { error } = await supabase
+          .from('announcement_templates')
+          .update({ name, type, title, body })
+          .eq('id', id)
+        if (error) return { error: error.message }
+        await fetchTemplates()
+      } else {
+        demoTemplates = demoTemplates.map((t) => (t.id === id ? { ...t, name, type, title, body } : t))
+        setTplVersion((v) => v + 1)
+      }
+      return {}
+    },
+    [isLive, fetchTemplates],
+  )
+
+  const deleteTemplate = useCallback(
+    async (id) => {
+      if (isLive) {
+        const { error } = await supabase.from('announcement_templates').delete().eq('id', id)
+        if (error) return
+        await fetchTemplates()
+      } else {
+        demoTemplates = demoTemplates.filter((t) => t.id !== id)
+        setTplVersion((v) => v + 1)
+      }
+    },
+    [isLive, fetchTemplates],
+  )
 
   // Admin sees everything (management); a borrower sees only valid ones for them.
   // Live rows are already validity- and audience-filtered by RLS, so we trust
@@ -195,8 +294,24 @@ export function AnnouncementsProvider({ children }) {
   const getById = useCallback((id) => announcements.find((a) => a.id === id) ?? null, [announcements])
 
   const value = useMemo(
-    () => ({ announcements, toasts, banners, isAdmin, createAnnouncement, deleteAnnouncement, dismiss, getById }),
-    [announcements, toasts, banners, isAdmin, createAnnouncement, deleteAnnouncement, dismiss, getById],
+    () => ({
+      announcements,
+      toasts,
+      banners,
+      isAdmin,
+      createAnnouncement,
+      deleteAnnouncement,
+      dismiss,
+      getById,
+      templates,
+      createTemplate,
+      updateTemplate,
+      deleteTemplate,
+    }),
+    [
+      announcements, toasts, banners, isAdmin, createAnnouncement, deleteAnnouncement, dismiss, getById,
+      templates, createTemplate, updateTemplate, deleteTemplate,
+    ],
   )
 
   return <AnnouncementsContext.Provider value={value}>{children}</AnnouncementsContext.Provider>
