@@ -4,11 +4,12 @@ import { supabase } from '../supabaseClient'
 
 // Admin-authored announcements delivered to borrowers (toast + push-down banner).
 // Dual-mode like the rest of the app: live sessions use the `announcements` table
-// + Realtime; demo sessions use a shared in-memory store. Per-recipient dismissals
-// live in localStorage so a closed announcement stays closed on that device.
+// + Realtime; demo sessions use a shared in-memory store. Dismissals are
+// session-scoped (in memory, reset per login) so a valid announcement reliably
+// reappears on each login until its expiry date — rather than being permanently
+// hidden the first time a toast auto-dismisses.
 
 const AnnouncementsContext = createContext(null)
-const DISMISS_KEY = 'announce-dismissed'
 
 const mapAnnouncement = (r) => ({
   id: r.id,
@@ -33,14 +34,6 @@ const isActive = (a, now) => {
 }
 const targetsMe = (a, meId) => a.audience === 'all' || (a.targetUserIds || []).includes(meId)
 
-function readDismissed() {
-  try {
-    return new Set(JSON.parse(localStorage.getItem(DISMISS_KEY) || '[]'))
-  } catch {
-    return new Set()
-  }
-}
-
 export function AnnouncementsProvider({ children }) {
   const { realSession, session } = useApp()
   const isLive = realSession?.source === 'supabase'
@@ -50,7 +43,9 @@ export function AnnouncementsProvider({ children }) {
 
   const [liveAnnouncements, setLiveAnnouncements] = useState([])
   const [demoVersion, setDemoVersion] = useState(0)
-  const [dismissed, setDismissed] = useState(() => readDismissed())
+  // Session-scoped dismissals (cleared on each login below), so an announcement
+  // reappears next time the borrower signs in until it actually expires.
+  const [dismissed, setDismissed] = useState(() => new Set())
   // Ticking clock so the active-window filter re-evaluates as time passes
   // (and keeps render pure — no Date.now() during render).
   const [now, setNow] = useState(() => Date.now())
@@ -58,6 +53,18 @@ export function AnnouncementsProvider({ children }) {
     const id = setInterval(() => setNow(Date.now()), 30000)
     return () => clearInterval(id)
   }, [])
+
+  // Reset dismissals whenever the signed-in identity changes (login / switch),
+  // so a fresh session starts with every valid announcement visible again.
+  useEffect(() => {
+    let cancelled = false
+    queueMicrotask(() => {
+      if (!cancelled) setDismissed(new Set())
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [meId])
 
   const fetchAll = useCallback(async () => {
     if (!isLive || !meId) return
@@ -98,11 +105,15 @@ export function AnnouncementsProvider({ children }) {
   }, [isLive, meId, fetchAll])
 
   // Admin sees everything (management); a borrower sees only valid ones for them.
+  // Live rows are already validity- and audience-filtered by RLS, so we trust
+  // them as-is (re-checking the window against a possibly-skewed client clock
+  // could wrongly hide a just-published announcement). Demo has no RLS, so it
+  // filters in memory.
   const announcements = useMemo(() => {
-    const base = isLive ? liveAnnouncements : demoAnnouncements
     if (!meId) return []
-    if (isAdmin) return [...base]
-    return base.filter((a) => isActive(a, now) && targetsMe(a, meId))
+    if (isLive) return [...liveAnnouncements]
+    if (isAdmin) return [...demoAnnouncements]
+    return demoAnnouncements.filter((a) => isActive(a, now) && targetsMe(a, meId))
     // demoVersion forces recompute after in-memory mutations.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLive, liveAnnouncements, demoVersion, meId, isAdmin, now])
@@ -121,11 +132,6 @@ export function AnnouncementsProvider({ children }) {
     setDismissed((prev) => {
       const next = new Set(prev)
       next.add(id)
-      try {
-        localStorage.setItem(DISMISS_KEY, JSON.stringify([...next]))
-      } catch {
-        /* ignore */
-      }
       return next
     })
   }, [])
