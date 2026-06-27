@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import Icon from '../components/Icon'
+import LoadingScreen from '../components/LoadingScreen'
 import { Button, FloatingInput } from '../components/ui'
 
 // Invite-only sign-in against Supabase (AUTH-5/AUTH-7: no public
@@ -13,8 +14,9 @@ export default function Login() {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  // Sign-in choreography: brief scale/blur exit, then navigate.
-  const [leaving, setLeaving] = useState(false)
+  // Sign-in choreography: a 5s loading splash, then route to the app.
+  const [splash, setSplash] = useState(false)
+  const [minElapsed, setMinElapsed] = useState(false)
 
   const target = !session
     ? null
@@ -24,15 +26,25 @@ export default function Login() {
         ? '/admin'
         : '/portal'
 
+  // Keep the splash on screen for at least 5 seconds after sign-in.
   useEffect(() => {
-    if (!leaving || !target) return undefined
-    const t = setTimeout(() => navigate(target, { replace: true }), 230)
+    if (!splash) return undefined
+    const t = setTimeout(() => setMinElapsed(true), 5000)
     return () => clearTimeout(t)
-  }, [leaving, target, navigate])
+  }, [splash])
 
-  // Restored session (page load / invite-link landing): route instantly —
+  // Once the 5s minimum has passed and the session/target is ready, route in.
+  useEffect(() => {
+    if (splash && minElapsed && target) navigate(target, { replace: true })
+  }, [splash, minElapsed, target, navigate])
+
+  // During a fresh sign-in, hold on the splash (don't let the restored-session
+  // redirect below short-circuit it).
+  if (splash) return <LoadingScreen />
+
+  // Restored session (page reload / invite-link landing): route instantly —
   // never animate a flow the user didn't just initiate.
-  if (session && !leaving) return <Navigate to={target} replace />
+  if (session) return <Navigate to={target} replace />
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -51,11 +63,11 @@ export default function Login() {
       )
       return
     }
-    setLeaving(true) // session arrives via the auth listener; effect navigates
+    setSplash(true) // show the 5s loading screen; effect routes once ready
   }
 
   return (
-    <div className={`flex min-h-screen flex-col bg-navy-950 lg:flex-row ${leaving ? 'page-leave' : ''}`}>
+    <div className="flex min-h-screen flex-col bg-navy-950 lg:flex-row">
       {/* Brand panel */}
       <div className="flex flex-col justify-between p-8 lg:w-1/2 lg:p-12">
         <div className="lp-rise flex items-center gap-3">

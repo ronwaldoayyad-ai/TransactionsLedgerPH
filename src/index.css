@@ -116,6 +116,214 @@ body {
   animation-fill-mode: forwards;
 }
 
+/* Login splash / loading screen — shown for ~5s after a successful sign-in. */
+.splash-screen {
+  position: fixed;
+  inset: 0;
+  background-color: #090d16;
+  color: #f8fafc;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  overflow: hidden;
+}
+.splash-circle {
+  width: 380px;
+  height: 380px;
+  max-width: 92vw;
+  max-height: 92vw;
+  border-radius: 50%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem;
+  background-color: rgba(255, 255, 255, 0.01);
+  box-shadow: inset 0 0 40px rgba(14, 165, 233, 0.03);
+  animation: splash-scale-in 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.splash-ring {
+  position: absolute;
+  inset: 0;
+  border: 4px solid rgba(14, 165, 233, 0.08);
+  border-top: 4px solid #0ea5e9;
+  border-bottom: 4px solid #10b981;
+  border-radius: 50%;
+  animation: splash-spin 3s linear infinite;
+  pointer-events: none;
+}
+.splash-brand {
+  text-align: center;
+  margin-bottom: 1rem;
+  z-index: 2;
+}
+.splash-title-wrap {
+  overflow: hidden;
+  margin-bottom: 0.25rem;
+}
+.splash-name {
+  font-size: 2.2rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  background: linear-gradient(to right, #ffffff, #cbd5e1);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  transform: translateY(100%);
+  animation: splash-slide-up 0.8s cubic-bezier(0.2, 1, 0.2, 1) forwards;
+  animation-delay: 0.2s;
+}
+.splash-name span {
+  background: linear-gradient(to right, #0ea5e9, #10b981);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.splash-tagline {
+  font-size: 0.8rem;
+  color: #94a3b8;
+  font-weight: 500;
+  text-transform: uppercase;
+  opacity: 0;
+  animation: splash-track-fade 1s cubic-bezier(0.2, 1, 0.2, 1) forwards;
+  animation-delay: 0.6s;
+}
+.splash-stage {
+  width: 220px;
+  height: 50px;
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 1rem;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+  z-index: 2;
+}
+.splash-loop {
+  display: flex;
+  width: 140px;
+  position: absolute;
+  bottom: 4px;
+  left: -150px;
+  justify-content: space-between;
+  align-items: flex-end;
+  animation: splash-chase 3s linear infinite;
+}
+.splash-char {
+  font-size: 22px;
+  position: relative;
+  user-select: none;
+  display: inline-block;
+}
+.splash-lender {
+  animation: splash-run-lender 0.2s ease-in-out infinite alternate-reverse;
+}
+.splash-lender::before {
+  content: '💢';
+  font-size: 10px;
+  position: absolute;
+  top: -9px;
+  right: 2px;
+  animation: splash-pulse 0.5s infinite;
+}
+.splash-lender::after {
+  content: '📋';
+  font-size: 11px;
+  position: absolute;
+  top: 2px;
+  left: -8px;
+}
+.splash-borrower {
+  animation: splash-run-borrower 0.25s ease-in-out infinite alternate;
+}
+.splash-borrower::before {
+  content: '💦';
+  font-size: 10px;
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  animation: splash-pulse 0.5s infinite;
+}
+.splash-borrower::after {
+  content: '💰';
+  font-size: 11px;
+  position: absolute;
+  bottom: -2px;
+  left: -6px;
+}
+.splash-footer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  z-index: 2;
+}
+.splash-text {
+  font-size: 0.8rem;
+  color: #64748b;
+  font-weight: 500;
+  text-align: center;
+  height: 1.2rem;
+  animation: splash-text-fade 0.3s ease;
+}
+.splash-progress-wrap {
+  width: 200px;
+  background-color: rgba(255, 255, 255, 0.05);
+  height: 4px;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.splash-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(to right, #0ea5e9, #10b981);
+  border-radius: 10px;
+  animation: splash-load 5s cubic-bezier(0.1, 0.85, 0.25, 1) forwards;
+}
+@keyframes splash-scale-in {
+  from { transform: scale(0.9); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+@keyframes splash-run-borrower {
+  0% { transform: translateY(0) rotate(-6deg); }
+  100% { transform: translateY(-6px) rotate(10deg); }
+}
+@keyframes splash-run-lender {
+  0% { transform: translateY(0) rotate(-4deg); }
+  100% { transform: translateY(-6px) rotate(14deg); }
+}
+@keyframes splash-chase {
+  0% { left: -150px; }
+  100% { left: 240px; }
+}
+@keyframes splash-slide-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+@keyframes splash-track-fade {
+  from { opacity: 0; letter-spacing: -2px; }
+  to { opacity: 1; letter-spacing: 2px; }
+}
+@keyframes splash-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+@keyframes splash-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+@keyframes splash-load {
+  0% { width: 0%; }
+  25% { width: 30%; }
+  60% { width: 65%; }
+  85% { width: 90%; }
+  100% { width: 100%; }
+}
+@keyframes splash-text-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 /* Continuous rotating multicolour border (Google-style) for highlighting a tile.
    A wrapper with 3px padding holds an oversized rotating 4-quadrant gradient
    behind an opaque inner card, leaving a spinning colour ring. */
