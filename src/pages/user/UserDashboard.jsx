@@ -102,24 +102,6 @@ export default function UserDashboard() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard
-          icon="scroll"
-          label="Active Loans"
-          value={myLoans.length}
-          hint={fullyPaidCount > 0 ? `${fullyPaidCount} fully paid` : undefined}
-        />
-        <StatCard
-          icon="wallet"
-          label="Net Proceeds Received"
-          value={formatPeso(totalNetProceeds)}
-          hint="After fees & deductions"
-        />
-        <StatCard
-          icon="trendingUp"
-          label="Outstanding Balance"
-          value={formatPeso(outstanding)}
-          accent="text-gold-600 bg-amber-50"
-        />
-        <StatCard
           icon="clock"
           label="Next Payment Due"
           value={nextDueItems.length ? formatPeso(nextDueAmount) : '—'}
@@ -149,6 +131,24 @@ export default function UserDashboard() {
           hint={`${straightTxns.length} item${straightTxns.length === 1 ? '' : 's'}`}
           accent="text-violet-700 bg-violet-50"
           onClick={() => navigate('/portal/straight')}
+        />
+        <StatCard
+          icon="trendingUp"
+          label="Outstanding Balance"
+          value={formatPeso(outstanding)}
+          accent="text-gold-600 bg-amber-50"
+        />
+        <StatCard
+          icon="wallet"
+          label="Net Proceeds Received"
+          value={formatPeso(totalNetProceeds)}
+          hint="After fees & deductions"
+        />
+        <StatCard
+          icon="scroll"
+          label="Active Loans"
+          value={myLoans.length}
+          hint={fullyPaidCount > 0 ? `${fullyPaidCount} fully paid` : undefined}
         />
       </div>
 
