@@ -343,6 +343,30 @@ export function AnnouncementsProvider({ children }) {
     [isLive, fetchAll],
   )
 
+  const updateAnnouncement = useCallback(
+    async (id, { title = '', body, audience = 'all', targetUserIds = [], expiresAt = null }) => {
+      const ids = audience === 'targeted' ? targetUserIds : []
+      if (isLive) {
+        const { error } = await supabase
+          .from('announcements')
+          .update({ title, body, audience, target_user_ids: ids, expires_at: expiresAt || null })
+          .eq('id', id)
+        if (error) {
+          console.error('[announcements] update failed:', error.message)
+          return { error: error.message }
+        }
+        await fetchAll()
+      } else {
+        demoAnnouncements = demoAnnouncements.map((a) =>
+          a.id === id ? { ...a, title, body, audience, targetUserIds: ids, expiresAt: expiresAt || null } : a,
+        )
+        setDemoVersion((v) => v + 1)
+      }
+      return {}
+    },
+    [isLive, fetchAll],
+  )
+
   const getById = useCallback((id) => announcements.find((a) => a.id === id) ?? null, [announcements])
 
   const value = useMemo(
@@ -352,6 +376,7 @@ export function AnnouncementsProvider({ children }) {
       banners,
       isAdmin,
       createAnnouncement,
+      updateAnnouncement,
       deleteAnnouncement,
       dismiss,
       getById,
@@ -362,7 +387,7 @@ export function AnnouncementsProvider({ children }) {
       triggerTemplateToast,
     }),
     [
-      announcements, toasts, banners, isAdmin, createAnnouncement, deleteAnnouncement, dismiss, getById,
+      announcements, toasts, banners, isAdmin, createAnnouncement, updateAnnouncement, deleteAnnouncement, dismiss, getById,
       templates, createTemplate, updateTemplate, deleteTemplate, triggerTemplateToast,
     ],
   )

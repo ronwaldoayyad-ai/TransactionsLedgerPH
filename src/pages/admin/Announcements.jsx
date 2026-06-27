@@ -4,6 +4,7 @@ import { useAnnouncements } from '../../context/AnnouncementsContext'
 import { PageHeader } from '../../components/AppShell'
 import Icon from '../../components/Icon'
 import TemplatesModal from '../../components/announcements/TemplatesModal'
+import EditAnnouncementModal from '../../components/announcements/EditAnnouncementModal'
 import { Button, Card, CardHeader, EmptyState, Field, MultiSelect, inputClass } from '../../components/ui'
 
 const TYPES = [
@@ -15,7 +16,7 @@ const fmt = (iso) => (iso ? new Date(iso).toLocaleString('en-PH', { dateStyle: '
 
 export default function Announcements() {
   const { users } = useApp()
-  const { announcements, createAnnouncement, deleteAnnouncement, templates, createTemplate, updateTemplate, deleteTemplate } =
+  const { announcements, createAnnouncement, updateAnnouncement, deleteAnnouncement, templates, createTemplate, updateTemplate, deleteTemplate } =
     useAnnouncements()
 
   const borrowers = useMemo(() => users.filter((u) => u.role === 'user'), [users])
@@ -31,6 +32,7 @@ export default function Announcements() {
   const [saving, setSaving] = useState(false)
   const [tplOpen, setTplOpen] = useState(false)
   const [tplDraft, setTplDraft] = useState(null)
+  const [editing, setEditing] = useState(null) // announcement being edited
 
   const templatesForType = templates.filter((t) => t.type === type)
   const applyTemplate = (id) => {
@@ -240,6 +242,14 @@ export default function Announcements() {
                     </p>
                   </div>
                   <button
+                    onClick={() => setEditing(a)}
+                    aria-label="Edit announcement"
+                    title="Edit"
+                    className="shrink-0 cursor-pointer rounded-lg p-2 text-slate-500 transition-colors hover:bg-navy-50 hover:text-navy-800"
+                  >
+                    <Icon name="pencil" className="h-4 w-4" />
+                  </button>
+                  <button
                     onClick={() => deleteAnnouncement(a.id)}
                     aria-label="Delete announcement"
                     title="Delete"
@@ -262,6 +272,15 @@ export default function Announcements() {
           onUpdate={updateTemplate}
           onDelete={deleteTemplate}
           onClose={() => setTplOpen(false)}
+        />
+      )}
+
+      {editing && (
+        <EditAnnouncementModal
+          announcement={editing}
+          options={options}
+          onSave={(patch) => updateAnnouncement(editing.id, patch)}
+          onClose={() => setEditing(null)}
         />
       )}
     </>
