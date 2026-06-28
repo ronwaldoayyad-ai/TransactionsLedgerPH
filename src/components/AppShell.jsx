@@ -120,7 +120,7 @@ export default function AppShell({ children }) {
           `relative origin-left flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-300 ease-out ` +
           `after:pointer-events-none after:absolute after:bottom-1 after:left-3 after:right-3 after:h-0.5 after:origin-left after:rounded-full after:bg-gold-400 after:transition-transform after:duration-300 ` +
           `group-hover/nav:scale-[0.97] group-hover/nav:opacity-40 group-hover/nav:blur-[1.5px] ` +
-          `hover:z-10 hover:!scale-[1.04] hover:!opacity-100 hover:!blur-0 hover:after:scale-x-100 ` +
+          `hover:z-10 hover:scale-[1.04]! hover:opacity-100! hover:blur-[0px]! hover:after:scale-x-100 ` +
           (isActive
             ? 'bg-white/10 text-white shadow-sm ring-1 ring-white/10 after:scale-x-100'
             : 'text-navy-200 hover:bg-white/5 hover:text-white after:scale-x-0')
