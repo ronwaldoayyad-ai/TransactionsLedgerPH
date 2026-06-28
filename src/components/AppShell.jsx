@@ -113,11 +113,17 @@ export default function AppShell({ children }) {
         end={item.end}
         onClick={() => setMenuOpen(false)}
         className={({ isActive }) =>
-          `flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors duration-200 ${
-            isActive
-              ? 'bg-white/10 text-white shadow-sm ring-1 ring-white/10'
-              : 'text-navy-200 hover:bg-white/5 hover:text-white'
-          }`
+          // Sidebar "spotlight" effect: hovering the nav dims/blurs/shrinks every
+          // link (the background), while the hovered link pops to the forefront —
+          // sharp, full opacity, scaled up. The active link keeps an animated
+          // underline that also slides in on hover.
+          `relative origin-left flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-300 ease-out ` +
+          `after:pointer-events-none after:absolute after:bottom-1 after:left-3 after:right-3 after:h-0.5 after:origin-left after:rounded-full after:bg-gold-400 after:transition-transform after:duration-300 ` +
+          `group-hover/nav:scale-[0.97] group-hover/nav:opacity-40 group-hover/nav:blur-[1.5px] ` +
+          `hover:z-10 hover:!scale-[1.04] hover:!opacity-100 hover:!blur-0 hover:after:scale-x-100 ` +
+          (isActive
+            ? 'bg-white/10 text-white shadow-sm ring-1 ring-white/10 after:scale-x-100'
+            : 'text-navy-200 hover:bg-white/5 hover:text-white after:scale-x-0')
         }
       >
         {/* iOS-style unread badge: red pill on the icon's top-right corner. */}
@@ -136,7 +142,7 @@ export default function AppShell({ children }) {
   }
 
   const navItems = (
-    <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 pb-3" aria-label="Main navigation">
+    <nav className="group/nav flex flex-1 flex-col gap-1 overflow-y-auto px-3 pb-3" aria-label="Main navigation">
       {nav.map((group, gi) => (
         <div
           key={group.title ?? 'overview'}
