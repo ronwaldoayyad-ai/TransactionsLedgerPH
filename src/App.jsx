@@ -25,6 +25,7 @@ import AdminMessages from './pages/admin/Messages'
 import UserMessages from './pages/user/Messages'
 import Announcements from './pages/admin/Announcements'
 import AnnouncementDetail from './pages/user/AnnouncementDetail'
+import PrivacyPolicy from './pages/PrivacyPolicy'
 
 // Two-tier RBAC route guard. Admin routes are unreachable for general users
 // and vice versa; unauthenticated visitors land on the invite-only login.
@@ -55,6 +56,8 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/set-password" element={<SetPassword />} />
+          {/* Public — linked from the mobile app's store listings. */}
+          <Route path="/privacy" element={<PrivacyPolicy />} />
 
           <Route path="/portal" element={<Protected role="user"><UserDashboard /></Protected>} />
           <Route path="/portal/loans/:loanId" element={<Protected role="user"><LoanDetail /></Protected>} />

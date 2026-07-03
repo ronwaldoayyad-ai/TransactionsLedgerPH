@@ -8,8 +8,11 @@
     "scheme": "loanledger",
     "userInterfaceStyle": "light",
     "ios": {
-      "icon": "./assets/expo.icon",
-      "bundleIdentifier": "com.wushuboy.loanledgerph"
+      "icon": "./assets/images/icon.png",
+      "bundleIdentifier": "com.wushuboy.loanledgerph",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.wushuboy.loanledgerph",
