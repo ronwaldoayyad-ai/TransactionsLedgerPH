@@ -2,11 +2,11 @@ import { useState } from 'react'
 import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Redirect, useRouter } from 'expo-router'
-import Animated, { FadeInDown, ZoomIn } from 'react-native-reanimated'
 import { AlertCircle, Check, Lock } from 'lucide-react-native'
 import { useApp } from '../context/AppContext'
 import FloatingInput from '../components/ui/FloatingInput'
 import Button from '../components/ui/Button'
+import FadeInView from '../components/ui/FadeInView'
 import LoadingSplash from '../components/LoadingSplash'
 import { errorHaptic, successHaptic } from '../lib/haptics'
 import { colors } from '../theme'
@@ -72,7 +72,7 @@ export default function SetPassword() {
             contentContainerClassName="flex-grow justify-center px-6 py-10"
             keyboardShouldPersistTaps="handled"
           >
-            <Animated.View entering={FadeInDown.duration(400)} className="rounded-2xl bg-white p-6">
+            <FadeInView className="rounded-2xl bg-white p-6">
               <View className="self-start rounded-full bg-navy-50 p-3">
                 <Lock size={22} color={colors.navy800} />
               </View>
@@ -103,11 +103,11 @@ export default function SetPassword() {
                     return (
                       <View key={r.id} className="flex-row items-center gap-2">
                         {ok ? (
-                          <Animated.View entering={ZoomIn.springify().damping(14)}>
+                          <FadeInView dy={0}>
                             <View className="h-5 w-5 items-center justify-center rounded-full bg-emerald-100">
                               <Check size={12} color="#059669" strokeWidth={3} />
                             </View>
-                          </Animated.View>
+                          </FadeInView>
                         ) : (
                           <View className="h-5 w-5 rounded-full border border-slate-300" />
                         )}
@@ -135,20 +135,17 @@ export default function SetPassword() {
                 />
 
                 {error ? (
-                  <Animated.View
-                    entering={FadeInDown.duration(200)}
-                    className="flex-row items-start gap-2 rounded-xl bg-red-50 px-3 py-3"
-                  >
+                  <FadeInView dy={4} className="flex-row items-start gap-2 rounded-xl bg-red-50 px-3 py-3">
                     <AlertCircle size={16} color="#b91c1c" style={{ marginTop: 1 }} />
                     <Text className="flex-1 font-sans text-sm leading-5 text-red-700">{error}</Text>
-                  </Animated.View>
+                  </FadeInView>
                 ) : null}
 
                 <Button onPress={handleSubmit} loading={submitting} disabled={submitting}>
                   {submitting ? 'Saving…' : 'Activate account'}
                 </Button>
               </View>
-            </Animated.View>
+            </FadeInView>
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>

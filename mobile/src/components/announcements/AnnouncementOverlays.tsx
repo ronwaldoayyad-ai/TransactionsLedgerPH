@@ -4,16 +4,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import Animated, {
   Easing,
-  FadeInDown,
-  FadeOutUp,
-  SlideInRight,
-  SlideOutRight,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
 } from 'react-native-reanimated'
 import { Megaphone, X } from 'lucide-react-native'
 import { useAnnouncements } from '../../context/AnnouncementsContext'
+import FadeInView from '../ui/FadeInView'
 import Marquee from './Marquee'
 import { lightHaptic } from '../../lib/haptics'
 import { colors } from '../../theme'
@@ -39,11 +36,7 @@ function ToastCard({ a }: { a: any }) {
   const barStyle = useAnimatedStyle(() => ({ transform: [{ scaleX: progress.get() }] }))
 
   return (
-    <Animated.View
-      entering={SlideInRight.springify().damping(19).stiffness(160)}
-      exiting={SlideOutRight.duration(220)}
-      className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg"
-    >
+    <FadeInView dy={-8} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg">
       <Pressable
         onPress={() => {
           dismiss(a)
@@ -80,7 +73,7 @@ function ToastCard({ a }: { a: any }) {
           style={[barStyle, { height: '100%', backgroundColor: colors.gold400, transformOrigin: 'left center' }]}
         />
       </View>
-    </Animated.View>
+    </FadeInView>
   )
 }
 
@@ -94,9 +87,8 @@ export default function AnnouncementOverlays() {
     <>
       {/* Banner: persistent bar pinned under the status bar, marquee if long */}
       {banner && (
-        <Animated.View
-          entering={FadeInDown.duration(300)}
-          exiting={FadeOutUp.duration(200)}
+        <FadeInView
+          dy={-8}
           style={{ position: 'absolute', top: insets.top, left: 0, right: 0, zIndex: 40 }}
           className="flex-row items-center gap-3 bg-blue-600 px-4 py-2.5"
         >
@@ -112,7 +104,7 @@ export default function AnnouncementOverlays() {
           >
             <Text className="font-sans-medium text-[11px] text-white">Dismiss</Text>
           </Pressable>
-        </Animated.View>
+        </FadeInView>
       )}
 
       {/* Toast stack: top of screen (below the banner when both show) */}

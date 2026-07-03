@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react'
 import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
-import Animated, {
-  FadeInDown,
+import {
   useAnimatedStyle,
   useSharedValue,
   withSequence,
@@ -13,6 +12,7 @@ import { AlertCircle, ShieldCheck, Wallet } from 'lucide-react-native'
 import { useApp } from '../context/AppContext'
 import FloatingInput from '../components/ui/FloatingInput'
 import Button from '../components/ui/Button'
+import FadeInView from '../components/ui/FadeInView'
 import LoadingSplash from '../components/LoadingSplash'
 import { errorHaptic, successHaptic } from '../lib/haptics'
 import { colors } from '../theme'
@@ -98,7 +98,7 @@ export default function Login() {
             keyboardShouldPersistTaps="handled"
           >
             {/* Brand */}
-            <Animated.View entering={FadeInDown.duration(400)} className="mb-10 items-center">
+            <FadeInView className="mb-10 items-center">
               <View className="flex-row items-center gap-3">
                 <View className="rounded-xl bg-gold-500 p-2.5">
                   <Wallet size={26} color="#ffffff" />
@@ -108,14 +108,10 @@ export default function Login() {
               <Text className="mt-3 text-center font-sans text-sm leading-5 text-navy-200">
                 Predictable loan schedules.{'\n'}Transparent disclosures.
               </Text>
-            </Animated.View>
+            </FadeInView>
 
             {/* Form card */}
-            <Animated.View
-              entering={FadeInDown.duration(400).delay(80)}
-              style={shakeStyle}
-              className="rounded-2xl bg-white p-6"
-            >
+            <FadeInView delay={80} style={shakeStyle} className="rounded-2xl bg-white p-6">
               <Text className="font-sans-bold text-xl text-slate-900">Sign in</Text>
               <Text className="mt-1 font-sans text-sm text-slate-600">
                 Use the credentials from your email invitation.
@@ -144,29 +140,23 @@ export default function Login() {
                   onSubmitEditing={handleSubmit}
                 />
                 {error ? (
-                  <Animated.View
-                    entering={FadeInDown.duration(200)}
-                    className="flex-row items-start gap-2 rounded-xl bg-red-50 px-3 py-3"
-                  >
+                  <FadeInView dy={4} className="flex-row items-start gap-2 rounded-xl bg-red-50 px-3 py-3">
                     <AlertCircle size={16} color="#b91c1c" style={{ marginTop: 1 }} />
                     <Text className="flex-1 font-sans text-sm leading-5 text-red-700">{error}</Text>
-                  </Animated.View>
+                  </FadeInView>
                 ) : null}
                 <Button onPress={handleSubmit} loading={submitting} disabled={submitting}>
                   {submitting ? 'Signing in…' : 'Sign in'}
                 </Button>
               </View>
-            </Animated.View>
+            </FadeInView>
 
-            <Animated.View
-              entering={FadeInDown.duration(400).delay(160)}
-              className="mt-8 flex-row items-center justify-center gap-2"
-            >
+            <FadeInView delay={160} className="mt-8 flex-row items-center justify-center gap-2">
               <ShieldCheck size={15} color={colors.navy300} />
               <Text className="font-sans text-xs text-navy-300">
                 Invite-only access. Public registration is disabled.
               </Text>
-            </Animated.View>
+            </FadeInView>
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>

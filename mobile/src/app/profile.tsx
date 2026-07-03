@@ -11,11 +11,11 @@ import {
 } from 'react-native'
 import { Stack, useRouter } from 'expo-router'
 import * as ImagePicker from 'expo-image-picker'
-import Animated, { FadeInDown } from 'react-native-reanimated'
 import { Camera, LogOut } from 'lucide-react-native'
 import { useApp } from '../context/AppContext'
 import Avatar from '../components/ui/Avatar'
 import Button from '../components/ui/Button'
+import FadeInView from '../components/ui/FadeInView'
 import FloatingInput from '../components/ui/FloatingInput'
 import Toast, { ToastData } from '../components/ui/Toast'
 import { errorHaptic, successHaptic, warningHaptic } from '../lib/haptics'
@@ -115,7 +115,7 @@ export default function Profile() {
       <KeyboardAvoidingView className="flex-1" behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerClassName="gap-4 p-4 pb-10" keyboardShouldPersistTaps="handled">
           {/* Avatar */}
-          <Animated.View entering={FadeInDown.duration(400)} className="items-center py-4">
+          <FadeInView className="items-center py-4">
             <Pressable onPress={pickAvatar} accessibilityLabel="Change profile photo">
               <Avatar name={me.name} url={me.avatarUrl} size={96} />
               <View className="absolute -bottom-1 -right-1 rounded-full border-2 border-[#f3f6fb] bg-navy-800 p-2">
@@ -128,13 +128,10 @@ export default function Profile() {
             </Pressable>
             <Text className="mt-3 font-sans-bold text-lg text-slate-900">{me.name}</Text>
             <Text className="font-sans text-xs text-slate-500">Borrower · {me.email}</Text>
-          </Animated.View>
+          </FadeInView>
 
           {/* Details */}
-          <Animated.View
-            entering={FadeInDown.duration(400).delay(80)}
-            className="gap-4 rounded-2xl border border-slate-200/70 bg-white p-5 shadow-sm"
-          >
+          <FadeInView delay={80} className="gap-4 rounded-2xl border border-slate-200/70 bg-white p-5 shadow-sm">
             <FloatingInput label="First name" value={firstName} onChangeText={setFirstName} />
             <FloatingInput label="Last name" value={lastName} onChangeText={setLastName} />
             <FloatingInput
@@ -151,14 +148,14 @@ export default function Profile() {
             <Button onPress={save} loading={saving} disabled={saving}>
               {saving ? 'Saving…' : 'Save changes'}
             </Button>
-          </Animated.View>
+          </FadeInView>
 
           {/* Sign out */}
-          <Animated.View entering={FadeInDown.duration(400).delay(140)}>
+          <FadeInView delay={140}>
             <Button variant="danger" onPress={confirmSignOut} icon={<LogOut size={15} color="#ffffff" />}>
               Sign out
             </Button>
-          </Animated.View>
+          </FadeInView>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>

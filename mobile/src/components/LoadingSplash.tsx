@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { Text, View, useWindowDimensions } from 'react-native'
 import Animated, {
   Easing,
-  FadeIn,
   useAnimatedStyle,
   useSharedValue,
   withDelay,
@@ -10,6 +9,7 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated'
+import FadeInView from './ui/FadeInView'
 import { colors, fonts } from '../theme'
 
 // RN recreation of the web sign-in splash (src/components/LoadingScreen.jsx):
@@ -118,13 +118,11 @@ export default function LoadingSplash() {
 
       {/* Status line + progress */}
       <View className="mt-6 w-full items-center" style={{ maxWidth: 320 }}>
-        <Animated.Text
-          key={text}
-          entering={FadeIn.duration(250)}
-          style={{ fontFamily: fonts.sansMedium, fontSize: 14, color: colors.navy200 }}
-        >
-          {text}
-        </Animated.Text>
+        <FadeInView key={text} dy={0}>
+          <Text style={{ fontFamily: fonts.sansMedium, fontSize: 14, color: colors.navy200 }}>
+            {text}
+          </Text>
+        </FadeInView>
         <View
           className="mt-4 w-full overflow-hidden rounded-full"
           style={{ height: 5, backgroundColor: 'rgba(255,255,255,0.08)' }}

@@ -1,9 +1,9 @@
 import { ScrollView, Text, View } from 'react-native'
 import { Stack, useLocalSearchParams } from 'expo-router'
-import Animated, { FadeInDown } from 'react-native-reanimated'
 import { Megaphone } from 'lucide-react-native'
 import { useAnnouncements } from '../../context/AnnouncementsContext'
 import EmptyState from '../../components/ui/EmptyState'
+import FadeInView from '../../components/ui/FadeInView'
 import { colors, fonts } from '../../theme'
 
 // Full-text announcement view (web AnnouncementDetail port).
@@ -30,10 +30,7 @@ export default function AnnouncementDetail() {
         />
       ) : (
         <ScrollView contentContainerClassName="p-4 pb-10">
-          <Animated.View
-            entering={FadeInDown.duration(400)}
-            className="rounded-2xl border border-slate-200/70 bg-white p-5 shadow-sm"
-          >
+          <FadeInView className="rounded-2xl border border-slate-200/70 bg-white p-5 shadow-sm">
             <View className="self-start rounded-full bg-navy-50 p-2.5">
               <Megaphone size={18} color={colors.navy800} />
             </View>
@@ -51,7 +48,7 @@ export default function AnnouncementDetail() {
             <Text className="mt-4 font-sans text-[15px] leading-[23px] text-slate-700">
               {a.body}
             </Text>
-          </Animated.View>
+          </FadeInView>
         </ScrollView>
       )}
     </View>

@@ -15,7 +15,7 @@ import { useFocusEffect } from 'expo-router'
 // SDK 56+ expo-router vendors bottom-tabs; the hook is only exposed on this
 // internal path (importing the @react-navigation package now throws).
 import { useBottomTabBarHeight } from 'expo-router/build/react-navigation/bottom-tabs'
-import Animated, { FadeIn, FadeInDown, FadeOut, SlideInDown, ZoomIn } from 'react-native-reanimated'
+import Animated, { FadeIn, FadeOut, SlideInDown } from 'react-native-reanimated'
 import { Pin, Send, Smile, Trash2, Volume2, VolumeX, X } from 'lucide-react-native'
 import { useApp } from '../../context/AppContext'
 import { useMessages } from '../../context/MessagesContext'
@@ -23,6 +23,7 @@ import { EMOJIS, QUICK_REACTIONS } from '../../lib/emoji'
 import { isMuted, playSend, setMuted } from '../../lib/sounds'
 import { lightHaptic, tapHaptic, warningHaptic } from '../../lib/haptics'
 import Avatar from '../../components/ui/Avatar'
+import FadeInView from '../../components/ui/FadeInView'
 import EmptyState from '../../components/ui/EmptyState'
 import { colors, fonts } from '../../theme'
 
@@ -165,10 +166,7 @@ export default function Messages() {
               </Text>
             </View>
             {reactions.length > 0 && (
-              <Animated.View
-                entering={ZoomIn.springify().damping(14)}
-                className={`-mt-1.5 flex-row gap-1 ${mine ? 'self-end pr-1' : 'self-start pl-1'}`}
-              >
+              <FadeInView dy={0} className={`-mt-1.5 flex-row gap-1 ${mine ? "self-end pr-1" : "self-start pl-1"}`}>
                 <View className="flex-row items-center gap-0.5 rounded-full border border-slate-200 bg-white px-1.5 py-0.5 shadow-sm">
                   {reactions.map((e, i) => (
                     <Text key={i} className="text-[13px]">
@@ -176,7 +174,7 @@ export default function Messages() {
                     </Text>
                   ))}
                 </View>
-              </Animated.View>
+              </FadeInView>
             )}
           </Pressable>
         </View>
@@ -231,10 +229,7 @@ export default function Messages() {
 
         {/* Pinned banner */}
         {pinned && (
-          <Animated.View
-            entering={FadeInDown.duration(250)}
-            className="flex-row items-center gap-2 border-b border-amber-200 bg-amber-50 px-4 py-2.5"
-          >
+          <FadeInView dy={-6} className="flex-row items-center gap-2 border-b border-amber-200 bg-amber-50 px-4 py-2.5">
             <Pin size={14} color={colors.gold600} />
             <Text className="flex-1 font-sans text-xs text-amber-900" numberOfLines={1}>
               {pinned.body}
@@ -242,7 +237,7 @@ export default function Messages() {
             <Pressable onPress={() => togglePin(pinned.id)} hitSlop={8} accessibilityLabel="Unpin">
               <X size={14} color={colors.gold600} />
             </Pressable>
-          </Animated.View>
+          </FadeInView>
         )}
 
         {/* Thread */}

@@ -1,6 +1,5 @@
 import { FlatList, RefreshControl, Text, View } from 'react-native'
 import { Stack, useLocalSearchParams } from 'expo-router'
-import Animated, { FadeInDown } from 'react-native-reanimated'
 import { PartyPopper } from 'lucide-react-native'
 import { useApp } from '../../context/AppContext'
 import { formatDate, formatPeso, toISODate } from '../../lib/amortization'
@@ -80,19 +79,16 @@ export default function LoanDetail() {
         ListHeaderComponent={
           <View className="gap-4">
             {fullyPaid && (
-              <Animated.View
-                entering={FadeInDown.duration(400)}
-                className="flex-row items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3.5"
-              >
+              <View className="flex-row items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3.5">
                 <PartyPopper size={20} color="#047857" />
                 <Text className="flex-1 font-sans-semibold text-sm text-emerald-900">
                   Congratulations — this loan is Fully Paid!
                 </Text>
-              </Animated.View>
+              </View>
             )}
 
             {/* Disclosure statement */}
-            <Animated.View entering={FadeInDown.duration(400).delay(60)}>
+            <View>
               <Card>
                 <CardHeader title="Disclosure Statement" subtitle={`Loan ${loan.id} · read-only`} />
                 <View className="px-5 py-2">
@@ -123,10 +119,10 @@ export default function LoanDetail() {
                   </View>
                 </View>
               </Card>
-            </Animated.View>
+            </View>
 
             {/* Schedule header */}
-            <Animated.View entering={FadeInDown.duration(400).delay(120)}>
+            <View>
               <View className="rounded-t-2xl border border-b-0 border-slate-200/70 bg-white px-5 py-4">
                 <Text className="font-sans-semibold text-base text-slate-900">
                   Amortization Schedule
@@ -136,7 +132,7 @@ export default function LoanDetail() {
                   {formatPeso(txns.reduce((s: number, t: any) => s + t.amount, 0))}
                 </Text>
               </View>
-            </Animated.View>
+            </View>
           </View>
         }
         ListEmptyComponent={

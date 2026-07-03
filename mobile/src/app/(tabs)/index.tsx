@@ -1,7 +1,6 @@
 import { RefreshControl, ScrollView, Switch, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
-import Animated, { FadeInDown } from 'react-native-reanimated'
 import {
   Check,
   Clock,
@@ -19,6 +18,7 @@ import ProgressBar from '../../components/ui/ProgressBar'
 import Badge from '../../components/ui/Badge'
 import Avatar from '../../components/ui/Avatar'
 import PressableScale from '../../components/ui/PressableScale'
+import FadeInView from '../../components/ui/FadeInView'
 import Skeleton from '../../components/ui/Skeleton'
 import EmptyState from '../../components/ui/EmptyState'
 import { Card, CardHeader } from '../../components/ui/Card'
@@ -122,7 +122,7 @@ export default function Dashboard() {
         }
       >
         {/* Header */}
-        <Animated.View entering={FadeInDown.duration(400)} className="flex-row items-center justify-between px-1">
+        <FadeInView className="flex-row items-center justify-between px-1">
           <View className="min-w-0 flex-1 pr-3">
             <Text className="font-sans-bold text-2xl text-slate-900">
               Welcome back, {session.user.name.split(' ')[0]}
@@ -134,7 +134,7 @@ export default function Dashboard() {
           <PressableScale onPress={() => router.push('/profile')} accessibilityLabel="View profile">
             <Avatar name={session.user.name} url={session.user.avatarUrl} size={40} />
           </PressableScale>
-        </Animated.View>
+        </FadeInView>
 
         {/* Stat tiles — exact web order */}
         {dataLoading ? (
@@ -228,19 +228,15 @@ export default function Dashboard() {
                 ),
               },
             ].map((t, i) => (
-              <Animated.View
-                key={t.key}
-                entering={FadeInDown.duration(400).delay(60 * i)}
-                className="w-[48.7%]"
-              >
+              <FadeInView key={t.key} delay={60 * i} className="w-[48.7%]">
                 {t.el}
-              </Animated.View>
+              </FadeInView>
             ))}
           </View>
         )}
 
         {/* My Loan Schedules */}
-        <Animated.View entering={FadeInDown.duration(400).delay(200)}>
+        <FadeInView delay={200}>
           <Card>
             <CardHeader
               title="My Loan Schedules"
@@ -326,10 +322,10 @@ export default function Dashboard() {
               })
             )}
           </Card>
-        </Animated.View>
+        </FadeInView>
 
         {/* Recent Payments */}
-        <Animated.View entering={FadeInDown.duration(400).delay(260)}>
+        <FadeInView delay={260}>
           <Card>
             <CardHeader
               title="Recent Payments"
@@ -373,7 +369,7 @@ export default function Dashboard() {
               ))
             )}
           </Card>
-        </Animated.View>
+        </FadeInView>
       </ScrollView>
     </SafeAreaView>
   )

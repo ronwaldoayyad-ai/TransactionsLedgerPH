@@ -14,7 +14,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import * as ImagePicker from 'expo-image-picker'
 import * as DocumentPicker from 'expo-document-picker'
-import Animated, { FadeInDown } from 'react-native-reanimated'
 import { Image } from 'expo-image'
 import { useRouter } from 'expo-router'
 import { Check, FileText, Paperclip, ScrollText, Send, X } from 'lucide-react-native'
@@ -23,6 +22,7 @@ import { formatPeso } from '../../lib/amortization'
 import { Card, CardHeader } from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import CurrencyInput from '../../components/ui/CurrencyInput'
+import FadeInView from '../../components/ui/FadeInView'
 import Toast, { ToastData } from '../../components/ui/Toast'
 import PaymentList from '../../components/PaymentList'
 import PressableScale from '../../components/ui/PressableScale'
@@ -202,10 +202,7 @@ export default function Pay() {
             <RefreshControl refreshing={refreshing} onRefresh={refreshData} tintColor={colors.navy600} />
           }
         >
-          <Animated.View
-            entering={FadeInDown.duration(400)}
-            className="flex-row items-center justify-between px-1"
-          >
+          <FadeInView className="flex-row items-center justify-between px-1">
             <View className="min-w-0 flex-1 pr-3">
               <Text className="font-sans-bold text-xl text-slate-900">My Payments</Text>
               <Text className="mt-0.5 font-sans text-xs text-slate-500">
@@ -218,10 +215,10 @@ export default function Pay() {
                 <Text className="font-sans-medium text-xs text-navy-700">Logs</Text>
               </View>
             </PressableScale>
-          </Animated.View>
+          </FadeInView>
 
           {/* Submit card */}
-          <Animated.View entering={FadeInDown.duration(400).delay(60)}>
+          <FadeInView delay={60}>
             <Card>
               <CardHeader title="Submit proof of payment" subtitle="JPG, PNG, or PDF · max 5 MB" />
               <View className="gap-4 px-5 py-4">
@@ -364,9 +361,9 @@ export default function Pay() {
                 </View>
 
                 {error ? (
-                  <Animated.View entering={FadeInDown.duration(200)} className="rounded-xl bg-red-50 px-3 py-3">
+                  <FadeInView dy={4} className="rounded-xl bg-red-50 px-3 py-3">
                     <Text className="font-sans text-sm text-red-700">{error}</Text>
-                  </Animated.View>
+                  </FadeInView>
                 ) : null}
 
                 <Button
@@ -380,17 +377,17 @@ export default function Pay() {
                 </Button>
               </View>
             </Card>
-          </Animated.View>
+          </FadeInView>
 
           {/* History */}
-          <Animated.View entering={FadeInDown.duration(400).delay(120)}>
+          <FadeInView delay={120}>
             <Card>
               <CardHeader title="My submissions" subtitle="View status or open a proof" />
               <View className="pt-3">
                 <PaymentList payments={myPayments} emptyBody="Your submitted proofs will appear here." />
               </View>
             </Card>
-          </Animated.View>
+          </FadeInView>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

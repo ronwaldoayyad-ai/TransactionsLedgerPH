@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { FlatList, RefreshControl, ScrollView, Switch, Text, View } from 'react-native'
-import Animated, { FadeInDown } from 'react-native-reanimated'
 import { Clock } from 'lucide-react-native'
 import { useApp } from '../context/AppContext'
 import { usePersistedState } from '../hooks/usePersistedState'
 import { formatDate, formatPeso, toISODate } from '../lib/amortization'
 import { BORROWER_STATUS_LABELS, borrowerStatus, isReceivable } from '../lib/transactions'
 import FilterSheet, { FilterChip, Option } from './ui/FilterSheet'
+import FadeInView from './ui/FadeInView'
 import PressableScale from './ui/PressableScale'
 import EmptyState from './ui/EmptyState'
 import Skeleton from './ui/Skeleton'
@@ -141,7 +141,7 @@ export default function TransactionsView({
   return (
     <View className="flex-1">
       {/* Filter bar */}
-      <Animated.View entering={FadeInDown.duration(350)} className="gap-2.5 px-4 pb-3 pt-1">
+      <FadeInView className="gap-2.5 px-4 pb-3 pt-1">
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="items-center gap-2">
           {!straightOnly && (
             <FilterChip label="Type" count={typeSel.size} onPress={() => setOpenSheet('type')} />
@@ -194,7 +194,7 @@ export default function TransactionsView({
             />
           </View>
         </View>
-      </Animated.View>
+      </FadeInView>
 
       {/* Summary header */}
       <View className="border-y border-slate-200 bg-white px-4 py-2.5">

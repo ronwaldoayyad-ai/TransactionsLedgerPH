@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native'
 import * as WebBrowser from 'expo-web-browser'
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable'
-import Animated, { FadeInDown } from 'react-native-reanimated'
 import { Image } from 'expo-image'
 import { FileText, Inbox, Trash2 } from 'lucide-react-native'
 import { useApp } from '../context/AppContext'
@@ -10,6 +9,7 @@ import { formatDate, formatPeso } from '../lib/amortization'
 import Badge from './ui/Badge'
 import EmptyState from './ui/EmptyState'
 import SegmentedTabs from './ui/SegmentedTabs'
+import FadeInView from './ui/FadeInView'
 import ProofViewer from './ProofViewer'
 import { errorHaptic, warningHaptic } from '../lib/haptics'
 import { colors } from '../theme'
@@ -144,9 +144,9 @@ export default function PaymentList({
           body={filter === 'all' ? emptyBody : `No ${filter} submissions.`}
         />
       ) : (
-        <Animated.View entering={FadeInDown.duration(300)} className="overflow-hidden rounded-b-2xl">
+        <FadeInView className="overflow-hidden rounded-b-2xl">
           {list.map(renderRow)}
-        </Animated.View>
+        </FadeInView>
       )}
       {viewing && (
         <ProofViewer url={viewing.url} fileName={viewing.fileName} onClose={() => setViewing(null)} />

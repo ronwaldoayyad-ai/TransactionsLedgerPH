@@ -1,6 +1,6 @@
 import { Text, View } from 'react-native'
-import Animated, { FadeInUp, FadeOutUp } from 'react-native-reanimated'
 import { CheckCircle2, XCircle } from 'lucide-react-native'
+import FadeInView from './FadeInView'
 
 export type ToastData = {
   id: number
@@ -13,10 +13,9 @@ export type ToastData = {
 export default function Toast({ toast }: { toast: ToastData }) {
   const success = toast.variant === 'success'
   return (
-    <Animated.View
+    <FadeInView
       key={toast.id}
-      entering={FadeInUp.springify().damping(18)}
-      exiting={FadeOutUp.duration(200)}
+      dy={-8}
       className={`flex-row items-start gap-3 rounded-2xl border p-4 shadow-lg ${
         success ? 'border-emerald-200 bg-emerald-50' : 'border-red-200 bg-red-50'
       }`}
@@ -38,6 +37,6 @@ export default function Toast({ toast }: { toast: ToastData }) {
           {toast.message}
         </Text>
       </View>
-    </Animated.View>
+    </FadeInView>
   )
 }
