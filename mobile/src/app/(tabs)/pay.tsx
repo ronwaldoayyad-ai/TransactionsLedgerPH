@@ -26,7 +26,7 @@ import CurrencyInput from '../../components/ui/CurrencyInput'
 import Toast, { ToastData } from '../../components/ui/Toast'
 import PaymentList from '../../components/PaymentList'
 import PressableScale from '../../components/ui/PressableScale'
-import { errorHaptic, successHaptic } from '../../lib/haptics'
+import { errorHaptic, successHaptic, tapHaptic } from '../../lib/haptics'
 import { colors, fonts } from '../../theme'
 
 const MAX_FILE_BYTES = 5 * 1024 * 1024 // 5 MB (web parity)
@@ -275,21 +275,28 @@ export default function Pay() {
                       return (
                         <Pressable
                           key={l.id}
-                          onPress={() => toggleLoan(l.id)}
-                          className={`flex-row items-center gap-3 rounded-xl border px-3 py-3 ${
+                          onPress={() => {
+                            tapHaptic()
+                            toggleLoan(l.id)
+                          }}
+                          hitSlop={{ left: 8, right: 8 }}
+                          android_ripple={{ color: '#e2e8f0' }}
+                          style={({ pressed }) => ({ minHeight: 54, opacity: pressed ? 0.85 : 1 })}
+                          className={`flex-row items-center gap-3 rounded-xl border px-3 ${
                             on ? 'border-navy-300 bg-navy-50' : 'border-slate-200 bg-white'
                           }`}
                           accessibilityRole="checkbox"
                           accessibilityState={{ checked: on }}
+                          accessibilityLabel={l.label}
                         >
                           <View
-                            className={`h-5 w-5 items-center justify-center rounded-md border ${
+                            className={`h-6 w-6 items-center justify-center rounded-lg border-2 ${
                               on ? 'border-navy-800 bg-navy-800' : 'border-slate-300 bg-white'
                             }`}
                           >
-                            {on && <Check size={13} color="#ffffff" strokeWidth={3} />}
+                            {on && <Check size={15} color="#ffffff" strokeWidth={3.5} />}
                           </View>
-                          <Text className="flex-1 font-sans-medium text-sm text-slate-800" numberOfLines={1}>
+                          <Text className="flex-1 py-3 font-sans-medium text-sm text-slate-800" numberOfLines={1}>
                             {l.label}
                           </Text>
                           <Text className="font-mono text-xs text-slate-500">
