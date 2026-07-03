@@ -81,58 +81,83 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [payments, setPayments] = useState<any[]>([])
   const [paymentLogs, setPaymentLogs] = useState<any[]>([])
 
+  // Progressive load: each slice paints as soon as it arrives instead of
+  // waiting for the slowest one. `dataLoading` clears once the core slices
+  // (loans + transactions) are in — the dashboard needs nothing else.
   const loadLiveData = useCallback(async () => {
     const failures: string[] = []
+    const run = async (label: string, fetch: () => Promise<any>, apply: (rows: any[]) => void) => {
+      try {
+        const { data, error } = await fetch()
+        if (error) failures.push(`${label} (${error.message})`)
+        else apply(data ?? [])
+      } catch (e: any) {
+        failures.push(`${label} (${e?.message ?? 'unknown error'})`)
+      }
+    }
+
     try {
-      const [profilesRes, loansRes, txnsRes, paymentsRes, paymentLogsRes] = await Promise.all([
-        // Secondary .order('id') keeps paging deterministic (web comment).
-        fetchAllRows(() => supabase.from('profiles').select('*').order('created_at').order('id')),
-        fetchAllRows(() => supabase.from('loans').select('*').order('created_at').order('id')),
-        fetchAllRows(() => supabase.from('transactions').select('*').order('due_date').order('id')),
-        fetchAllRows(() =>
-          supabase.from('payments').select('*').order('submitted_at', { ascending: false }).order('id'),
+      // Secondary .order('id') keeps paging deterministic (web comment).
+      const core = Promise.all([
+        run(
+          'loans',
+          () => fetchAllRows(() => supabase.from('loans').select('*').order('created_at').order('id')),
+          (rows) => setLoans(rows.map(mapLoan)),
         ),
-        fetchAllRows(() => supabase.from('payment_logs').select('*').order('created_at').order('id')),
+        run(
+          'transactions',
+          () =>
+            fetchAllRows(() => supabase.from('transactions').select('*').order('due_date').order('id')),
+          (rows) => setTransactions(rows.map(mapTransaction).filter((t: any) => !t.archivedAt)),
+        ),
       ])
 
-      if (profilesRes.error) failures.push(`profiles (${profilesRes.error.message})`)
-      else setUsers((profilesRes.data ?? []).map(mapProfile))
-
-      if (loansRes.error) failures.push(`loans (${loansRes.error.message})`)
-      else setLoans((loansRes.data ?? []).map(mapLoan))
-
-      if (txnsRes.error) failures.push(`transactions (${txnsRes.error.message})`)
-      else {
-        const allTxns = (txnsRes.data ?? []).map(mapTransaction)
-        setTransactions(allTxns.filter((t: any) => !t.archivedAt))
-      }
-
-      if (paymentLogsRes.error) failures.push(`payment logs (${paymentLogsRes.error.message})`)
-      else setPaymentLogs((paymentLogsRes.data ?? []).map(mapPaymentLog))
-
-      if (paymentsRes.error) {
-        failures.push(`payments (${paymentsRes.error.message})`)
-      } else {
-        const paymentRows = paymentsRes.data ?? []
-        // Resolve signed URLs mapped by REQUEST ORDER, not the returned path —
-        // Supabase may re-encode keys with special characters (web comment).
-        const paths = [...new Set(paymentRows.map((p: any) => p.file_path).filter(Boolean))]
-        const urlByPath: Record<string, string> = {}
-        if (paths.length > 0) {
+      const rest = Promise.all([
+        run(
+          'profiles',
+          () => fetchAllRows(() => supabase.from('profiles').select('*').order('created_at').order('id')),
+          (rows) => setUsers(rows.map(mapProfile)),
+        ),
+        run(
+          'payment logs',
+          () =>
+            fetchAllRows(() => supabase.from('payment_logs').select('*').order('created_at').order('id')),
+          (rows) => setPaymentLogs(rows.map(mapPaymentLog)),
+        ),
+        // Payments render immediately without thumbnails, then hydrate once
+        // the signed URLs resolve (they're the slowest round-trip).
+        (async () => {
           try {
+            const { data, error } = await fetchAllRows(() =>
+              supabase.from('payments').select('*').order('submitted_at', { ascending: false }).order('id'),
+            )
+            if (error) {
+              failures.push(`payments (${error.message})`)
+              return
+            }
+            const paymentRows = data ?? []
+            setPayments(paymentRows.map((p: any) => mapPayment(p, null)))
+            // Resolve signed URLs mapped by REQUEST ORDER, not the returned
+            // path — Supabase may re-encode keys with special characters.
+            const paths = [...new Set(paymentRows.map((p: any) => p.file_path).filter(Boolean))]
+            if (paths.length === 0) return
+            const urlByPath: Record<string, string> = {}
             const { data: signed } = await supabase.storage
               .from('payment-proofs')
               .createSignedUrls(paths as string[], 60 * 60)
             ;(signed ?? []).forEach((s: any, i: number) => {
               if (s?.signedUrl) urlByPath[paths[i] as string] = s.signedUrl
             })
+            setPayments(paymentRows.map((p: any) => mapPayment(p, urlByPath[p.file_path] ?? null)))
           } catch (e: any) {
-            console.error('[supabase] signed URLs failed:', e?.message ?? e)
+            console.error('[supabase] payments load failed:', e?.message ?? e)
           }
-        }
-        setPayments(paymentRows.map((p: any) => mapPayment(p, urlByPath[p.file_path] ?? null)))
-      }
+        })(),
+      ])
 
+      await core
+      setDataLoading(false) // dashboard can paint now
+      await rest
       setSyncError(
         failures.length > 0 ? `Some records could not be refreshed: ${failures.join(', ')}.` : null,
       )

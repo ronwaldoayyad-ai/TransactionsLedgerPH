@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { FlatList, RefreshControl, ScrollView, Switch, Text, View } from 'react-native'
 import Animated, { FadeInDown } from 'react-native-reanimated'
 import { Clock } from 'lucide-react-native'
@@ -19,14 +19,29 @@ const FILTERABLE_STATUSES = ['paid', 'upcoming', 'due', 'past_due', 'refunded', 
 // and Straight (status-only). Port of the web ConsolidatedLoans /
 // StraightTransactions logic; the web's 15-per-page pagination becomes a
 // virtualized FlatList (the mobile-native equivalent).
+// Dashboard tiles prefilter this view via navigation params. Params reach an
+// ALREADY-MOUNTED tab screen (unlike the web, where navigation remounts the
+// page), so seeds are applied in an effect keyed by the `seedN` nonce.
+export type FilterSeed = {
+  seedN?: string
+  seedStatus?: string
+  seedDue?: string
+  seedType?: string
+  seedHide?: string
+}
+
+const csvToSet = (csv?: string) => new Set(csv ? csv.split(',').filter(Boolean) : [])
+
 export default function TransactionsView({
   keyPrefix,
   straightOnly = false,
   emptyDefaultBody,
+  seed,
 }: {
   keyPrefix: 'consolidated' | 'straight'
   straightOnly?: boolean
   emptyDefaultBody: string
+  seed?: FilterSeed
 }) {
   const { session, transactions, dataLoading, refreshing, refreshData } = useApp()
   const today = toISODate(new Date())
@@ -38,6 +53,20 @@ export default function TransactionsView({
   const [sortKey, setSortKey] = usePersistedState(`${keyPrefix}.sortKey`, 'dueDate')
   const [sortDir, setSortDir] = usePersistedState(`${keyPrefix}.sortDir`, 'asc')
   const [openSheet, setOpenSheet] = useState<null | 'type' | 'status' | 'due'>(null)
+
+  // Apply a dashboard-tile prefilter each time a new seed nonce arrives.
+  const { seedN, seedStatus, seedDue, seedType, seedHide } = seed ?? {}
+  useEffect(() => {
+    if (!seedN) return
+    queueMicrotask(() => {
+      setStatusSel(csvToSet(seedStatus))
+      setDueDateSel(csvToSet(seedDue))
+      setTypeSel(csvToSet(seedType))
+      setHideSettled(seedHide !== '0')
+    })
+    // Re-run only when a NEW tap seeds new params (nonce changes).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seedN])
 
   const myTxns = useMemo(
     () =>
@@ -211,31 +240,39 @@ export default function TransactionsView({
         />
       )}
 
-      {/* Filter sheets */}
-      <FilterSheet
-        visible={openSheet === 'type'}
-        title="Filter by type"
-        options={typeOptions}
-        selected={typeSel}
-        onChange={setTypeSel}
-        onClose={() => setOpenSheet(null)}
-      />
-      <FilterSheet
-        visible={openSheet === 'status'}
-        title="Filter by status"
-        options={statusOptions}
-        selected={statusSel}
-        onChange={setStatusSel}
-        onClose={() => setOpenSheet(null)}
-      />
-      <FilterSheet
-        visible={openSheet === 'due'}
-        title="Filter by due date"
-        options={dueDateOptions}
-        selected={dueDateSel}
-        onChange={setDueDateSel}
-        onClose={() => setOpenSheet(null)}
-      />
+      {/* Filter sheets — mounted only while open so each open starts from the
+          CURRENT selection (a persistent instance kept a stale draft, which
+          made Clear/prefilters look broken). */}
+      {openSheet === 'type' && (
+        <FilterSheet
+          visible
+          title="Filter by type"
+          options={typeOptions}
+          selected={typeSel}
+          onChange={setTypeSel}
+          onClose={() => setOpenSheet(null)}
+        />
+      )}
+      {openSheet === 'status' && (
+        <FilterSheet
+          visible
+          title="Filter by status"
+          options={statusOptions}
+          selected={statusSel}
+          onChange={setStatusSel}
+          onClose={() => setOpenSheet(null)}
+        />
+      )}
+      {openSheet === 'due' && (
+        <FilterSheet
+          visible
+          title="Filter by due date"
+          options={dueDateOptions}
+          selected={dueDateSel}
+          onChange={setDueDateSel}
+          onClose={() => setOpenSheet(null)}
+        />
+      )}
     </View>
   )
 }

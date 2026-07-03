@@ -12,7 +12,6 @@ import {
 } from 'lucide-react-native'
 import { useApp } from '../../context/AppContext'
 import { usePersistedState } from '../../hooks/usePersistedState'
-import { setPageEntry } from '../../lib/pageStateStore'
 import { formatDate, formatPeso, toISODate } from '../../lib/amortization'
 import { effectiveStatus } from '../../lib/transactions'
 import StatTile from '../../components/ui/StatTile'
@@ -84,21 +83,32 @@ export default function Dashboard() {
   const straightTotal = straightTxns.reduce((s: number, t: any) => s + t.amount, 0)
   const installmentTotal = installmentTxns.reduce((s: number, t: any) => s + t.amount, 0)
 
-  // Clickable tiles pre-seed the destination screen's persisted filters
-  // (same pageStateStore keys as the web app).
+  // Clickable tiles prefilter the Transactions screen via search params —
+  // params reach the already-mounted tab, unlike mount-time store seeds
+  // (the web remounts pages on navigation; tabs don't).
   const goNextDue = () => {
-    setPageEntry('consolidated.statusSel', new Set(['past_due', 'due', 'upcoming']))
-    setPageEntry('consolidated.dueDateSel', new Set(nextDueItems.map((t: any) => t.dueDate)))
-    setPageEntry('consolidated.typeSel', new Set())
-    setPageEntry('consolidated.hideSettled', true)
-    router.push('/(tabs)/transactions')
+    router.push({
+      pathname: '/(tabs)/transactions',
+      params: {
+        seedN: String(Date.now()),
+        seedStatus: 'past_due,due,upcoming',
+        seedDue: [...new Set(nextDueItems.map((t: any) => t.dueDate))].join(','),
+        seedType: '',
+        seedHide: '1',
+      },
+    })
   }
   const goInstallments = () => {
-    setPageEntry('consolidated.statusSel', new Set())
-    setPageEntry('consolidated.dueDateSel', new Set())
-    setPageEntry('consolidated.typeSel', new Set(['Installment']))
-    setPageEntry('consolidated.hideSettled', false)
-    router.push('/(tabs)/transactions')
+    router.push({
+      pathname: '/(tabs)/transactions',
+      params: {
+        seedN: String(Date.now()),
+        seedStatus: '',
+        seedDue: '',
+        seedType: 'Installment',
+        seedHide: '0',
+      },
+    })
   }
 
   const iconSize = 18

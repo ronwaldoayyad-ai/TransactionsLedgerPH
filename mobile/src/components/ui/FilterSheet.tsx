@@ -56,7 +56,10 @@ export default function FilterSheet({
   onClose: () => void
 }) {
   // Draft locally; commit on Done (matches the web dropdown's forgiving feel).
-  const [draft, setDraft] = useState<Set<string>>(selected)
+  // The sheet is mounted fresh on every open (see TransactionsView), so this
+  // snapshot of `selected` is always current — a persistent instance would
+  // resurrect stale checkmarks after Clear or a dashboard prefilter.
+  const [draft, setDraft] = useState<Set<string>>(() => new Set(selected))
 
   const toggle = (value: string) => {
     setDraft((prev) => {
