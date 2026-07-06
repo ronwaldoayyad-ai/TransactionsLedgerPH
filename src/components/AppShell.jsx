@@ -32,6 +32,7 @@ const adminNav = [
     title: 'Loans',
     items: [
       { to: '/admin/calculator', label: 'Loan Calculator', icon: 'calculator' },
+      { to: '/admin/loan-requests', label: 'Loan Requests', icon: 'file' },
       { to: '/admin/loan-tracker', label: 'Loan Tracker', icon: 'wallet' },
     ],
   },
@@ -47,6 +48,10 @@ const adminNav = [
 
 const userNav = [
   { items: [{ to: '/portal', label: 'My Dashboard', icon: 'dashboard', end: true }] },
+  {
+    title: 'Loans',
+    items: [{ to: '/portal/loan-request', label: 'Request a Loan', icon: 'file' }],
+  },
   {
     title: 'Messages',
     items: [{ to: '/portal/messages', label: 'Messages', icon: 'mail' }],
