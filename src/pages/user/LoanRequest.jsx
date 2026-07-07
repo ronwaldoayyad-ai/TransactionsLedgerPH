@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
 import { useLoanRequests } from '../../context/LoanRequestsContext'
 import { PageHeader } from '../../components/AppShell'
@@ -290,6 +291,18 @@ function RequestDetail({ request, onBack }) {
   const [busy, setBusy] = useState(false)
   const events = eventsFor(request.id)
 
+  // Rebuild the same summary + schedule the borrower saw at submission, from the
+  // values stored on the request (which reflect any admin fee overrides).
+  const feeArgs = {
+    amount: request.amount,
+    termMonths: request.termMonths,
+    monthlyRate: request.monthlyRate,
+    notarialFee: request.notarialFee,
+    dst: request.dst,
+  }
+  const summary = requestSummary(feeArgs)
+  const schedule = buildRequestSchedule(feeArgs)
+
   const cancel = async () => {
     setBusy(true)
     await cancelRequest(request.id, 'Canceled by borrower.')
@@ -328,6 +341,66 @@ function RequestDetail({ request, onBack }) {
             <p className="text-xs text-slate-500">Rate</p>
             <p className="font-mono text-sm font-semibold text-slate-900">{(request.monthlyRate * 100).toFixed(4)}%</p>
           </div>
+        </div>
+      </Card>
+
+      <Card>
+        <CardHeader title="Cash Loan Summary" />
+        <div className="px-5 py-4">
+          <div className="grid gap-x-6 sm:grid-cols-2">
+            <SummaryRow label="Loan Amount" value={formatPeso(request.amount)} />
+            <SummaryRow label="Monthly Add-on Rate" value={`${(request.monthlyRate * 100).toFixed(4)}%`} />
+            <SummaryRow label="Processing Fee" value={formatPeso(request.processingFee)} />
+            <SummaryRow label="DST Amount" value={formatPeso(request.dst)} />
+            <SummaryRow label="Notarial Fee" value={formatPeso(request.notarialFee)} />
+            <SummaryRow label="Payment Terms" value={`${request.termMonths} Months`} />
+          </div>
+          <div className="mt-2 border-t border-slate-200 pt-2">
+            <SummaryRow label="Total Monthly Installment" value={formatPeso(summary.monthlyInstallment)} strong />
+          </div>
+        </div>
+      </Card>
+
+      <Card>
+        <CardHeader title="Disbursement Bank Details" />
+        <div className="px-5 py-2">
+          {[
+            ['Bank Name', request.bankName],
+            ['Bank Account Number', request.bankAccountNumber],
+            ['Bank Account Name', request.bankAccountName],
+          ].map(([label, value], i) => (
+            <div
+              key={label}
+              className={`flex items-center justify-between gap-3 py-2.5 ${i > 0 ? 'border-t border-slate-100' : ''}`}
+            >
+              <span className="text-sm text-slate-500">{label}</span>
+              <span className="text-sm font-medium text-slate-900">{value}</span>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <Card>
+        <CardHeader title="Amortization Schedule" />
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-slate-200 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                <th className="px-4 py-3">Month</th>
+                <th className="px-4 py-3 text-right">Total Payment</th>
+                <th className="px-4 py-3 text-right">Remaining Balance</th>
+              </tr>
+            </thead>
+            <tbody>
+              {schedule.map((row) => (
+                <tr key={row.month} className="border-b border-slate-100">
+                  <td className="px-4 py-2.5 text-slate-700">{row.month}</td>
+                  <td className="px-4 py-2.5 text-right font-mono text-slate-900">{formatPeso(row.totalPayment)}</td>
+                  <td className="px-4 py-2.5 text-right font-mono text-slate-700">{formatPeso(row.remainingBalance)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </Card>
 
@@ -383,6 +456,34 @@ function MyRequests() {
   )
 }
 
+// Shown when the borrower isn't enabled for loan requests: a friendly nudge to
+// message the admin, routing straight to the Messages tab.
+function NotEligible() {
+  const { users } = useApp()
+  const navigate = useNavigate()
+  const admin = users.find((u) => u.role === 'admin')
+  const adminName = admin?.name?.split(' ')[0] || 'the admin'
+  return (
+    <Card>
+      <div className="flex flex-col items-center gap-4 px-6 py-12 text-center">
+        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-navy-50 text-navy-700">
+          <Icon name="lock" className="h-7 w-7" />
+        </span>
+        <div>
+          <h3 className="text-lg font-bold text-slate-900">Loan requests aren&apos;t enabled for your account yet</h3>
+          <p className="mt-1 max-w-sm text-sm text-slate-600">
+            Message {adminName} to check if this offer is available to you.
+          </p>
+        </div>
+        <Button variant="gold" onClick={() => navigate('/portal/messages')}>
+          <Icon name="mail" className="h-4 w-4" />
+          Message {adminName}
+        </Button>
+      </div>
+    </Card>
+  )
+}
+
 export default function LoanRequest() {
   const { canRequest } = useLoanRequests()
   const [tab, setTab] = useState('new') // new | mine
@@ -409,15 +510,7 @@ export default function LoanRequest() {
       </div>
 
       {tab === 'new' ? (
-        canRequest ? (
-          <RequestForm />
-        ) : (
-          <EmptyState
-            icon="lock"
-            title="Loan requests aren't enabled for your account yet"
-            body="Please contact your administrator to enable cash loan requests for your account."
-          />
-        )
+        canRequest ? <RequestForm /> : <NotEligible />
       ) : (
         <MyRequests />
       )}

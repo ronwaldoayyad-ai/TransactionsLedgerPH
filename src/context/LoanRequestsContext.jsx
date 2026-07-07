@@ -235,6 +235,23 @@ export function LoanRequestsProvider({ children }) {
     [isLive, fetchAll],
   )
 
+  // Admin: delete one or more requests (events cascade in the DB).
+  const deleteRequests = useCallback(
+    async (ids) => {
+      if (!isLive) return { error: 'Live session required.' }
+      const list = Array.isArray(ids) ? ids : [ids]
+      if (list.length === 0) return {}
+      const { error } = await supabase.from('loan_requests').delete().in('id', list)
+      if (error) {
+        console.error('[loan-requests] delete failed:', error.message)
+        return { error: error.message }
+      }
+      await fetchAll()
+      return {}
+    },
+    [isLive, fetchAll],
+  )
+
   const accessFor = useCallback(
     (userId) => accessList.find((a) => a.userId === userId)?.enabled ?? false,
     [accessList],
@@ -254,12 +271,13 @@ export function LoanRequestsProvider({ children }) {
       cancelRequest,
       updateStatus,
       updateFees,
+      deleteRequests,
       setRate,
       setAccess,
     }),
     [
       loading, rates, ratesByTerm, canRequest, myRequests, requests, eventsFor, accessFor,
-      submitRequest, cancelRequest, updateStatus, updateFees, setRate, setAccess,
+      submitRequest, cancelRequest, updateStatus, updateFees, deleteRequests, setRate, setAccess,
     ],
   )
 

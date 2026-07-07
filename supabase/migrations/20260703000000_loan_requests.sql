@@ -98,6 +98,9 @@ create policy "loan requests: read own or admin" on public.loan_requests
 -- Admin may edit (fee overrides). Inserts flow only through submit_loan_request.
 create policy "loan requests: admin update" on public.loan_requests
   for update to authenticated using (public.is_admin()) with check (public.is_admin());
+-- Admin may delete requests (single or bulk); events cascade.
+create policy "loan requests: admin delete" on public.loan_requests
+  for delete to authenticated using (public.is_admin());
 
 create table public.loan_request_events (
   id         uuid primary key default gen_random_uuid(),

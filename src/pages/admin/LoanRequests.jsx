@@ -116,12 +116,16 @@ function RateConfig({ initialRates, onSaveRate }) {
 
 export default function LoanRequests() {
   const { users } = useApp()
-  const { requests, rates, ratesByTerm, eventsFor, updateStatus, updateFees, setRate } = useLoanRequests()
+  const { requests, rates, ratesByTerm, eventsFor, updateStatus, updateFees, deleteRequests, setRate } =
+    useLoanRequests()
   const borrowers = useMemo(() => users.filter((u) => u.role === 'user'), [users])
   const nameOf = (id) => users.find((u) => u.id === id)?.name ?? '—'
 
   const [updating, setUpdating] = useState(null) // request being status-updated
   const [historyOf, setHistoryOf] = useState(null) // request whose history is shown
+  const [selected, setSelected] = useState(() => new Set()) // ids checked for deletion
+  const [confirming, setConfirming] = useState(null) // ids pending delete confirmation
+  const [busy, setBusy] = useState(false)
 
   const pag = usePagination(requests, 10)
 
@@ -131,6 +135,34 @@ export default function LoanRequests() {
       if (feeRes?.error) return feeRes
     }
     return updateStatus(updating.id, status, note)
+  }
+
+  const pageIds = pag.pageItems.map((r) => r.id)
+  const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selected.has(id))
+  const toggleOne = (id) =>
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  const toggleAllPage = () =>
+    setSelected((prev) => {
+      const next = new Set(prev)
+      if (allPageSelected) pageIds.forEach((id) => next.delete(id))
+      else pageIds.forEach((id) => next.add(id))
+      return next
+    })
+  const confirmDelete = async () => {
+    setBusy(true)
+    await deleteRequests(confirming)
+    setBusy(false)
+    setSelected((prev) => {
+      const next = new Set(prev)
+      confirming.forEach((id) => next.delete(id))
+      return next
+    })
+    setConfirming(null)
   }
 
   return (
@@ -152,15 +184,38 @@ export default function LoanRequests() {
       </div>
 
       <Card className="mt-6">
-        <CardHeader title="Loan Request Approval" subtitle={`${requests.length} request${requests.length === 1 ? '' : 's'}`} />
+        <CardHeader
+          title="Loan Request Approval"
+          subtitle={`${requests.length} request${requests.length === 1 ? '' : 's'}`}
+          action={
+            selected.size > 0 ? (
+              <button
+                onClick={() => setConfirming([...selected])}
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-red-600 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-red-700"
+              >
+                <Icon name="trash" className="h-4 w-4" />
+                Delete selected ({selected.size})
+              </button>
+            ) : null
+          }
+        />
         {requests.length === 0 ? (
           <EmptyState icon="file" title="No loan requests yet" body="Borrower requests will appear here for review." />
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[720px] text-sm">
+              <table className="w-full min-w-[760px] text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    <th className="w-10 px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={allPageSelected}
+                        onChange={toggleAllPage}
+                        aria-label="Select all on this page"
+                        className="h-4 w-4 rounded border-slate-300 text-navy-800 focus:ring-navy-800"
+                      />
+                    </th>
                     <th className="px-4 py-3">Ref</th>
                     <th className="px-4 py-3">Borrower</th>
                     <th className="px-4 py-3 text-right">Amount</th>
@@ -171,7 +226,16 @@ export default function LoanRequests() {
                 </thead>
                 <tbody>
                   {pag.pageItems.map((r) => (
-                    <tr key={r.id} className="border-b border-slate-100 hover:bg-navy-50/40">
+                    <tr key={r.id} className={`border-b border-slate-100 hover:bg-navy-50/40 ${selected.has(r.id) ? 'bg-navy-50/40' : ''}`}>
+                      <td className="px-4 py-2.5">
+                        <input
+                          type="checkbox"
+                          checked={selected.has(r.id)}
+                          onChange={() => toggleOne(r.id)}
+                          aria-label={`Select ${r.reference}`}
+                          className="h-4 w-4 rounded border-slate-300 text-navy-800 focus:ring-navy-800"
+                        />
+                      </td>
                       <td className="px-4 py-2.5 font-mono text-xs text-slate-700">{r.reference}</td>
                       <td className="px-4 py-2.5 text-slate-700">{nameOf(r.userId)}</td>
                       <td className="px-4 py-2.5 text-right font-mono text-slate-900">{formatPeso(r.amount)}</td>
@@ -192,6 +256,15 @@ export default function LoanRequests() {
                           >
                             <Icon name="pencil" className="h-3.5 w-3.5" />
                             Update Status
+                          </button>
+                          <button
+                            onClick={() => setConfirming([r.id])}
+                            aria-label="Delete request"
+                            title="Delete"
+                            className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-red-200 bg-white px-2.5 py-1 text-xs font-medium text-red-600 transition-colors hover:bg-red-50"
+                          >
+                            <Icon name="trash" className="h-3.5 w-3.5" />
+                            Delete
                           </button>
                         </div>
                       </td>
@@ -222,6 +295,29 @@ export default function LoanRequests() {
       {historyOf && (
         <Modal open title={`History — ${historyOf.reference}`} onClose={() => setHistoryOf(null)}>
           <HistoryTimeline events={eventsFor(historyOf.id)} />
+        </Modal>
+      )}
+
+      {confirming && (
+        <Modal
+          open
+          title={`Delete ${confirming.length} loan request${confirming.length === 1 ? '' : 's'}`}
+          onClose={() => (busy ? null : setConfirming(null))}
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => setConfirming(null)} disabled={busy}>
+                Cancel
+              </Button>
+              <Button variant="danger" onClick={confirmDelete} disabled={busy}>
+                {busy ? 'Deleting…' : `Delete ${confirming.length}`}
+              </Button>
+            </>
+          }
+        >
+          <p className="text-sm text-slate-600">
+            This permanently deletes {confirming.length} loan request{confirming.length === 1 ? '' : 's'} and{' '}
+            {confirming.length === 1 ? 'its' : 'their'} history. This action cannot be undone.
+          </p>
         </Modal>
       )}
     </>
