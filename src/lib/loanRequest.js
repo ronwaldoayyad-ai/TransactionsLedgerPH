@@ -6,6 +6,22 @@ import { autoDST } from './amortization'
 
 export const TERMS = [3, 6, 12, 24, 36]
 
+// Common PH disbursement banks (borrower picks one for the transfer).
+export const BANKS = [
+  'BDO Unibank',
+  'Bank of the Philippine Islands (BPI)',
+  'Metropolitan Bank & Trust Company (Metrobank)',
+  'Land Bank of the Philippines (Landbank)',
+  'Philippine National Bank (PNB)',
+  'Security Bank',
+  'UnionBank of the Philippines',
+  'Rizal Commercial Banking Corporation (RCBC)',
+  'China Banking Corporation (Chinabank)',
+  'EastWest Bank',
+  'GCash',
+  'Maya',
+]
+
 // Fees (per the PRD + clarifications): processing is a flat one-time charge;
 // notarial is 0.35% of the amount; DST auto-applies at ≥₱500k. Notarial + DST
 // are auto-computed at submission but stay admin-editable per request.

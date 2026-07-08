@@ -7,6 +7,7 @@ import Pagination from '../../components/Pagination'
 import { usePagination } from '../../hooks/usePagination'
 import StatusBadge from '../../components/loanrequest/StatusBadge'
 import HistoryTimeline from '../../components/loanrequest/HistoryTimeline'
+import RequestDetailBody from '../../components/loanrequest/RequestDetailBody'
 import UpdateStatusModal from '../../components/loanrequest/UpdateStatusModal'
 import { Button, Card, CardHeader, EmptyState, Field, Modal, Switch, inputClass } from '../../components/ui'
 import { formatPeso } from '../../lib/amortization'
@@ -247,8 +248,8 @@ export default function LoanRequests() {
                             onClick={() => setHistoryOf(r)}
                             className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50"
                           >
-                            <Icon name="scroll" className="h-3.5 w-3.5" />
-                            View History
+                            <Icon name="file" className="h-3.5 w-3.5" />
+                            View
                           </button>
                           <button
                             onClick={() => setUpdating(r)}
@@ -293,8 +294,20 @@ export default function LoanRequests() {
       )}
 
       {historyOf && (
-        <Modal open title={`History — ${historyOf.reference}`} onClose={() => setHistoryOf(null)}>
-          <HistoryTimeline events={eventsFor(historyOf.id)} />
+        <Modal open title={historyOf.reference} onClose={() => setHistoryOf(null)}>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm text-slate-600">
+                Borrower: <span className="font-medium text-slate-900">{nameOf(historyOf.userId)}</span>
+              </p>
+              <StatusBadge status={historyOf.status} />
+            </div>
+            <RequestDetailBody request={historyOf} />
+            <div>
+              <h3 className="mb-2 text-sm font-semibold text-slate-900">History Timeline</h3>
+              <HistoryTimeline events={eventsFor(historyOf.id)} />
+            </div>
+          </div>
         </Modal>
       )}
 

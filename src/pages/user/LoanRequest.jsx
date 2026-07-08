@@ -6,15 +6,19 @@ import { PageHeader } from '../../components/AppShell'
 import Icon from '../../components/Icon'
 import StatusBadge from '../../components/loanrequest/StatusBadge'
 import HistoryTimeline from '../../components/loanrequest/HistoryTimeline'
+import RequestDetailBody from '../../components/loanrequest/RequestDetailBody'
+import EditBankModal from '../../components/loanrequest/EditBankModal'
 import { Button, Card, CardHeader, CurrencyInput, EmptyState, Field, inputClass } from '../../components/ui'
 import { formatPeso } from '../../lib/amortization'
 import {
+  BANKS,
   PROCESSING_FEE,
   TERMS,
   buildRequestSchedule,
   canCancel,
   computeNotarial,
   computeRequestDST,
+  isTerminal,
   requestSummary,
 } from '../../lib/loanRequest'
 
@@ -22,22 +26,6 @@ import {
 // plain YYYY-MM-DD and would yield "Invalid Date").
 const fmtDate = (iso) =>
   iso ? new Date(iso).toLocaleDateString('en-PH', { year: 'numeric', month: 'short', day: 'numeric' }) : '—'
-
-// Common PH disbursement banks (borrower picks one for the transfer).
-const BANKS = [
-  'BDO Unibank',
-  'Bank of the Philippine Islands (BPI)',
-  'Metropolitan Bank & Trust Company (Metrobank)',
-  'Land Bank of the Philippines (Landbank)',
-  'Philippine National Bank (PNB)',
-  'Security Bank',
-  'UnionBank of the Philippines',
-  'Rizal Commercial Banking Corporation (RCBC)',
-  'China Banking Corporation (Chinabank)',
-  'EastWest Bank',
-  'GCash',
-  'Maya',
-]
 
 function SummaryRow({ label, value, strong }) {
   return (
@@ -151,7 +139,11 @@ function RequestForm() {
                 placeholder="1234567890"
               />
             </Field>
-            <Field label="Bank Account Name" htmlFor="lr-acct-name">
+            <Field
+              label="Bank Account Name"
+              htmlFor="lr-acct-name"
+              hint="Enter the name exactly as it appears on your bank account."
+            >
               <input
                 id="lr-acct-name"
                 className={inputClass}
@@ -287,21 +279,10 @@ function RequestForm() {
 }
 
 function RequestDetail({ request, onBack }) {
-  const { eventsFor, cancelRequest } = useLoanRequests()
+  const { eventsFor, cancelRequest, updateMyBank } = useLoanRequests()
   const [busy, setBusy] = useState(false)
+  const [editingBank, setEditingBank] = useState(false)
   const events = eventsFor(request.id)
-
-  // Rebuild the same summary + schedule the borrower saw at submission, from the
-  // values stored on the request (which reflect any admin fee overrides).
-  const feeArgs = {
-    amount: request.amount,
-    termMonths: request.termMonths,
-    monthlyRate: request.monthlyRate,
-    notarialFee: request.notarialFee,
-    dst: request.dst,
-  }
-  const summary = requestSummary(feeArgs)
-  const schedule = buildRequestSchedule(feeArgs)
 
   const cancel = async () => {
     setBusy(true)
@@ -344,65 +325,10 @@ function RequestDetail({ request, onBack }) {
         </div>
       </Card>
 
-      <Card>
-        <CardHeader title="Cash Loan Summary" />
-        <div className="px-5 py-4">
-          <div className="grid gap-x-6 sm:grid-cols-2">
-            <SummaryRow label="Loan Amount" value={formatPeso(request.amount)} />
-            <SummaryRow label="Monthly Add-on Rate" value={`${(request.monthlyRate * 100).toFixed(4)}%`} />
-            <SummaryRow label="Processing Fee" value={formatPeso(request.processingFee)} />
-            <SummaryRow label="DST Amount" value={formatPeso(request.dst)} />
-            <SummaryRow label="Notarial Fee" value={formatPeso(request.notarialFee)} />
-            <SummaryRow label="Payment Terms" value={`${request.termMonths} Months`} />
-          </div>
-          <div className="mt-2 border-t border-slate-200 pt-2">
-            <SummaryRow label="Total Monthly Installment" value={formatPeso(summary.monthlyInstallment)} strong />
-          </div>
-        </div>
-      </Card>
-
-      <Card>
-        <CardHeader title="Disbursement Bank Details" />
-        <div className="px-5 py-2">
-          {[
-            ['Bank Name', request.bankName],
-            ['Bank Account Number', request.bankAccountNumber],
-            ['Bank Account Name', request.bankAccountName],
-          ].map(([label, value], i) => (
-            <div
-              key={label}
-              className={`flex items-center justify-between gap-3 py-2.5 ${i > 0 ? 'border-t border-slate-100' : ''}`}
-            >
-              <span className="text-sm text-slate-500">{label}</span>
-              <span className="text-sm font-medium text-slate-900">{value}</span>
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      <Card>
-        <CardHeader title="Amortization Schedule" />
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
-                <th className="px-4 py-3">Month</th>
-                <th className="px-4 py-3 text-right">Total Payment</th>
-                <th className="px-4 py-3 text-right">Remaining Balance</th>
-              </tr>
-            </thead>
-            <tbody>
-              {schedule.map((row) => (
-                <tr key={row.month} className="border-b border-slate-100">
-                  <td className="px-4 py-2.5 text-slate-700">{row.month}</td>
-                  <td className="px-4 py-2.5 text-right font-mono text-slate-900">{formatPeso(row.totalPayment)}</td>
-                  <td className="px-4 py-2.5 text-right font-mono text-slate-700">{formatPeso(row.remainingBalance)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+      <RequestDetailBody
+        request={request}
+        onEditBank={isTerminal(request.status) ? undefined : () => setEditingBank(true)}
+      />
 
       <Card>
         <CardHeader title="History Timeline" />
@@ -416,6 +342,14 @@ function RequestDetail({ request, onBack }) {
           <Icon name="x" className="h-4 w-4" />
           {busy ? 'Canceling…' : 'Cancel Request'}
         </Button>
+      )}
+
+      {editingBank && (
+        <EditBankModal
+          request={request}
+          onSave={(patch) => updateMyBank(request.id, patch)}
+          onClose={() => setEditingBank(false)}
+        />
       )}
     </div>
   )

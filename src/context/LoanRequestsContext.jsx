@@ -167,6 +167,26 @@ export function LoanRequestsProvider({ children }) {
     [isLive, fetchAll],
   )
 
+  // Borrower edits the bank details on their own (still-active) request.
+  const updateMyBank = useCallback(
+    async (id, { bankName, bankAccountNumber, bankAccountName }) => {
+      if (!isLive) return { error: 'Live session required.' }
+      const { error } = await supabase.rpc('update_my_loan_request_bank', {
+        p_id: id,
+        p_bank_name: bankName,
+        p_account_number: bankAccountNumber,
+        p_account_name: bankAccountName,
+      })
+      if (error) {
+        console.error('[loan-requests] bank update failed:', error.message)
+        return { error: error.message }
+      }
+      await fetchAll()
+      return {}
+    },
+    [isLive, fetchAll],
+  )
+
   // ---- Admin actions ----
   const updateStatus = useCallback(
     async (id, status, note = '') => {
@@ -269,6 +289,7 @@ export function LoanRequestsProvider({ children }) {
       accessFor,
       submitRequest,
       cancelRequest,
+      updateMyBank,
       updateStatus,
       updateFees,
       deleteRequests,
@@ -277,7 +298,7 @@ export function LoanRequestsProvider({ children }) {
     }),
     [
       loading, rates, ratesByTerm, canRequest, myRequests, requests, eventsFor, accessFor,
-      submitRequest, cancelRequest, updateStatus, updateFees, deleteRequests, setRate, setAccess,
+      submitRequest, cancelRequest, updateMyBank, updateStatus, updateFees, deleteRequests, setRate, setAccess,
     ],
   )
 
