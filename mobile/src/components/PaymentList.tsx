@@ -1,9 +1,9 @@
 import { useState } from 'react'
-import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native'
+import { ActivityIndicator, Alert, Platform, Pressable, Text, View } from 'react-native'
 import * as WebBrowser from 'expo-web-browser'
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable'
 import { Image } from 'expo-image'
-import { FileText, Inbox, Trash2 } from 'lucide-react-native'
+import { Check, FileText, Inbox, Trash2, X } from 'lucide-react-native'
 import { useApp } from '../context/AppContext'
 import { formatDate, formatPeso } from '../lib/amortization'
 import Badge from './ui/Badge'
@@ -11,32 +11,41 @@ import EmptyState from './ui/EmptyState'
 import SegmentedTabs from './ui/SegmentedTabs'
 import FadeInView from './ui/FadeInView'
 import ProofViewer from './ProofViewer'
-import { errorHaptic, warningHaptic } from '../lib/haptics'
+import { errorHaptic, successHaptic, warningHaptic } from '../lib/haptics'
 import { colors } from '../theme'
 
 const TABS = ['all', 'pending', 'approved', 'rejected'].map((v) => ({ value: v, label: v }))
 
-// Borrower proof-of-payment history (web PaymentList port, read-only side):
-// status tabs, proof viewing (fresh signed URL), swipe-to-delete on pending.
+// Shared proof-of-payment list (web PaymentList port). Borrower side: read-only
+// history with swipe-to-delete on own pending proofs. Admin side (canReview):
+// approve/reject with an optional note, and the borrower's name shown.
 export default function PaymentList({
   payments,
   showTabs = true,
+  canReview = false,
+  showBorrower = false,
+  pageSize = 50,
   emptyBody = 'No submissions yet.',
 }: {
   payments: any[]
   showTabs?: boolean
+  canReview?: boolean
+  showBorrower?: boolean
+  pageSize?: number
   emptyBody?: string
 }) {
-  const { getProofUrl, deletePayment } = useApp()
+  const { users, getProofUrl, deletePayment, reviewPayment } = useApp()
   const [filter, setFilter] = useState('all')
   const [viewing, setViewing] = useState<{ url: string; fileName: string } | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [limit, setLimit] = useState(pageSize)
 
+  const nameOf = (userId: string) => users.find((u: any) => u.id === userId)?.name ?? 'Borrower'
   const list = payments.filter((p) => filter === 'all' || p.status === filter)
+  const shown = list.slice(0, limit)
 
   const openProof = async (p: any) => {
     setBusyId(p.id)
-    // Always fetch a fresh signed URL — the one loaded with the list may have expired.
     const url = await getProofUrl(p)
     setBusyId(null)
     if (!url) {
@@ -45,7 +54,6 @@ export default function PaymentList({
       return
     }
     if (p.fileType === 'pdf') {
-      // Safari VC (iOS) and custom tabs (Android) both render PDFs natively.
       WebBrowser.openBrowserAsync(url).catch(() => {})
     } else {
       setViewing({ url, fileName: p.fileName })
@@ -60,7 +68,39 @@ export default function PaymentList({
     ])
   }
 
+  const approve = (p: any) => {
+    successHaptic()
+    reviewPayment(p.id, 'approved')
+  }
+
+  // Reject with an optional note. Alert.prompt is iOS-only, so Android falls
+  // back to a plain confirm (note empty) — parity enough for v1.
+  const reject = (p: any) => {
+    warningHaptic()
+    if (Platform.OS === 'ios' && (Alert as any).prompt) {
+      ;(Alert as any).prompt(
+        'Reject proof',
+        'Add a note for the borrower (optional):',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Reject', style: 'destructive', onPress: (note: string) => reviewPayment(p.id, 'rejected', note ?? '') },
+        ],
+        'plain-text',
+      )
+    } else {
+      Alert.alert('Reject this proof?', `${p.fileName} will be marked rejected.`, [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Reject', style: 'destructive', onPress: () => reviewPayment(p.id, 'rejected', '') },
+      ])
+    }
+  }
+
   const renderRow = (p: any, idx: number) => {
+    const title = showBorrower ? nameOf(p.userId) : p.fileName
+    const subtitle = showBorrower
+      ? `${p.fileName} · ${formatDate(p.submittedAt)}`
+      : `${formatDate(p.submittedAt)} · ${p.method}${p.reference && p.reference !== '—' ? ` · ${p.reference}` : ''}`
+
     const row = (
       <Pressable
         onPress={() => openProof(p)}
@@ -83,11 +123,10 @@ export default function PaymentList({
         )}
         <View className="min-w-0 flex-1">
           <Text className="font-sans-medium text-sm text-slate-900" numberOfLines={1}>
-            {p.fileName}
+            {title}
           </Text>
           <Text className="mt-0.5 font-sans text-xs text-slate-500" numberOfLines={1}>
-            {formatDate(p.submittedAt)} · {p.method}
-            {p.reference && p.reference !== '—' ? ` · ${p.reference}` : ''}
+            {subtitle}
           </Text>
           {p.status === 'rejected' && p.note ? (
             <Text className="mt-1 font-sans text-xs text-red-600" numberOfLines={2}>
@@ -106,8 +145,38 @@ export default function PaymentList({
       </Pressable>
     )
 
-    // Only the borrower's own PENDING proofs can be withdrawn (web parity).
-    if (p.status !== 'pending') return <View key={p.id}>{row}</View>
+    // Admin review controls for pending proofs.
+    const reviewBar =
+      canReview && p.status === 'pending' ? (
+        <View className="flex-row gap-2 border-t border-slate-100 bg-white px-4 py-2.5">
+          <Pressable
+            onPress={() => approve(p)}
+            className="flex-1 flex-row items-center justify-center gap-1.5 rounded-xl bg-emerald-600 py-2.5 active:opacity-80"
+            accessibilityLabel="Approve proof"
+          >
+            <Check size={16} color="#ffffff" />
+            <Text className="font-sans-semibold text-sm text-white">Approve</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => reject(p)}
+            className="flex-1 flex-row items-center justify-center gap-1.5 rounded-xl bg-red-600 py-2.5 active:opacity-80"
+            accessibilityLabel="Reject proof"
+          >
+            <X size={16} color="#ffffff" />
+            <Text className="font-sans-semibold text-sm text-white">Reject</Text>
+          </Pressable>
+        </View>
+      ) : null
+
+    // Swipe-to-delete: borrower's own pending, or any proof when admin.
+    const deletable = canReview || p.status === 'pending'
+    const content = (
+      <View>
+        {row}
+        {reviewBar}
+      </View>
+    )
+    if (!deletable) return <View key={p.id}>{content}</View>
     return (
       <ReanimatedSwipeable
         key={p.id}
@@ -125,7 +194,7 @@ export default function PaymentList({
           </Pressable>
         )}
       >
-        {row}
+        {content}
       </ReanimatedSwipeable>
     )
   }
@@ -145,7 +214,17 @@ export default function PaymentList({
         />
       ) : (
         <FadeInView className="overflow-hidden rounded-b-2xl">
-          {list.map(renderRow)}
+          {shown.map(renderRow)}
+          {list.length > shown.length ? (
+            <Pressable
+              onPress={() => setLimit((n) => n + pageSize)}
+              className="items-center border-t border-slate-100 bg-white py-3 active:bg-slate-50"
+            >
+              <Text className="font-sans-medium text-sm text-navy-700">
+                Show more ({list.length - shown.length})
+              </Text>
+            </Pressable>
+          ) : null}
         </FadeInView>
       )}
       {viewing && (

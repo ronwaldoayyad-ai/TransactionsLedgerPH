@@ -297,15 +297,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // Restore the session on launch, react to auth changes, resolve the profile,
   // then load data. Admins are NO LONGER blocked — routing handles the split.
+  const authedUserId = useRef<string | null>(null)
   useEffect(() => {
     let mounted = true
 
     const loadProfile = async (sbSession: any) => {
       if (!sbSession) {
+        authedUserId.current = null
         if (mounted) {
           setSession(null)
           setAuthLoading(false)
         }
+        return
+      }
+      // Dedup redundant events: supabase-js on mobile re-fires SIGNED_IN /
+      // INITIAL_SESSION on token refresh and app focus. Re-setting the session
+      // object each time re-creates a new identity, re-running every consumer
+      // and every dependent effect (realtime resubscribes, refetches) — which
+      // presents as a periodic UI flicker. Only (re)load for a NEW user id.
+      if (authedUserId.current === sbSession.user.id) {
+        if (mounted) setAuthLoading(false)
         return
       }
       const { data: profile, error } = await supabase
@@ -315,6 +326,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         .single()
       if (!mounted) return
       if (profile && !error) {
+        authedUserId.current = sbSession.user.id
         setSession({
           source: 'supabase',
           user: mapProfile(profile),
