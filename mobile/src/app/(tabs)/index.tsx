@@ -3,13 +3,16 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import {
   Check,
+  ChevronRight,
   Clock,
+  FileText,
   List,
   ScrollText,
   TrendingUp,
   Wallet,
 } from 'lucide-react-native'
 import { useApp } from '../../context/AppContext'
+import { useLoanRequests } from '../../context/LoanRequestsContext'
 import { usePersistedState } from '../../hooks/usePersistedState'
 import { formatDate, formatPeso, toISODate } from '../../lib/amortization'
 import { effectiveStatus } from '../../lib/transactions'
@@ -28,6 +31,7 @@ import { colors } from '../../theme'
 // derivations, same tap-to-prefilter wiring through pageStateStore).
 export default function Dashboard() {
   const { session, loans, payments, transactions, dataLoading, refreshing, refreshData } = useApp()
+  const { canRequest } = useLoanRequests()
   const router = useRouter()
   const [hidePaid, setHidePaid] = usePersistedState('dashboard.hidePaid', true)
 
@@ -135,6 +139,25 @@ export default function Dashboard() {
             <Avatar name={session.user.name} url={session.user.avatarUrl} size={40} />
           </PressableScale>
         </FadeInView>
+
+        {/* Loan Request entry — only for borrowers the admin has enabled. */}
+        {canRequest ? (
+          <FadeInView delay={40}>
+            <PressableScale
+              onPress={() => router.push('/loan-request')}
+              className="flex-row items-center gap-3 rounded-2xl bg-navy-800 px-4 py-3.5"
+            >
+              <View className="rounded-xl bg-white/15 p-2">
+                <FileText size={18} color="#ffffff" />
+              </View>
+              <View className="flex-1">
+                <Text className="font-sans-semibold text-[15px] text-white">Request a Cash Loan</Text>
+                <Text className="font-sans text-xs text-navy-200">File a new request and track its status</Text>
+              </View>
+              <ChevronRight size={18} color="#ffffff" />
+            </PressableScale>
+          </FadeInView>
+        ) : null}
 
         {/* Stat tiles — exact web order */}
         {dataLoading ? (
