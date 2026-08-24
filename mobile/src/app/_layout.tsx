@@ -21,6 +21,7 @@ import {
 import { AppProvider } from '../context/AppContext'
 import { MessagesProvider } from '../context/MessagesContext'
 import { AnnouncementsProvider } from '../context/AnnouncementsContext'
+import { LoanRequestsProvider } from '../context/LoanRequestsContext'
 import AnnouncementOverlays from '../components/announcements/AnnouncementOverlays'
 import { colors } from '../theme'
 
@@ -50,18 +51,21 @@ export default function RootLayout() {
       <AppProvider>
         <MessagesProvider>
           <AnnouncementsProvider>
-            <StatusBar style="dark" />
-            <Stack
-              screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.screenBg } }}
-            >
-              <Stack.Screen name="login" options={{ contentStyle: { backgroundColor: colors.navy950 } }} />
-              <Stack.Screen
-                name="set-password"
-                options={{ contentStyle: { backgroundColor: colors.navy950 } }}
-              />
-              <Stack.Screen name="(tabs)" />
-            </Stack>
-            <AnnouncementOverlays />
+            <LoanRequestsProvider>
+              <StatusBar style="dark" />
+              <Stack
+                screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.screenBg } }}
+              >
+                <Stack.Screen name="login" options={{ contentStyle: { backgroundColor: colors.navy950 } }} />
+                <Stack.Screen
+                  name="set-password"
+                  options={{ contentStyle: { backgroundColor: colors.navy950 } }}
+                />
+                <Stack.Screen name="(tabs)" />
+                <Stack.Screen name="(admin)" />
+              </Stack>
+              <AnnouncementOverlays />
+            </LoanRequestsProvider>
           </AnnouncementsProvider>
         </MessagesProvider>
       </AppProvider>

@@ -1,2 +1,2 @@
 // Loose typings for the verbatim-copied web allocation module (paymentLogs.js).
-export function allocate(payments: any[], targetTxns: any[]): any
+export function allocate(amountOwed: any, fundsApplied: any): any

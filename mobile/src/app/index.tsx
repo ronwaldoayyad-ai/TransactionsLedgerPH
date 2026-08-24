@@ -11,5 +11,9 @@ export default function Index() {
   if (authLoading) return <View style={{ flex: 1, backgroundColor: colors.navy950 }} />
   if (!session) return <Redirect href="/login" />
   if (session.needsPasswordSetup) return <Redirect href="/set-password" />
+  // Role gate: admins land in the admin section, everyone else in the borrower
+  // tabs. `session` is the effective session, so an admin "viewing as" a
+  // borrower (role flipped to 'user') correctly routes to the borrower tabs.
+  if (session.user?.role === 'admin') return <Redirect href="/(admin)" />
   return <Redirect href="/(tabs)" />
 }
