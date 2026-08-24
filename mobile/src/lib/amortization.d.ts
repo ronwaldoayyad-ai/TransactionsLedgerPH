@@ -10,3 +10,7 @@ export function autoDST(principal: number): number
 export function computeDeductions(args: any): any
 export function addMonthsClamped(anchor: Date, n: number): Date
 export function buildDisclosure(args: any): any
+export const DST_THRESHOLD: number
+export function generateSchedule(args: any): any
+export function scheduleToCSV(schedule: any, view?: string): string
+export function downloadCSV(filename: string, csv: string): void
