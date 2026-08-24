@@ -140,9 +140,71 @@ export function AnnouncementsProvider({ children }: { children: ReactNode }) {
     [announcements],
   )
 
+  // ---- Admin mutations (RLS restricts these to admins) ----
+  const createAnnouncement = useCallback(
+    async ({ type, title = '', body, audience = 'all', targetUserIds = [], expiresAt = null, oneTime = false }: any) => {
+      const ids = audience === 'targeted' ? targetUserIds : []
+      const { error } = await supabase.from('announcements').insert({
+        type,
+        title,
+        body,
+        audience,
+        target_user_ids: ids,
+        expires_at: expiresAt || null,
+        one_time: oneTime,
+      })
+      if (error) {
+        console.error('[announcements] create failed:', error.message)
+        return { error: error.message }
+      }
+      await fetchAll()
+      return {}
+    },
+    [fetchAll],
+  )
+
+  const updateAnnouncement = useCallback(
+    async (id: string, { title, body, audience, targetUserIds = [], expiresAt = null }: any) => {
+      const ids = audience === 'targeted' ? targetUserIds : []
+      const { error } = await supabase
+        .from('announcements')
+        .update({ title, body, audience, target_user_ids: ids, expires_at: expiresAt || null })
+        .eq('id', id)
+      if (error) {
+        console.error('[announcements] update failed:', error.message)
+        return { error: error.message }
+      }
+      await fetchAll()
+      return {}
+    },
+    [fetchAll],
+  )
+
+  const deleteAnnouncement = useCallback(
+    async (id: string) => {
+      const { error } = await supabase.from('announcements').delete().eq('id', id)
+      if (error) {
+        console.error('[announcements] delete failed:', error.message)
+        return { error: error.message }
+      }
+      await fetchAll()
+      return {}
+    },
+    [fetchAll],
+  )
+
   const value = useMemo(
-    () => ({ announcements, toasts, banners, dismiss, getById }),
-    [announcements, toasts, banners, dismiss, getById],
+    () => ({
+      announcements,
+      toasts,
+      banners,
+      dismiss,
+      getById,
+      createAnnouncement,
+      updateAnnouncement,
+      deleteAnnouncement,
+    }),
+    [announcements, toasts, banners, dismiss, getById, createAnnouncement, updateAnnouncement, deleteAnnouncement],
   )
 
   return <AnnouncementsContext.Provider value={value}>{children}</AnnouncementsContext.Provider>
