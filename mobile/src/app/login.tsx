@@ -54,6 +54,17 @@ export default function Login() {
     }
   }, [splash, minElapsed, target, router])
 
+  // Safety net: never hang on the splash. If the session hasn't resolved a
+  // moment after the 5s minimum, hand off to the root gate, which re-evaluates
+  // auth and routes by role (or back to sign-in if the session was lost).
+  useEffect(() => {
+    if (splash && minElapsed && !target) {
+      const t = setTimeout(() => router.replace('/'), 1500)
+      return () => clearTimeout(t)
+    }
+    return undefined
+  }, [splash, minElapsed, target, router])
+
   // Error shake (mirrors the web's attention cue).
   const shake = useSharedValue(0)
   const shakeStyle = useAnimatedStyle(() => ({ transform: [{ translateX: shake.get() }] }))
@@ -165,6 +176,12 @@ export default function Login() {
                 Invite-only access. Public registration is disabled.
               </Text>
             </FadeInView>
+
+            {/* Build tag — confirms the admin-enabled bundle is loaded. Remove
+                once the admin rollout is verified. */}
+            <Text className="mt-3 text-center font-mono text-[10px] text-navy-400">
+              build: admin-v1
+            </Text>
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
