@@ -29,7 +29,15 @@ export default function Login() {
   const [splash, setSplash] = useState(false)
   const [minElapsed, setMinElapsed] = useState(false)
 
-  const target = !session ? null : session.needsPasswordSetup ? '/set-password' : '/(tabs)'
+  // Route to the role's home once signed in: admins to the admin section,
+  // everyone else to the borrower tabs (matches the root auth gate in index.tsx).
+  const target = !session
+    ? null
+    : session.needsPasswordSetup
+      ? '/set-password'
+      : session.user?.role === 'admin'
+        ? '/(admin)'
+        : '/(tabs)'
 
   // Keep the splash on screen for at least 5 seconds after sign-in.
   useEffect(() => {

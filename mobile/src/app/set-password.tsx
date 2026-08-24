@@ -31,9 +31,12 @@ export default function SetPassword() {
   const [submitting, setSubmitting] = useState(false)
   const [splash, setSplash] = useState(false)
 
+  // Role home: admins to the admin section, everyone else to the borrower tabs.
+  const home = session?.user?.role === 'admin' ? '/(admin)' : '/(tabs)'
+
   if (splash) return <LoadingSplash />
   if (!session) return <Redirect href="/login" />
-  if (!session.needsPasswordSetup) return <Redirect href="/(tabs)" />
+  if (!session.needsPasswordSetup) return <Redirect href={home} />
 
   const allPass = rules.every((r) => r.test(password))
 
@@ -58,7 +61,7 @@ export default function SetPassword() {
     }
     successHaptic()
     setSplash(true)
-    setTimeout(() => router.replace('/(tabs)'), 5000)
+    setTimeout(() => router.replace(home as any), 5000)
   }
 
   return (
