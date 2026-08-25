@@ -25,6 +25,8 @@ const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100
 // `nextUnpaidDate` is the earliest upcoming due date across the schedule — rows
 // on that date read "Upcoming", later unpaid rows read "Scheduled".
 export function invoiceStatusLabel(txn, today, nextUnpaidDate) {
+  // A negative amortization amount is a credit / overpayment — always Paid.
+  if ((Number(txn.amount) || 0) < 0) return 'Paid'
   const s = effectiveStatus(txn, today)
   if (s === 'paid') return 'Paid'
   if (s === 'refunded') return 'Refunded'
@@ -45,7 +47,7 @@ export function buildLineItems(transactions, userId, today = toISODate(new Date(
     .sort((a, b) => a.dueDate.localeCompare(b.dueDate) || String(a.id).localeCompare(String(b.id)))
 
   const nextUnpaidDate = mine
-    .filter((t) => effectiveStatus(t, today) === 'unpaid')
+    .filter((t) => (Number(t.amount) || 0) >= 0 && effectiveStatus(t, today) === 'unpaid')
     .reduce((min, t) => (min == null || t.dueDate < min ? t.dueDate : min), null)
 
   return mine.map((t) => ({
@@ -60,18 +62,21 @@ export function buildLineItems(transactions, userId, today = toISODate(new Date(
 }
 
 // Totals per the spec. `status` labels come from invoiceStatusLabel above.
-export function computeInvoiceTotals(lineItems, processingFee = 0) {
+//   Subtotal            = sum of UNPAID amounts (Upcoming + Scheduled + Past Due)
+//   Amount Paid to Date = sum of PAID amounts, PLUS the magnitude of any negative
+//                         amounts (credits/overpayments add to paid — never deduct;
+//                         negative rows are already labeled 'Paid', so abs() covers both)
+//   Total Amount Due    = Subtotal
+export function computeInvoiceTotals(lineItems) {
   const subtotal = round2(
     lineItems
       .filter((r) => r.status === 'Upcoming' || r.status === 'Scheduled' || r.status === 'Past Due')
       .reduce((s, r) => s + (Number(r.amount) || 0), 0),
   )
   const amountPaid = round2(
-    lineItems.filter((r) => r.status === 'Paid').reduce((s, r) => s + (Number(r.amount) || 0), 0),
+    lineItems.filter((r) => r.status === 'Paid').reduce((s, r) => s + Math.abs(Number(r.amount) || 0), 0),
   )
-  const fee = round2(Number(processingFee) || 0)
-  const totalDue = round2(subtotal + fee)
-  return { subtotal, amountPaid, processingFee: fee, totalDue }
+  return { subtotal, amountPaid, totalDue: subtotal }
 }
 
 // The distinct due dates a borrower has, for the admin's multi-select.

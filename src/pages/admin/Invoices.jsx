@@ -4,7 +4,7 @@ import { useInvoices } from '../../context/InvoicesContext'
 import { PageHeader } from '../../components/AppShell'
 import Icon from '../../components/Icon'
 import RefreshButton from '../../components/RefreshButton'
-import { Badge, Button, Card, CardHeader, CurrencyInput, EmptyState, Field, Modal, MultiSelect, inputClass } from '../../components/ui'
+import { Badge, Button, Card, CardHeader, EmptyState, Field, Modal, MultiSelect, inputClass } from '../../components/ui'
 import { formatDate, formatPeso, toISODate } from '../../lib/amortization'
 import { borrowerDueDates, buildLineItems, computeInvoiceTotals } from '../../lib/invoice'
 import { downloadInvoicePdf, invoicePdfBlobUrl } from '../../lib/invoicePdf'
@@ -33,7 +33,6 @@ export default function Invoices() {
   const [userId, setUserId] = useState('')
   const [dueSel, setDueSel] = useState(() => new Set())
   const [invoiceDueDate, setInvoiceDueDate] = useState(today) // header Due Date
-  const [fee, setFee] = useState(0)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [preview, setPreview] = useState(null) // invoice being previewed
@@ -48,13 +47,12 @@ export default function Invoices() {
     () => (userId ? buildLineItems(transactions, userId, today, [...dueSel]) : []),
     [transactions, userId, today, dueSel],
   )
-  const totals = useMemo(() => computeInvoiceTotals(lineItems, fee), [lineItems, fee])
+  const totals = useMemo(() => computeInvoiceTotals(lineItems), [lineItems])
 
   const resetForm = () => {
     setUserId('')
     setDueSel(new Set())
     setInvoiceDueDate(today)
-    setFee(0)
     setError('')
   }
 
@@ -72,7 +70,7 @@ export default function Invoices() {
       selectedDueDates: [...dueSel].sort(),
       subtotal: totals.subtotal,
       amountPaid: totals.amountPaid,
-      processingFee: totals.processingFee,
+      processingFee: 0,
       totalDue: totals.totalDue,
       lineItems,
     })
@@ -144,17 +142,12 @@ export default function Invoices() {
               />
             </Field>
 
-            <Field label="Processing / Admin Fee" htmlFor="inv-fee" hint="Added to Total Amount Due. Enter 0 for none.">
-              <CurrencyInput id="inv-fee" value={fee} onValueChange={(v) => setFee(v ?? 0)} />
-            </Field>
-
             {/* Live totals */}
             {userId && (
               <dl className="space-y-1.5 rounded-xl bg-slate-50 p-4 text-sm">
                 <Row k="Line items" v={`${lineItems.length}`} />
                 <Row k="Subtotal (unpaid)" v={formatPeso(totals.subtotal)} />
                 <Row k="Amount Paid to Date" v={formatPeso(totals.amountPaid)} />
-                <Row k="Processing / Admin Fee" v={formatPeso(totals.processingFee)} />
                 <div className="flex justify-between border-t border-slate-200 pt-1.5">
                   <dt className="font-semibold text-navy-900">Total Amount Due</dt>
                   <dd className="font-mono font-bold text-navy-900">{formatPeso(totals.totalDue)}</dd>
