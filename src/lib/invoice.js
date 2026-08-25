@@ -65,7 +65,12 @@ export function buildLineItems(transactions, userId, today = toISODate(new Date(
 //   Subtotal            = sum of UNPAID amounts (Upcoming + Scheduled + Past Due)
 //   Amount Paid to Date = sum of PAID amounts, incl. the magnitude of negative
 //                         amounts (a negative is a payment by the borrower)
-//   Total Amount Due    = Subtotal minus Amount Paid to Date.
+//   Total Amount Due    = Subtotal minus PARTIAL PAYMENTS only — i.e. PAID line
+//                         items whose description contains "Partial Payment".
+//                         Regular paid installments do not reduce the total.
+const isPartialPayment = (r) =>
+  r.status === 'Paid' && /partial\s*payment/i.test(String(r.description || ''))
+
 export function computeInvoiceTotals(lineItems) {
   const subtotal = round2(
     lineItems
@@ -75,7 +80,10 @@ export function computeInvoiceTotals(lineItems) {
   const amountPaid = round2(
     lineItems.filter((r) => r.status === 'Paid').reduce((s, r) => s + Math.abs(Number(r.amount) || 0), 0),
   )
-  const totalDue = round2(subtotal - amountPaid)
+  const partialPayments = round2(
+    lineItems.filter(isPartialPayment).reduce((s, r) => s + Math.abs(Number(r.amount) || 0), 0),
+  )
+  const totalDue = round2(subtotal - partialPayments)
   return { subtotal, amountPaid, totalDue }
 }
 
