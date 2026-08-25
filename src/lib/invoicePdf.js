@@ -45,12 +45,15 @@ function drawWatermark(doc) {
   const W = doc.internal.pageSize.getWidth()
   const H = doc.internal.pageSize.getHeight()
   const text = 'LOANLEDGER PH INVOICE'
-  const diag = Math.sqrt(W * W + H * H)
 
   doc.setFont('helvetica', 'bold').setTextColor(30, 58, 138)
-  let fs = 60
-  doc.setFontSize(fs)
-  fs *= (diag * 0.82) / (doc.getTextWidth(text) || 1) // fit ~82% of the diagonal
+  // Size the rotated line to fit inside the page WIDTH (the narrower dimension)
+  // with a margin and room for the glyph height, so the whole text is visible
+  // and nothing clips at the corners.
+  const margin = 34
+  doc.setFontSize(60)
+  const k = (doc.getTextWidth(text) || 1) / 60 // text width per 1pt of font size
+  const fs = (Math.SQRT2 * (W - 2 * margin)) / (k + 0.95)
   doc.setFontSize(fs)
   const tw = doc.getTextWidth(text)
 
