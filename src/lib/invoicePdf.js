@@ -11,16 +11,17 @@ const NAVY = [30, 58, 138] // #1e3a8a
 const SLATE = [100, 116, 139]
 const DARK = [15, 23, 42]
 
-// Per-status row fill (whole row colored by its status). Scheduled shares the
-// Upcoming hue (both are future unpaid; the palette doesn't distinguish them).
+// Whole-row fill by status.
 const STATUS_FILL = {
   Paid: [46, 204, 113], // #2ecc71
-  Upcoming: [243, 156, 18], // #f39c12
-  Scheduled: [243, 156, 18],
-  'Past Due': [231, 76, 60], // #e74c3c
   Refunded: [77, 116, 153], // #4D7499
   Cancelled: [108, 114, 147], // #6C7293
 }
+// Font-only status (row stays white; the text takes the color).
+const STATUS_FONT = {
+  'Past Due': [231, 76, 60], // #e74c3c
+}
+// Upcoming / Scheduled: no color coding.
 // Auto-contrast text for a fill: dark on light fills, white on dark ones.
 const textOn = ([r, g, b]) =>
   (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.55 ? [15, 23, 42] : [255, 255, 255]
@@ -112,7 +113,8 @@ export function buildInvoiceDoc(invoice) {
       4: { halign: 'right' },
       5: { halign: 'center' },
     },
-    // Color the whole row by its status.
+    // Status coloring: full-row fill for Paid/Refunded/Cancelled, font-only for
+    // Past Due, nothing for Upcoming/Scheduled.
     didParseCell: (data) => {
       if (data.section !== 'body') return
       const status = (invoice.lineItems || [])[data.row.index]?.status
@@ -120,6 +122,8 @@ export function buildInvoiceDoc(invoice) {
       if (fill) {
         data.cell.styles.fillColor = fill
         data.cell.styles.textColor = textOn(fill)
+      } else if (STATUS_FONT[status]) {
+        data.cell.styles.textColor = STATUS_FONT[status]
       }
     },
   })
