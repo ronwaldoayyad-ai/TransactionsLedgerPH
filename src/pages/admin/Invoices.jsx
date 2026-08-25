@@ -32,6 +32,7 @@ export default function Invoices() {
 
   const [userId, setUserId] = useState('')
   const [dueSel, setDueSel] = useState(() => new Set())
+  const [invoiceDueDate, setInvoiceDueDate] = useState(today) // header Due Date
   const [fee, setFee] = useState(0)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -42,28 +43,32 @@ export default function Invoices() {
     () => (userId ? borrowerDueDates(transactions, userId).map((d) => ({ value: d, label: formatDate(d) })) : []),
     [transactions, userId],
   )
-  const lineItems = useMemo(() => (userId ? buildLineItems(transactions, userId, today) : []), [transactions, userId, today])
+  // Line items = only the installments on the selected due dates.
+  const lineItems = useMemo(
+    () => (userId ? buildLineItems(transactions, userId, today, [...dueSel]) : []),
+    [transactions, userId, today, dueSel],
+  )
   const totals = useMemo(() => computeInvoiceTotals(lineItems, fee), [lineItems, fee])
-  // Header Due Date = the latest selected due date.
-  const headerDueDate = useMemo(() => (dueSel.size ? [...dueSel].sort().at(-1) : ''), [dueSel])
 
   const resetForm = () => {
     setUserId('')
     setDueSel(new Set())
+    setInvoiceDueDate(today)
     setFee(0)
     setError('')
   }
 
   const generate = async () => {
     if (!userId) return setError('Select a borrower.')
-    if (dueSel.size === 0) return setError('Select at least one due date.')
-    if (lineItems.length === 0) return setError('This borrower has no transactions to invoice.')
+    if (dueSel.size === 0) return setError('Select at least one due date to include.')
+    if (!invoiceDueDate) return setError('Set the invoice Due Date.')
+    if (lineItems.length === 0) return setError('No transactions match the selected due dates.')
     setError('')
     setBusy(true)
     const { invoice, error: err } = await createInvoice({
       userId,
       billedToName: nameOf(userId),
-      dueDate: headerDueDate || null,
+      dueDate: invoiceDueDate,
       selectedDueDates: [...dueSel].sort(),
       subtotal: totals.subtotal,
       amountPaid: totals.amountPaid,
@@ -119,13 +124,23 @@ export default function Invoices() {
               </select>
             </Field>
 
-            <Field label="Due Date(s)" htmlFor="inv-due" hint="Multi-select. The latest becomes the invoice's Due Date.">
+            <Field label="Due Date(s) to include" htmlFor="inv-due" hint="Multi-select. Only installments on these due dates appear as line items.">
               <MultiSelect
                 label="due dates"
                 options={dueOptions}
                 selected={dueSel}
                 onChange={setDueSel}
                 className="w-full"
+              />
+            </Field>
+
+            <Field label="Invoice Due Date" htmlFor="inv-header-due" hint="Shown in the invoice header — the payment deadline you set.">
+              <input
+                id="inv-header-due"
+                type="date"
+                className={inputClass}
+                value={invoiceDueDate ?? ''}
+                onChange={(e) => setInvoiceDueDate(e.target.value)}
               />
             </Field>
 

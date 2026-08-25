@@ -29,33 +29,37 @@ export function buildInvoiceDoc(invoice) {
   const M = 40 // margin
   let y = 48
 
-  // --- Header: issuer (left) + INVOICE (right) ---
+  // --- Header: issuer (left) + INVOICE with stacked meta (right) ---
   doc.setFont('helvetica', 'bold').setFontSize(18).setTextColor(...NAVY)
   doc.text(BILLED_FROM.name.toUpperCase(), M, y)
   doc.setFont('helvetica', 'normal').setFontSize(8).setTextColor(...SLATE)
-  doc.text(BILLED_FROM.tagline, M, y + 14)
-  doc.setFont('helvetica', 'bold').setFontSize(22).setTextColor(...DARK)
-  doc.text('INVOICE', W - M, y, { align: 'right' })
+  doc.text(BILLED_FROM.tagline, M, y + 12)
 
-  // --- Invoice meta line ---
-  y += 40
-  doc.setFontSize(9).setFont('helvetica', 'normal').setTextColor(...DARK)
-  doc.setDrawColor(226, 232, 240).line(M, y - 12, W - M, y - 12)
+  doc.setFont('helvetica', 'bold').setFontSize(26).setTextColor(...NAVY)
+  doc.text('INVOICE', W - M, y + 6, { align: 'right' })
+
+  // Right-aligned, stacked meta under the title: label (slate) + bold value.
   const meta = [
     ['Invoice No:', invoice.invoiceNumber || '—'],
     ['Invoice Date:', prettyDate(invoice.invoiceDate)],
     ['Due Date:', prettyDate(invoice.dueDate)],
   ]
-  let mx = M
+  let my = y + 32
   meta.forEach(([k, v]) => {
-    doc.setFont('helvetica', 'bold').setTextColor(...SLATE).text(k, mx, y)
-    const kw = doc.getTextWidth(k)
-    doc.setFont('helvetica', 'normal').setTextColor(...DARK).text(` ${v}`, mx + kw, y)
-    mx += kw + doc.getTextWidth(` ${v}`) + 24
+    doc.setFont('helvetica', 'bold').setFontSize(10).setTextColor(...DARK)
+    const vw = doc.getTextWidth(v)
+    doc.text(v, W - M, my, { align: 'right' })
+    doc.setFont('helvetica', 'normal').setTextColor(...SLATE)
+    doc.text(k, W - M - vw - 6, my, { align: 'right' })
+    my += 15
   })
 
+  // Divider below the whole header block.
+  y = my + 4
+  doc.setDrawColor(226, 232, 240).setLineWidth(0.5).line(M, y, W - M, y)
+
   // --- Billed From / Billed To ---
-  y += 26
+  y += 22
   doc.setFont('helvetica', 'bold').setFontSize(8).setTextColor(...SLATE)
   doc.text('BILLED FROM', M, y)
   doc.text('BILLED TO', W / 2 + 10, y)

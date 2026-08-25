@@ -34,11 +34,14 @@ export function invoiceStatusLabel(txn, today, nextUnpaidDate) {
   return nextUnpaidDate && txn.dueDate === nextUnpaidDate ? 'Upcoming' : 'Scheduled'
 }
 
-// Every non-archived ledger row for the borrower, sorted by due date, tagged
-// with an invoice status label.
-export function buildLineItems(transactions, userId, today = toISODate(new Date())) {
+// The borrower's ledger rows to invoice, sorted by due date, tagged with an
+// invoice status label. `dueDates` (array of ISO dates) filters the line items
+// to only those installments due on the admin-selected dates; pass null/empty
+// to include the borrower's full schedule.
+export function buildLineItems(transactions, userId, today = toISODate(new Date()), dueDates = null) {
+  const dueSet = dueDates && dueDates.length ? new Set(dueDates) : null
   const mine = transactions
-    .filter((t) => t.userId === userId && !t.archivedAt)
+    .filter((t) => t.userId === userId && !t.archivedAt && (!dueSet || dueSet.has(t.dueDate)))
     .sort((a, b) => a.dueDate.localeCompare(b.dueDate) || String(a.id).localeCompare(String(b.id)))
 
   const nextUnpaidDate = mine
