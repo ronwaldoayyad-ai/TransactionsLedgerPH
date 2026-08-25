@@ -38,6 +38,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
     items: [
       { label: 'Overall Transactions', icon: List, href: '/(admin)/transactions' },
       { label: 'Payment Logs', icon: Wallet, href: '/(admin)/payment-logs' },
+      { label: 'Invoices', icon: FileText, href: '/(admin)/invoices' },
       { label: 'Interest / Arbitrage', icon: TrendingUp, href: '/(admin)/arbitrage' },
       { label: 'Cards & Bills Wallet', icon: Wallet, href: '/(admin)/wallet' },
     ],

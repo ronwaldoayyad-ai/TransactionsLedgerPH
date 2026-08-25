@@ -140,6 +140,24 @@ export default function Dashboard() {
           </PressableScale>
         </FadeInView>
 
+        {/* Quick links */}
+        <FadeInView delay={30} className="flex-row gap-3">
+          <PressableScale
+            onPress={() => router.push('/invoices')}
+            className="flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3"
+          >
+            <FileText size={18} color={colors.navy700} />
+            <Text className="font-sans-medium text-sm text-navy-700">My Invoices</Text>
+          </PressableScale>
+          <PressableScale
+            onPress={() => router.push('/payment-logs')}
+            className="flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3"
+          >
+            <ScrollText size={18} color={colors.navy700} />
+            <Text className="font-sans-medium text-sm text-navy-700">Payment Logs</Text>
+          </PressableScale>
+        </FadeInView>
+
         {/* Loan Request entry — only for borrowers the admin has enabled. */}
         {canRequest ? (
           <FadeInView delay={40}>
