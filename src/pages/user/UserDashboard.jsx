@@ -1,7 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
 import { PageHeader } from '../../components/AppShell'
-import { Badge, Card, CardHeader, EmptyState, StatCard, Switch } from '../../components/ui'
+import { Badge, Button, Card, CardHeader, EmptyState, StatCard, Switch } from '../../components/ui'
 import Icon from '../../components/Icon'
 import PaymentList from '../../components/PaymentList'
 import RefreshButton from '../../components/RefreshButton'
@@ -97,7 +97,23 @@ export default function UserDashboard() {
       <PageHeader
         title={`Welcome back, ${session.user.name.split(' ')[0]}`}
         subtitle="Here is the latest on your loans and payments."
-        action={<RefreshButton />}
+        action={
+          <div className="flex flex-wrap gap-2">
+            <Link to="/portal/invoices">
+              <Button variant="secondary">
+                <Icon name="file" className="h-4 w-4" />
+                My Invoices
+              </Button>
+            </Link>
+            <Link to="/portal/payment-logs">
+              <Button variant="secondary">
+                <Icon name="scroll" className="h-4 w-4" />
+                Payment Logs
+              </Button>
+            </Link>
+            <RefreshButton />
+          </div>
+        }
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

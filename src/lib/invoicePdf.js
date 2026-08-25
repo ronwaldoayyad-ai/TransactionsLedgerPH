@@ -50,8 +50,16 @@ function drawWatermark(doc) {
   doc.setFont('helvetica', 'bold').setTextColor(30, 58, 138)
   let fs = 60
   doc.setFontSize(fs)
-  fs *= (diag * 0.86) / (doc.getTextWidth(text) || 1) // fit ~86% of the diagonal
+  fs *= (diag * 0.82) / (doc.getTextWidth(text) || 1) // fit ~82% of the diagonal
   doc.setFontSize(fs)
+  const tw = doc.getTextWidth(text)
+
+  // Anchor the baseline-left so the text's MIDPOINT lands exactly at the page
+  // center, running diagonally up to the right (align:'center' + angle mis-
+  // positions in this jsPDF version, so we place it manually).
+  const rad = Math.PI / 4
+  const cx = W / 2 - (tw / 2) * Math.cos(rad)
+  const cy = H / 2 + (tw / 2) * Math.sin(rad)
 
   // Concentric rings of offsets → soft, blurred edges.
   const offsets = [[0, 0]]
@@ -62,9 +70,7 @@ function drawWatermark(doc) {
   }
   const hasGState = typeof doc.setGState === 'function' && typeof doc.GState === 'function'
   if (hasGState) doc.setGState(new doc.GState({ opacity: 0.012 }))
-  offsets.forEach(([dx, dy]) =>
-    doc.text(text, W / 2 + dx, H / 2 + dy, { align: 'center', baseline: 'middle', angle: 45 }),
-  )
+  offsets.forEach(([dx, dy]) => doc.text(text, cx + dx, cy + dy, { angle: 45 }))
   if (hasGState) doc.setGState(new doc.GState({ opacity: 1 }))
 }
 
