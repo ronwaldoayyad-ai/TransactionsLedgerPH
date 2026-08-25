@@ -65,8 +65,7 @@ export function buildLineItems(transactions, userId, today = toISODate(new Date(
 //   Subtotal            = sum of UNPAID amounts (Upcoming + Scheduled + Past Due)
 //   Amount Paid to Date = sum of PAID amounts, incl. the magnitude of negative
 //                         amounts (a negative is a payment by the borrower)
-//   Total Amount Due    = Subtotal MINUS the credits (negative amounts) — a
-//                         negative is a (partial) payment, so it reduces what's owed.
+//   Total Amount Due    = Subtotal minus Amount Paid to Date.
 export function computeInvoiceTotals(lineItems) {
   const subtotal = round2(
     lineItems
@@ -76,10 +75,7 @@ export function computeInvoiceTotals(lineItems) {
   const amountPaid = round2(
     lineItems.filter((r) => r.status === 'Paid').reduce((s, r) => s + Math.abs(Number(r.amount) || 0), 0),
   )
-  const credits = round2(
-    lineItems.reduce((s, r) => s + Math.min(0, Number(r.amount) || 0), 0),
-  ) // sum of negatives (<= 0)
-  const totalDue = round2(subtotal + credits) // credits are negative → deducts
+  const totalDue = round2(subtotal - amountPaid)
   return { subtotal, amountPaid, totalDue }
 }
 
