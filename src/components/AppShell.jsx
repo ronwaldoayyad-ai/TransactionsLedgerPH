@@ -17,6 +17,7 @@ const adminNav = [
     items: [
       { to: '/admin/transactions', label: 'Overall Transactions', icon: 'list' },
       { to: '/admin/payment-logs', label: 'Payment Logs', icon: 'wallet' },
+      { to: '/admin/invoices', label: 'Invoices', icon: 'file' },
       { to: '/admin/arbitrage', label: 'Interest / Arbitrage', icon: 'chart' },
       { to: '/admin/wallet', label: 'Cards & Bills Wallet', icon: 'wallet' },
     ],
@@ -68,6 +69,7 @@ const userNav = [
     items: [
       { to: '/portal/payments', label: 'My Payments', icon: 'upload' },
       { to: '/portal/payment-logs', label: 'Payment Logs', icon: 'scroll' },
+      { to: '/portal/invoices', label: 'My Invoices', icon: 'file' },
     ],
   },
 ]
