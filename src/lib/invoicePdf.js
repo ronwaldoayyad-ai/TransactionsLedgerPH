@@ -38,6 +38,36 @@ const prettyDate = (iso) => {
     : d.toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' })
 }
 
+// Large diagonal anti-forgery watermark. jsPDF can't Gaussian-blur vector text,
+// so we stack many slightly-offset, very-low-opacity copies — the overlap
+// softens the edges into a blurred security mark that spans the page.
+function drawWatermark(doc) {
+  const W = doc.internal.pageSize.getWidth()
+  const H = doc.internal.pageSize.getHeight()
+  const text = 'LOANLEDGER PH INVOICE'
+  const diag = Math.sqrt(W * W + H * H)
+
+  doc.setFont('helvetica', 'bold').setTextColor(30, 58, 138)
+  let fs = 60
+  doc.setFontSize(fs)
+  fs *= (diag * 0.86) / (doc.getTextWidth(text) || 1) // fit ~86% of the diagonal
+  doc.setFontSize(fs)
+
+  // Concentric rings of offsets → soft, blurred edges.
+  const offsets = [[0, 0]]
+  for (let i = 0; i < 10; i++) {
+    const a = (Math.PI / 5) * i
+    offsets.push([Math.cos(a) * 1.8, Math.sin(a) * 1.8])
+    offsets.push([Math.cos(a) * 3.6, Math.sin(a) * 3.6])
+  }
+  const hasGState = typeof doc.setGState === 'function' && typeof doc.GState === 'function'
+  if (hasGState) doc.setGState(new doc.GState({ opacity: 0.012 }))
+  offsets.forEach(([dx, dy]) =>
+    doc.text(text, W / 2 + dx, H / 2 + dy, { align: 'center', baseline: 'middle', angle: 45 }),
+  )
+  if (hasGState) doc.setGState(new doc.GState({ opacity: 1 }))
+}
+
 export function buildInvoiceDoc(invoice) {
   const doc = new jsPDF({ unit: 'pt', format: 'a4' })
   const W = doc.internal.pageSize.getWidth()
@@ -154,6 +184,9 @@ export function buildInvoiceDoc(invoice) {
     fy,
     { align: 'center', maxWidth: W - 2 * M },
   )
+
+  // Anti-forgery watermark drawn last, over the content.
+  drawWatermark(doc)
   return doc
 }
 
