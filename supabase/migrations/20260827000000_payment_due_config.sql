@@ -50,3 +50,13 @@ create policy "payment_due_config: admin write"
   for all to authenticated
   using (public.is_admin())
   with check (public.is_admin());
+
+-- Realtime: publish row changes so every connected borrower's dashboard tile
+-- updates the moment the admin applies or clears an override — no manual
+-- refresh. Guarded so re-running the migration doesn't error if already added.
+do $$
+begin
+  alter publication supabase_realtime add table public.payment_due_config;
+exception
+  when duplicate_object then null;
+end $$;

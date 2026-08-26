@@ -1440,6 +1440,35 @@ export function AppProvider({ children }) {
     return true
   }, [isLive])
 
+  // Re-read the singleton override row (used by the realtime subscription).
+  const refreshPaymentDueConfig = useCallback(async () => {
+    const { data, error } = await supabase.from('payment_due_config').select('*').limit(1)
+    if (error) {
+      console.warn('[supabase] payment_due_config refresh failed:', error.message)
+      return
+    }
+    setPaymentDueConfig(mapPaymentDueConfig((data ?? [])[0] ?? null))
+  }, [])
+
+  // Realtime: when the admin applies or clears an override, every connected
+  // client (each borrower's device included) re-reads it, so the Next Payment
+  // Due tile updates without a manual refresh.
+  const pdcListenerId = session?.user?.id ?? 'anon'
+  useEffect(() => {
+    if (!isLive) return undefined
+    const channel = supabase
+      .channel(`payment-due-config-rt-${pdcListenerId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'payment_due_config' },
+        () => refreshPaymentDueConfig(),
+      )
+      .subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [isLive, pdcListenerId, refreshPaymentDueConfig])
+
   const value = useMemo(
     () => ({
       session: effectiveSession,
