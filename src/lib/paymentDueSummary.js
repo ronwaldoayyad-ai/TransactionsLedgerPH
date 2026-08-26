@@ -20,6 +20,8 @@ export function buildDueSummary(items, today) {
   const focusDate = onOrBefore.length
     ? onOrBefore[onOrBefore.length - 1].date
     : (dates[0]?.date ?? null)
+  // The latest selected due date, regardless of status (dates is sorted ascending).
+  const latestDate = dates.length ? dates[dates.length - 1].date : null
   return {
     total: items.reduce((s, t) => s + t.amount, 0),
     pastDueTotal: pastDue.reduce((s, t) => s + t.amount, 0),
@@ -29,5 +31,6 @@ export function buildDueSummary(items, today) {
     upcomingCount: upcoming.length,
     dates,
     focusDate,
+    latestDate,
   }
 }

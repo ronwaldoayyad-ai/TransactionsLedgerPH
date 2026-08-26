@@ -180,10 +180,10 @@ export function PaymentDueBreakdown({ summary, borrowersTargeted = null, footer 
           <BreakdownRow label="Total Due" value={formatPeso(summary.total)} />
           <BreakdownRow label="Upcoming" value={formatPeso(summary.upcomingTotal)} tone="emerald" />
           <BreakdownRow label="Past Due Items" value={summary.pastDueCount} tone="red" />
-          {/* Most recent selected due date (to date) — where the borrower pays. */}
+          {/* Latest selected due date, regardless of status. */}
           <BreakdownRow
-            label="Next Due Date"
-            value={summary.focusDate ? formatDate(summary.focusDate) : '—'}
+            label="Due Date"
+            value={summary.latestDate ? formatDate(summary.latestDate) : '—'}
           />
         </div>
         <div className="divide-y divide-slate-100">{col2}</div>
