@@ -16,6 +16,7 @@ const adminNav = [
     title: 'Operations',
     items: [
       { to: '/admin/transactions', label: 'Overall Transactions', icon: 'list' },
+      { to: '/admin/payment-due', label: 'Payment Due', icon: 'clock' },
       { to: '/admin/payment-logs', label: 'Payment Logs', icon: 'wallet' },
       { to: '/admin/invoices', label: 'Invoices', icon: 'file' },
       { to: '/admin/arbitrage', label: 'Interest / Arbitrage', icon: 'chart' },

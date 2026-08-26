@@ -22,6 +22,7 @@ import Logs from './pages/admin/Logs'
 import PaymentLogs from './pages/admin/PaymentLogs'
 import Arbitrage from './pages/admin/Arbitrage'
 import LoanTracker from './pages/admin/LoanTracker'
+import PaymentDue from './pages/admin/PaymentDue'
 import Wallet from './pages/admin/Wallet'
 import AdminMessages from './pages/admin/Messages'
 import UserMessages from './pages/user/Messages'
@@ -80,6 +81,7 @@ export default function App() {
 
           <Route path="/admin" element={<Protected role="admin"><AdminDashboard /></Protected>} />
           <Route path="/admin/transactions" element={<Protected role="admin"><Transactions /></Protected>} />
+          <Route path="/admin/payment-due" element={<Protected role="admin"><PaymentDue /></Protected>} />
           <Route path="/admin/calculator" element={<Protected role="admin"><Calculator /></Protected>} />
           <Route path="/admin/queue" element={<Protected role="admin"><Queue /></Protected>} />
           <Route path="/admin/users" element={<Protected role="admin"><Users /></Protected>} />

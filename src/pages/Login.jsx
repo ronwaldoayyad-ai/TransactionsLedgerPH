@@ -4,11 +4,16 @@ import { useApp } from '../context/AppContext'
 import Icon from '../components/Icon'
 import LoadingScreen from '../components/LoadingScreen'
 import { Button, FloatingInput } from '../components/ui'
+import { adminUser, mockUsers } from '../data/mock'
 
 // Invite-only sign-in against Supabase (AUTH-5/AUTH-7: no public
 // registration, no demo backdoor).
 export default function Login() {
-  const { session, signInWithPassword } = useApp()
+  const { session, signInWithPassword, signInDemo } = useApp()
+  // Dev-only: local sign-in against the mock dataset, so the app can be checked
+  // on localhost without real Supabase credentials. Tree-shaken out of prod
+  // builds (import.meta.env.DEV is false there).
+  const showDemo = import.meta.env.DEV
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -141,6 +146,25 @@ export default function Login() {
             </Button>
           </form>
 
+          {showDemo && (
+            <div className="lp-rise mt-6 rounded-xl border border-dashed border-slate-300 bg-white/60 p-4" style={{ animationDelay: '180ms' }}>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Local dev — demo sign-in (mock data)
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button variant="secondary" onClick={() => signInDemo(adminUser)}>
+                  Demo Admin
+                </Button>
+                {mockUsers
+                  .filter((u) => u.status === 'active')
+                  .map((u) => (
+                    <Button key={u.id} variant="secondary" onClick={() => signInDemo(u)}>
+                      {u.name.split(' ')[0]} (borrower)
+                    </Button>
+                  ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

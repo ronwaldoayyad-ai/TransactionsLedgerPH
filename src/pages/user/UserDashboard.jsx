@@ -9,6 +9,7 @@ import { usePersistedState } from '../../hooks/usePersistedState'
 import { setPageEntry } from '../../lib/pageStateStore'
 import { formatDate, formatPeso, toISODate } from '../../lib/amortization'
 import { effectiveStatus } from '../../lib/transactions'
+import { configAppliesTo, usePaymentDueConfig } from '../../lib/paymentDueConfig'
 
 export default function UserDashboard() {
   const { session, loans, payments, transactions } = useApp()
@@ -57,17 +58,33 @@ export default function UserDashboard() {
   const outstanding = unpaidTxns.reduce((s, t) => s + t.amount, 0)
   // Next Payment Due = every Past Due item plus the Unpaid items falling on the
   // next (earliest) upcoming due date — across installments and straight.
-  const pastDueItems = unpaidTxns.filter((t) => effectiveStatus(t, today) === 'past_due')
-  const upcomingUnpaid = unpaidTxns.filter((t) => effectiveStatus(t, today) === 'unpaid')
-  const nextUnpaidDate = upcomingUnpaid.reduce(
+  //
+  // Admin override: from the Payment Due page the admin can pin an exact set of
+  // due dates for this borrower; when active, the tile sums only that borrower's
+  // receivable installments landing on those dates instead of the default calc.
+  const pdConfig = usePaymentDueConfig()
+  const overrideActive = configAppliesTo(pdConfig, session.user.id)
+  const overrideDates = overrideActive ? new Set(pdConfig.dueDates) : null
+
+  const defaultPastDue = unpaidTxns.filter((t) => effectiveStatus(t, today) === 'past_due')
+  const defaultUpcoming = unpaidTxns.filter((t) => effectiveStatus(t, today) === 'unpaid')
+  const defaultNextDate = defaultUpcoming.reduce(
     (min, t) => (min == null || t.dueDate < min ? t.dueDate : min),
     null,
   )
-  const nextDueItems = [
-    ...pastDueItems,
-    ...(nextUnpaidDate ? upcomingUnpaid.filter((t) => t.dueDate === nextUnpaidDate) : []),
-  ]
+  const nextDueItems = overrideActive
+    ? unpaidTxns.filter((t) => overrideDates.has(t.dueDate))
+    : [
+        ...defaultPastDue,
+        ...(defaultNextDate ? defaultUpcoming.filter((t) => t.dueDate === defaultNextDate) : []),
+      ]
   const nextDueAmount = nextDueItems.reduce((s, t) => s + t.amount, 0)
+  // Hint figures derive from the tile's actual item set so they stay correct
+  // under both the default calculation and an admin override.
+  const pastDueItems = nextDueItems.filter((t) => effectiveStatus(t, today) === 'past_due')
+  const nextUnpaidDate = nextDueItems
+    .filter((t) => effectiveStatus(t, today) !== 'past_due')
+    .reduce((min, t) => (min == null || t.dueDate < min ? t.dueDate : min), null)
 
   // Totals split by transaction type (across all of the borrower's records).
   const straightTxns = myTxns.filter((t) => t.type === 'Straight')
