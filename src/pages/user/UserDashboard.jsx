@@ -51,11 +51,32 @@ export default function UserDashboard() {
     const txns = txnsFor(loanId)
     return txns.length > 0 && txns.every((t) => ['paid', 'refunded', 'cancelled'].includes(t.status))
   }
-  const fullyPaidCount = myLoans.filter((l) => isFullyPaid(l.id)).length
   // Optional toggle: hide loans whose installments are all paid/refunded/cancelled.
   const visibleLoans = hidePaid ? sortedLoans.filter((l) => !isSettled(l.id)) : sortedLoans
 
   const today = toISODate(new Date())
+
+  // Per-loan status for the "Number of Loans" breakdown. Priority: any still-owed
+  // installment makes the loan Active; otherwise the settled loan is classified
+  // by its terminal installment statuses. Buckets are mutually exclusive and
+  // sum to the total loan count.
+  const loanCategory = (loanId) => {
+    const txns = txnsFor(loanId)
+    if (txns.length === 0) return 'active'
+    if (txns.some((t) => ['unpaid', 'past_due'].includes(effectiveStatus(t, today)))) return 'active'
+    if (txns.every((t) => t.status === 'paid')) return 'paid'
+    if (txns.some((t) => t.status === 'refunded')) return 'refunded'
+    if (txns.some((t) => t.status === 'cancelled')) return 'cancelled'
+    return 'paid'
+  }
+  const loanStatusCounts = myLoans.reduce(
+    (acc, l) => {
+      acc[loanCategory(l.id)] += 1
+      return acc
+    },
+    { paid: 0, active: 0, refunded: 0, cancelled: 0 },
+  )
+
   const totalNetProceeds = myLoans.reduce((s, l) => s + l.disclosure.netProceeds, 0)
   const outstanding = unpaidTxns.reduce((s, t) => s + t.amount, 0)
   // Next Payment Due = every Past Due item plus the Unpaid items falling on the
@@ -168,12 +189,41 @@ export default function UserDashboard() {
           value={formatPeso(totalNetProceeds)}
           hint="After fees & deductions"
         />
-        <StatCard
-          icon="scroll"
-          label="Active Loans"
-          value={myLoans.length}
-          hint={fullyPaidCount > 0 ? `${fullyPaidCount} fully paid` : undefined}
-        />
+        <Card className="p-5">
+          <div className="flex items-start justify-between">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-slate-600">Number of Loans</p>
+              <p className="mt-1.5 font-mono text-2xl font-semibold text-slate-900">
+                {myLoans.length}
+              </p>
+            </div>
+            <span className="shrink-0 rounded-lg bg-navy-50 p-2.5 text-navy-800">
+              <Icon name="scroll" className="h-5 w-5" />
+            </span>
+          </div>
+          <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-slate-100 pt-3">
+            {[
+              { key: 'paid', label: 'Fully Paid', dot: 'bg-emerald-500', text: 'text-emerald-700' },
+              { key: 'active', label: 'Active', dot: 'bg-sky-500', text: 'text-sky-700' },
+              { key: 'refunded', label: 'Refunded', dot: 'bg-blue-500', text: 'text-blue-700' },
+              { key: 'cancelled', label: 'Cancelled', dot: 'bg-teal-500', text: 'text-teal-700' },
+            ].map((row) => (
+              <div key={row.key} className="flex items-center justify-between gap-2">
+                <dt className="flex items-center gap-1.5 text-xs text-slate-500">
+                  <span className={`h-1.5 w-1.5 rounded-full ${row.dot}`} />
+                  {row.label}
+                </dt>
+                <dd
+                  className={`font-mono text-xs font-semibold ${
+                    loanStatusCounts[row.key] ? row.text : 'text-slate-400'
+                  }`}
+                >
+                  {loanStatusCounts[row.key]}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </Card>
       </div>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-3">
