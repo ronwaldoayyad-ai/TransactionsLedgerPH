@@ -18,7 +18,25 @@ import {
 } from '../lib/dbMappers'
 import { allocate } from '../lib/paymentLogs'
 import { clearPageStore } from '../lib/pageStateStore'
+import {
+  clearStoredConfig,
+  normalizeConfig,
+  readStoredConfig,
+  writeStoredConfig,
+} from '../lib/paymentDueConfig'
 import { supabase } from '../supabaseClient'
+
+// payment_due_config is a singleton row; map its snake_case columns to the
+// config shape the app uses everywhere else.
+const mapPaymentDueConfig = (r) =>
+  !r
+    ? null
+    : {
+        allBorrowers: !!r.all_borrowers,
+        borrowerIds: r.borrower_ids ?? [],
+        dueDates: r.due_dates ?? [],
+        appliedAt: r.applied_at ?? null,
+      }
 
 // Dual-mode data layer.
 //  - Real Supabase sessions ("live") read and write the Phase 2 backend;
@@ -116,6 +134,9 @@ export function AppProvider({ children }) {
   const [interestRates, setInterestRates] = useState([])
   const [trackedLoans, setTrackedLoans] = useState([])
   const [auditLog, setAuditLog] = useState(mockAuditLog)
+  // Admin override for the borrower "Next Payment Due" tile. Loaded from
+  // Supabase in live mode; the localStorage seed keeps the demo/dev flow alive.
+  const [paymentDueConfig, setPaymentDueConfig] = useState(() => readStoredConfig())
 
   const isLive = session?.source === 'supabase'
   const actor = session?.user?.name ?? adminUser.name
@@ -186,6 +207,7 @@ export function AppProvider({ children }) {
         ratesRes,
         trackedRes,
         auditRes,
+        pdcRes,
       ] = await Promise.all([
           // Secondary .order('id') makes paging deterministic (a non-unique
           // primary sort key could otherwise shift rows across page boundaries).
@@ -210,6 +232,7 @@ export function AppProvider({ children }) {
             supabase.from('tracked_loans').select('*').order('created_at').order('id'),
           ),
           supabase.from('audit_log').select('*').order('at', { ascending: false }).limit(500),
+        supabase.from('payment_due_config').select('*').limit(1),
         ])
 
       if (profilesRes.error) failures.push(`profiles (${profilesRes.error.message})`)
@@ -241,6 +264,12 @@ export function AppProvider({ children }) {
 
       if (auditRes.error) failures.push(`audit log (${auditRes.error.message})`)
       else setAuditLog((auditRes.data ?? []).map(mapAudit))
+
+      // Non-fatal: if the table is missing (migration not yet applied) the tile
+      // simply falls back to its default calculation instead of breaking sync.
+      if (pdcRes.error)
+        console.warn('[supabase] payment_due_config unavailable:', pdcRes.error.message)
+      else setPaymentDueConfig(mapPaymentDueConfig((pdcRes.data ?? [])[0] ?? null))
 
       if (paymentsRes.error) {
         failures.push(`payments (${paymentsRes.error.message})`)
@@ -1358,6 +1387,59 @@ export function AppProvider({ children }) {
     [isLive, log, actor],
   )
 
+  // Apply the admin's Payment Due override. Persisted to Supabase in live mode
+  // (a singleton row) so it reaches every borrower's device; localStorage backs
+  // the demo/dev flow.
+  const setPaymentDueOverride = useCallback(
+    async (cfg) => {
+      const normalized = normalizeConfig({ ...cfg, appliedAt: new Date().toISOString() })
+      if (isLive) {
+        const { data, error } = await supabase
+          .from('payment_due_config')
+          .upsert(
+            {
+              id: true,
+              all_borrowers: normalized.allBorrowers,
+              borrower_ids: normalized.borrowerIds,
+              due_dates: normalized.dueDates,
+              applied_at: normalized.appliedAt,
+              updated_by: session?.user?.id ?? null,
+            },
+            { onConflict: 'id' },
+          )
+          .select()
+          .single()
+        if (error) {
+          console.error('[supabase] payment due override save failed:', error.message)
+          reportDbError?.(`payment due override save failed (${error.message}) — a migration may be missing`)
+          return false
+        }
+        setPaymentDueConfig(mapPaymentDueConfig(data))
+        return true
+      }
+      writeStoredConfig(normalized)
+      setPaymentDueConfig(normalized)
+      return true
+    },
+    [isLive, session],
+  )
+
+  // Clear the override — borrowers revert to the default auto-calculation.
+  const clearPaymentDueOverride = useCallback(async () => {
+    if (isLive) {
+      const { error } = await supabase.from('payment_due_config').delete().eq('id', true)
+      if (error) {
+        console.error('[supabase] payment due override clear failed:', error.message)
+        reportDbError?.(`clear payment due override (${error.message})`)
+        return false
+      }
+    } else {
+      clearStoredConfig()
+    }
+    setPaymentDueConfig(null)
+    return true
+  }, [isLive])
+
   const value = useMemo(
     () => ({
       session: effectiveSession,
@@ -1389,6 +1471,9 @@ export function AppProvider({ children }) {
       trackedLoans,
       createTrackedLoan,
       deleteTrackedLoan,
+      paymentDueConfig,
+      setPaymentDueOverride,
+      clearPaymentDueOverride,
       transactions,
       auditLog,
       signInWithPassword,
@@ -1421,6 +1506,7 @@ export function AppProvider({ children }) {
       arbitrageLoans, interestRates, createArbitrageLoan, deleteArbitrageLoan,
       addInterestRate, deleteInterestRate,
       trackedLoans, createTrackedLoan, deleteTrackedLoan,
+      paymentDueConfig, setPaymentDueOverride, clearPaymentDueOverride,
       transactions, archivedTransactions, auditLog,
       signInWithPassword, signInDemo, signOut, completePasswordSetup, inviteUser, updateUser,
       deleteUser, resendInvite, submitPayment, reviewPayment, deletePayment, assignLoan, unassignLoan,

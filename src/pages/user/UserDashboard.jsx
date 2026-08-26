@@ -9,10 +9,10 @@ import { usePersistedState } from '../../hooks/usePersistedState'
 import { setPageEntry } from '../../lib/pageStateStore'
 import { formatDate, formatPeso, toISODate } from '../../lib/amortization'
 import { effectiveStatus } from '../../lib/transactions'
-import { configAppliesTo, usePaymentDueConfig } from '../../lib/paymentDueConfig'
+import { configAppliesTo } from '../../lib/paymentDueConfig'
 
 export default function UserDashboard() {
-  const { session, loans, payments, transactions } = useApp()
+  const { session, loans, payments, transactions, paymentDueConfig } = useApp()
   const navigate = useNavigate()
   const [hidePaid, setHidePaid] = usePersistedState('dashboard.hidePaid', true)
   const myPayments = payments.filter((p) => p.userId === session.user.id)
@@ -62,9 +62,8 @@ export default function UserDashboard() {
   // Admin override: from the Payment Due page the admin can pin an exact set of
   // due dates for this borrower; when active, the tile sums only that borrower's
   // receivable installments landing on those dates instead of the default calc.
-  const pdConfig = usePaymentDueConfig()
-  const overrideActive = configAppliesTo(pdConfig, session.user.id)
-  const overrideDates = overrideActive ? new Set(pdConfig.dueDates) : null
+  const overrideActive = configAppliesTo(paymentDueConfig, session.user.id)
+  const overrideDates = overrideActive ? new Set(paymentDueConfig.dueDates) : null
 
   const defaultPastDue = unpaidTxns.filter((t) => effectiveStatus(t, today) === 'past_due')
   const defaultUpcoming = unpaidTxns.filter((t) => effectiveStatus(t, today) === 'unpaid')

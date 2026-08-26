@@ -5,11 +5,6 @@ import { Badge, Button, Card, CardHeader } from '../../components/ui'
 import Icon from '../../components/Icon'
 import { formatDate, formatPeso, toISODate } from '../../lib/amortization'
 import { effectiveStatus, isReceivable } from '../../lib/transactions'
-import {
-  clearPaymentDueConfig,
-  setPaymentDueConfig,
-  usePaymentDueConfig,
-} from '../../lib/paymentDueConfig'
 
 // How many upcoming due dates to surface, to keep the picker from crowding.
 const UPCOMING_LIMIT = 5
@@ -55,8 +50,9 @@ function BreakdownRow({ label, value, tone = 'slate' }) {
 }
 
 export default function PaymentDue() {
-  const { users, transactions } = useApp()
-  const config = usePaymentDueConfig()
+  const { users, transactions, paymentDueConfig, setPaymentDueOverride, clearPaymentDueOverride } =
+    useApp()
+  const config = paymentDueConfig
   const today = toISODate(new Date())
 
   // Borrowers = general users. Sorted by name for a stable, scannable list.
@@ -123,6 +119,7 @@ export default function PaymentDue() {
   )
   const [status, setStatus] = useState('')
   const [flash, setFlash] = useState(false)
+  const [saving, setSaving] = useState(false)
   const flashTimer = useRef(null)
 
   // Due dates offered for the currently-selected borrowers.
@@ -221,13 +218,20 @@ export default function PaymentDue() {
 
   const canApply = selectedBorrowers.size > 0 && selectedDates.size > 0
 
-  const apply = () => {
-    if (!canApply) return
-    setPaymentDueConfig({
+  const apply = async () => {
+    if (!canApply || saving) return
+    setSaving(true)
+    setStatus('Saving…')
+    const ok = await setPaymentDueOverride({
       allBorrowers: allBorrowersSelected,
       borrowerIds: [...selectedBorrowers],
       dueDates: [...selectedDates],
     })
+    setSaving(false)
+    if (!ok) {
+      setStatus('Could not save — check the sync error above (a migration may be missing)')
+      return
+    }
     triggerFlash()
     const who = allBorrowersSelected
       ? 'all borrowers'
@@ -235,13 +239,20 @@ export default function PaymentDue() {
     setStatus(`Applied — ${who} will now see this summary`)
   }
 
-  const reset = () => {
-    clearPaymentDueConfig()
+  const reset = async () => {
+    if (saving) return
+    setSaving(true)
+    const ok = await clearPaymentDueOverride()
+    setSaving(false)
     const allIds = new Set(activeBorrowers.map((b) => b.id))
     setSelectedBorrowers(allIds)
     setSelectedDates(new Set(validDatesFor(allIds).map((d) => d.date)))
     triggerFlash()
-    setStatus('Reset — reverted to all borrowers and default due dates')
+    setStatus(
+      ok
+        ? 'Reset — reverted to all borrowers and default due dates'
+        : 'Could not clear the override — check the sync error above',
+    )
   }
 
   const overrideActive = !!config && config.dueDates.length > 0
@@ -364,11 +375,11 @@ export default function PaymentDue() {
           </Card>
 
           <div className="flex flex-wrap items-center gap-3">
-            <Button onClick={apply} disabled={!canApply}>
+            <Button onClick={apply} disabled={!canApply || saving}>
               <Icon name="check" className="h-4 w-4" />
-              Apply Settings
+              {saving ? 'Saving…' : 'Apply Settings'}
             </Button>
-            <Button variant="secondary" onClick={reset}>
+            <Button variant="secondary" onClick={reset} disabled={saving}>
               <Icon name="refresh" className="h-4 w-4" />
               Reset
             </Button>
