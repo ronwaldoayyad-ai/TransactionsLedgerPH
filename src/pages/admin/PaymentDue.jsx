@@ -3,7 +3,7 @@ import { useApp } from '../../context/AppContext'
 import { PageHeader } from '../../components/AppShell'
 import { Badge, Button, Card, CardHeader } from '../../components/ui'
 import Icon from '../../components/Icon'
-import { formatDate, toISODate } from '../../lib/amortization'
+import { formatDate, formatPeso, toISODate } from '../../lib/amortization'
 import { effectiveStatus, isReceivable } from '../../lib/transactions'
 import { NextPaymentDueCard, PaymentDueBreakdown } from '../../components/PaymentDueSummary'
 import { buildDueSummary } from '../../lib/paymentDueSummary'
@@ -255,6 +255,13 @@ export default function PaymentDue() {
     .filter((o) => o.dueDates.length > 0)
     .sort((a, b) => borrowerName(a.borrowerId).localeCompare(borrowerName(b.borrowerId)))
 
+  // The exact peso total a borrower sees for their pinned dates — the same
+  // receivable installments (on those dates) their Next Payment Due tile sums.
+  const overrideTotal = (o) =>
+    receivable
+      .filter((t) => t.userId === o.borrowerId && o.dueDates.includes(t.dueDate))
+      .reduce((s, t) => s + t.amount, 0)
+
   return (
     <>
       <PageHeader
@@ -480,14 +487,22 @@ export default function PaymentDue() {
                           ))}
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => clearOne(o.borrowerId)}
-                        disabled={saving}
-                        className="shrink-0 cursor-pointer rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors duration-200 hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        Clear
-                      </button>
+                      <div className="flex shrink-0 flex-col items-end gap-2">
+                        <div className="text-right">
+                          <p className="font-mono text-sm font-semibold text-slate-900">
+                            {formatPeso(overrideTotal(o))}
+                          </p>
+                          <p className="text-[11px] text-slate-400">shown to borrower</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => clearOne(o.borrowerId)}
+                          disabled={saving}
+                          className="cursor-pointer rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors duration-200 hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          Clear
+                        </button>
+                      </div>
                     </li>
                   )
                 })}
