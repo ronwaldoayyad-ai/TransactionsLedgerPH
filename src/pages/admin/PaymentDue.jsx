@@ -6,6 +6,7 @@ import Icon from '../../components/Icon'
 import { formatDate, toISODate } from '../../lib/amortization'
 import { effectiveStatus, isReceivable } from '../../lib/transactions'
 import { NextPaymentDueCard, PaymentDueBreakdown } from '../../components/PaymentDueSummary'
+import { buildDueSummary } from '../../lib/paymentDueSummary'
 
 // How many upcoming due dates to surface, to keep the picker from crowding.
 const UPCOMING_LIMIT = 5
@@ -140,26 +141,7 @@ export default function PaymentDue() {
     [receivable, selectedBorrowers, selectedDates],
   )
 
-  const summary = useMemo(() => {
-    const pastDue = previewItems.filter((t) => effectiveStatus(t, today) === 'past_due')
-    const upcoming = previewItems.filter((t) => effectiveStatus(t, today) !== 'past_due')
-    const total = previewItems.reduce((s, t) => s + t.amount, 0)
-    const pastDueTotal = pastDue.reduce((s, t) => s + t.amount, 0)
-    const upcomingTotal = upcoming.reduce((s, t) => s + t.amount, 0)
-    const nextDate = upcoming.reduce(
-      (min, t) => (min == null || t.dueDate < min ? t.dueDate : min),
-      null,
-    )
-    return {
-      total,
-      pastDueTotal,
-      upcomingTotal,
-      count: previewItems.length,
-      pastDueCount: pastDue.length,
-      upcomingCount: upcoming.length,
-      nextDate,
-    }
-  }, [previewItems, today])
+  const summary = useMemo(() => buildDueSummary(previewItems, today), [previewItems, today])
 
   // --- Actions ---------------------------------------------------------------
   const allBorrowersSelected =

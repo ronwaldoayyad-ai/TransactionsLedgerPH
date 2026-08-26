@@ -6,6 +6,7 @@ import Icon from '../../components/Icon'
 import PaymentList from '../../components/PaymentList'
 import RefreshButton from '../../components/RefreshButton'
 import { NextPaymentDueCard, PaymentDueBreakdown } from '../../components/PaymentDueSummary'
+import { buildDueSummary } from '../../lib/paymentDueSummary'
 import { usePersistedState } from '../../hooks/usePersistedState'
 import { setPageEntry } from '../../lib/pageStateStore'
 import { formatDate, formatPeso, toISODate } from '../../lib/amortization'
@@ -79,26 +80,10 @@ export default function UserDashboard() {
         ...defaultPastDue,
         ...(defaultNextDate ? defaultUpcoming.filter((t) => t.dueDate === defaultNextDate) : []),
       ]
-  const nextDueAmount = nextDueItems.reduce((s, t) => s + t.amount, 0)
-  // Hint figures derive from the tile's actual item set so they stay correct
-  // under both the default calculation and an admin override.
-  const pastDueItems = nextDueItems.filter((t) => effectiveStatus(t, today) === 'past_due')
-  const upcomingDueItems = nextDueItems.filter((t) => effectiveStatus(t, today) !== 'past_due')
-  const nextUnpaidDate = upcomingDueItems.reduce(
-    (min, t) => (min == null || t.dueDate < min ? t.dueDate : min),
-    null,
-  )
   // Summary consumed by the shared Next Payment Due card + breakdown (identical
-  // to the admin Payment Due preview).
-  const nextDueSummary = {
-    total: nextDueAmount,
-    pastDueTotal: pastDueItems.reduce((s, t) => s + t.amount, 0),
-    upcomingTotal: upcomingDueItems.reduce((s, t) => s + t.amount, 0),
-    count: nextDueItems.length,
-    pastDueCount: pastDueItems.length,
-    upcomingCount: upcomingDueItems.length,
-    nextDate: nextUnpaidDate,
-  }
+  // to the admin Payment Due preview): totals, the selected due dates, and the
+  // most recent one "to date" to highlight.
+  const nextDueSummary = buildDueSummary(nextDueItems, today)
 
   // Totals split by transaction type (across all of the borrower's records).
   const straightTxns = myTxns.filter((t) => t.type === 'Straight')
