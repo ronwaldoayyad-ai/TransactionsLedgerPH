@@ -37,9 +37,14 @@ function SelectionCount({ n }) {
 }
 
 export default function PaymentDue() {
-  const { users, transactions, paymentDueConfig, setPaymentDueOverride, clearPaymentDueOverride } =
-    useApp()
-  const config = paymentDueConfig
+  const {
+    users,
+    transactions,
+    paymentDueOverrides,
+    savePaymentDueOverrides,
+    clearPaymentDueOverride,
+    clearAllPaymentDueOverrides,
+  } = useApp()
   const today = toISODate(new Date())
 
   // Borrowers = general users. Sorted by name for a stable, scannable list.
@@ -50,6 +55,7 @@ export default function PaymentDue() {
         .sort((a, b) => a.name.localeCompare(b.name)),
     [users],
   )
+  const borrowerName = (id) => users.find((u) => u.id === id)?.name ?? id
 
   // Every receivable installment (past due or upcoming — paid/refunded/
   // cancelled excluded), which is the universe both pickers draw from.
@@ -91,18 +97,14 @@ export default function PaymentDue() {
   }
 
   // --- Selection state -------------------------------------------------------
-  // Seed once from data available at mount (synchronous in mock mode): an
-  // applied override restores its own borrowers/dates; otherwise everything
-  // starts selected, matching the "all borrowers and dates" default.
-  const [selectedBorrowers, setSelectedBorrowers] = useState(() =>
-    config && config.dueDates.length
-      ? new Set(config.allBorrowers ? activeBorrowers.map((b) => b.id) : config.borrowerIds)
-      : new Set(activeBorrowers.map((b) => b.id)),
+  // The pickers are a staging area for the NEXT Apply — they start with every
+  // borrower and date selected. What's currently saved is shown separately in
+  // the "Current Overrides" panel, since each borrower can differ.
+  const [selectedBorrowers, setSelectedBorrowers] = useState(
+    () => new Set(activeBorrowers.map((b) => b.id)),
   )
-  const [selectedDates, setSelectedDates] = useState(() =>
-    config && config.dueDates.length
-      ? new Set(config.dueDates)
-      : new Set(validDatesFor(new Set(activeBorrowers.map((b) => b.id))).map((d) => d.date)),
+  const [selectedDates, setSelectedDates] = useState(
+    () => new Set(validDatesFor(new Set(activeBorrowers.map((b) => b.id))).map((d) => d.date)),
   )
   const [status, setStatus] = useState('')
   const [flash, setFlash] = useState(false)
@@ -205,44 +207,71 @@ export default function PaymentDue() {
 
   const canApply = selectedBorrowers.size > 0 && selectedDates.size > 0
 
+  // Build the per-borrower rows for the current selection: each selected
+  // borrower is pinned to the selected dates that are actually theirs.
+  const rowsForSelection = () =>
+    [...selectedBorrowers]
+      .map((borrowerId) => ({
+        borrowerId,
+        dueDates: receivable
+          .filter((t) => t.userId === borrowerId && selectedDates.has(t.dueDate))
+          .map((t) => t.dueDate),
+      }))
+      // De-dupe dates per borrower, and drop borrowers with no matching date.
+      .map((r) => ({ borrowerId: r.borrowerId, dueDates: [...new Set(r.dueDates)] }))
+      .filter((r) => r.dueDates.length > 0)
+
   const apply = async () => {
     if (!canApply || saving) return
+    const rows = rowsForSelection()
+    if (rows.length === 0) {
+      setStatus('No matching dates for the selected borrowers — nothing to apply')
+      return
+    }
     setSaving(true)
     setStatus('Saving…')
-    const ok = await setPaymentDueOverride({
-      allBorrowers: allBorrowersSelected,
-      borrowerIds: [...selectedBorrowers],
-      dueDates: [...selectedDates],
-    })
+    const ok = await savePaymentDueOverrides(rows)
     setSaving(false)
     if (!ok) {
       setStatus('Could not save — check the sync error above (a migration may be missing)')
       return
     }
     triggerFlash()
-    const who = allBorrowersSelected
-      ? 'all borrowers'
-      : `${selectedBorrowers.size} borrower${selectedBorrowers.size === 1 ? '' : 's'}`
-    setStatus(`Applied — ${who} will now see this summary`)
+    setStatus(
+      `Applied — ${rows.length} borrower${rows.length === 1 ? '' : 's'} pinned (other overrides kept)`,
+    )
   }
 
-  const reset = async () => {
-    if (saving) return
-    setSaving(true)
-    const ok = await clearPaymentDueOverride()
-    setSaving(false)
+  // Reset the pickers only (does NOT clear saved overrides — use the Current
+  // Overrides panel for that).
+  const reset = () => {
     const allIds = new Set(activeBorrowers.map((b) => b.id))
     setSelectedBorrowers(allIds)
     setSelectedDates(new Set(validDatesFor(allIds).map((d) => d.date)))
     triggerFlash()
-    setStatus(
-      ok
-        ? 'Reset — reverted to all borrowers and default due dates'
-        : 'Could not clear the override — check the sync error above',
-    )
+    setStatus('Selection reset — all borrowers and dates')
   }
 
-  const overrideActive = !!config && config.dueDates.length > 0
+  const clearOne = async (borrowerId) => {
+    if (saving) return
+    setSaving(true)
+    const ok = await clearPaymentDueOverride(borrowerId)
+    setSaving(false)
+    setStatus(ok ? `Cleared override for ${borrowerName(borrowerId)}` : 'Could not clear — check the sync error above')
+  }
+
+  const clearAll = async () => {
+    if (saving) return
+    setSaving(true)
+    const ok = await clearAllPaymentDueOverrides()
+    setSaving(false)
+    setStatus(ok ? 'Cleared all overrides' : 'Could not clear — check the sync error above')
+  }
+
+  // Active overrides, sorted by borrower name, for the Current Overrides panel.
+  const activeOverrides = [...(paymentDueOverrides ?? [])]
+    .filter((o) => o.dueDates.length > 0)
+    .sort((a, b) => borrowerName(a.borrowerId).localeCompare(borrowerName(b.borrowerId)))
 
   return (
     <>
@@ -400,20 +429,89 @@ export default function PaymentDue() {
             flash={flash}
             borrowersTargeted={selectedBorrowers.size}
             footer={
-              overrideActive ? (
+              activeOverrides.length > 0 ? (
                 <span className="inline-flex items-center gap-1.5 text-emerald-700">
                   <Icon name="check" className="h-3.5 w-3.5" />
-                  Override live for{' '}
-                  {config.allBorrowers
-                    ? 'all borrowers'
-                    : `${config.borrowerIds.length} borrower${config.borrowerIds.length === 1 ? '' : 's'}`}{' '}
-                  · applied {formatDate(config.appliedAt.slice(0, 10))}
+                  {activeOverrides.length} active override{activeOverrides.length === 1 ? '' : 's'} — see the panel below
                 </span>
               ) : (
-                <span>No override applied — borrowers see the default auto-calculation.</span>
+                <span>No overrides applied — borrowers see the default auto-calculation.</span>
               )
             }
           />
+
+          {/* Current Overrides — exactly what's pinned for each borrower. */}
+          <Card>
+            <CardHeader
+              title={
+                <span className="flex items-center gap-2">
+                  <Icon name="list" className="h-4 w-4 text-navy-700" />
+                  Current Overrides
+                  <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">
+                    {activeOverrides.length}
+                  </span>
+                </span>
+              }
+              action={
+                activeOverrides.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={clearAll}
+                    disabled={saving}
+                    className="cursor-pointer text-sm font-medium text-red-600 transition-colors duration-200 hover:text-red-700 disabled:cursor-not-allowed disabled:text-slate-300"
+                  >
+                    Clear all
+                  </button>
+                )
+              }
+            />
+            {activeOverrides.length === 0 ? (
+              <p className="px-5 py-6 text-center text-sm text-slate-500">
+                No overrides pinned. Select borrowers and dates above, then Apply — each borrower keeps
+                their own dates independently.
+              </p>
+            ) : (
+              <ul className="divide-y divide-slate-100">
+                {activeOverrides.map((o) => {
+                  const dates = [...o.dueDates].sort((a, b) => a.localeCompare(b))
+                  return (
+                    <li key={o.borrowerId} className="flex items-start justify-between gap-4 px-5 py-3.5">
+                      <div className="min-w-0">
+                        <p className="flex items-center gap-2 font-semibold text-slate-900">
+                          {borrowerName(o.borrowerId)}
+                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500">
+                            {dates.length} date{dates.length === 1 ? '' : 's'}
+                          </span>
+                        </p>
+                        <div className="mt-1.5 flex flex-wrap gap-1.5">
+                          {dates.map((d) => (
+                            <span
+                              key={d}
+                              className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                                effectiveStatus({ dueDate: d, status: 'unpaid' }, today) === 'past_due'
+                                  ? 'bg-red-50 text-red-600'
+                                  : 'bg-emerald-50 text-emerald-700'
+                              }`}
+                            >
+                              {formatDate(d)}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => clearOne(o.borrowerId)}
+                        disabled={saving}
+                        className="shrink-0 cursor-pointer rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors duration-200 hover:border-red-200 hover:bg-red-50 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Clear
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </Card>
         </div>
       </div>
     </>
