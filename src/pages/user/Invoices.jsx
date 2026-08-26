@@ -3,8 +3,9 @@ import { useInvoices } from '../../context/InvoicesContext'
 import { PageHeader } from '../../components/AppShell'
 import Icon from '../../components/Icon'
 import RefreshButton from '../../components/RefreshButton'
-import { Button, Card, CardHeader, EmptyState, Modal } from '../../components/ui'
+import { Badge, Button, Card, CardHeader, EmptyState, Modal } from '../../components/ui'
 import { formatDate, formatPeso } from '../../lib/amortization'
+import { invoiceStatusMeta } from '../../lib/invoice'
 import { downloadInvoicePdf, invoicePdfBlobUrl } from '../../lib/invoicePdf'
 
 const toPdf = (inv) => ({
@@ -50,6 +51,7 @@ export default function Invoices() {
                   <th className="px-5 py-3">Invoice Date</th>
                   <th className="px-5 py-3">Due Date</th>
                   <th className="px-5 py-3 text-right">Total Amount Due</th>
+                  <th className="px-5 py-3">Status</th>
                   <th className="px-5 py-3 text-right">Actions</th>
                 </tr>
               </thead>
@@ -61,6 +63,11 @@ export default function Invoices() {
                     <td className="px-5 py-3.5 text-slate-600">{inv.dueDate ? formatDate(inv.dueDate) : '—'}</td>
                     <td className="px-5 py-3.5 text-right font-mono font-semibold text-slate-900">
                       {formatPeso(inv.totalDue)}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <Badge status={invoiceStatusMeta(inv.status).badge}>
+                        {invoiceStatusMeta(inv.status).label}
+                      </Badge>
                     </td>
                     <td className="px-5 py-3.5">
                       <div className="flex justify-end gap-1">

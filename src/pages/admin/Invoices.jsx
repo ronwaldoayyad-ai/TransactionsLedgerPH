@@ -6,7 +6,13 @@ import Icon from '../../components/Icon'
 import RefreshButton from '../../components/RefreshButton'
 import { Badge, Button, Card, CardHeader, EmptyState, Field, Modal, MultiSelect, inputClass } from '../../components/ui'
 import { formatDate, formatPeso, toISODate } from '../../lib/amortization'
-import { borrowerDueDates, buildLineItems, computeInvoiceTotals } from '../../lib/invoice'
+import {
+  borrowerDueDates,
+  buildLineItems,
+  computeInvoiceTotals,
+  EDITABLE_INVOICE_STATUSES,
+  invoiceStatusMeta,
+} from '../../lib/invoice'
 import { downloadInvoicePdf, invoicePdfBlobUrl } from '../../lib/invoicePdf'
 
 // Snapshot (DB camelCase) → the shape invoicePdf expects. Same for a freshly
@@ -25,7 +31,7 @@ const toPdf = (inv) => ({
 
 export default function Invoices() {
   const { users, transactions } = useApp()
-  const { invoices, createInvoice, assignInvoice, deleteInvoice } = useInvoices()
+  const { invoices, createInvoice, assignInvoice, updateInvoiceStatus, deleteInvoice } = useInvoices()
   const today = toISODate(new Date())
   const borrowers = useMemo(() => users.filter((u) => u.role === 'user'), [users])
   const nameOf = (id) => users.find((u) => u.id === id)?.name ?? id
@@ -37,6 +43,9 @@ export default function Invoices() {
   const [busy, setBusy] = useState(false)
   const [preview, setPreview] = useState(null) // invoice being previewed
   const [confirmDelete, setConfirmDelete] = useState(null)
+  const [statusEdit, setStatusEdit] = useState(null) // invoice whose status is being edited
+  const [statusDraft, setStatusDraft] = useState('assigned')
+  const [statusErr, setStatusErr] = useState('')
 
   const dueOptions = useMemo(
     () => (userId ? borrowerDueDates(transactions, userId).map((d) => ({ value: d, label: formatDate(d) })) : []),
@@ -87,6 +96,22 @@ export default function Invoices() {
     await assignInvoice(inv.id)
     setBusy(false)
     setPreview((p) => (p && p.id === inv.id ? { ...p, status: 'assigned' } : p))
+  }
+
+  const openStatusEdit = (inv) => {
+    setStatusEdit(inv)
+    setStatusDraft(inv.status === 'draft' ? 'assigned' : inv.status)
+    setStatusErr('')
+  }
+
+  const saveStatus = async () => {
+    if (!statusEdit) return
+    setBusy(true)
+    const { error: err } = await updateInvoiceStatus(statusEdit.id, statusDraft)
+    setBusy(false)
+    if (err) return setStatusErr(err)
+    setPreview((p) => (p && p.id === statusEdit.id ? { ...p, status: statusDraft } : p))
+    setStatusEdit(null)
   }
 
   return (
@@ -196,18 +221,18 @@ export default function Invoices() {
                       <td className="px-4 py-3 text-slate-600">{inv.dueDate ? formatDate(inv.dueDate) : '—'}</td>
                       <td className="px-4 py-3 text-right font-mono text-slate-900">{formatPeso(inv.totalDue)}</td>
                       <td className="px-4 py-3">
-                        {inv.status === 'assigned' ? (
-                          <Badge status="paid">Assigned</Badge>
-                        ) : (
-                          <Badge status="upcoming">Draft</Badge>
-                        )}
+                        <Badge status={invoiceStatusMeta(inv.status).badge}>
+                          {invoiceStatusMeta(inv.status).label}
+                        </Badge>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex justify-end gap-1">
                           <IconBtn title="Preview" onClick={() => setPreview(inv)} icon="file" />
                           <IconBtn title="Download PDF" onClick={() => downloadInvoicePdf(toPdf(inv))} icon="download" />
-                          {inv.status === 'draft' && (
+                          {inv.status === 'draft' ? (
                             <IconBtn title="Assign to borrower" tone="emerald" onClick={() => doAssign(inv)} icon="check" />
+                          ) : (
+                            <IconBtn title="Update status" onClick={() => openStatusEdit(inv)} icon="pencil" />
                           )}
                           <IconBtn title="Delete" tone="red" onClick={() => setConfirmDelete(inv)} icon="trash" />
                         </div>
@@ -242,10 +267,16 @@ export default function Invoices() {
                   {busy ? 'Assigning…' : `Assign to ${preview.billedToName || nameOf(preview.userId)}`}
                 </Button>
               ) : (
-                <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
-                  <Icon name="check" className="h-4 w-4" />
-                  Assigned — visible to {preview.billedToName || nameOf(preview.userId)}
-                </span>
+                <>
+                  <span className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-medium text-emerald-700">
+                    <Icon name="check" className="h-4 w-4" />
+                    {invoiceStatusMeta(preview.status).label} — visible to {preview.billedToName || nameOf(preview.userId)}
+                  </span>
+                  <Button variant="secondary" onClick={() => openStatusEdit(preview)}>
+                    <Icon name="pencil" className="h-4 w-4" />
+                    Update status
+                  </Button>
+                </>
               )}
             </>
           }
@@ -260,6 +291,51 @@ export default function Invoices() {
             src={invoicePdfBlobUrl(toPdf(preview))}
             className="h-[65vh] w-full rounded-lg border border-slate-200"
           />
+        </Modal>
+      )}
+
+      {/* Update status */}
+      {statusEdit && (
+        <Modal
+          open
+          title={`Update status — ${statusEdit.invoiceNumber}`}
+          onClose={() => setStatusEdit(null)}
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => setStatusEdit(null)}>
+                Cancel
+              </Button>
+              <Button variant="gold" onClick={saveStatus} disabled={busy || statusDraft === statusEdit.status}>
+                <Icon name="check" className="h-4 w-4" />
+                {busy ? 'Saving…' : 'Save status'}
+              </Button>
+            </>
+          }
+        >
+          <p className="mb-3 text-sm text-slate-600">
+            Set the status for{' '}
+            <span className="font-medium text-slate-900">{statusEdit.billedToName || nameOf(statusEdit.userId)}</span>. The
+            borrower sees this on their <span className="font-medium">My Invoices</span> tab but cannot change it.
+          </p>
+          <Field label="Status" htmlFor="inv-status">
+            <select
+              id="inv-status"
+              className={inputClass}
+              value={statusDraft}
+              onChange={(e) => setStatusDraft(e.target.value)}
+            >
+              {EDITABLE_INVOICE_STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {invoiceStatusMeta(s).label}
+                </option>
+              ))}
+            </select>
+          </Field>
+          {statusErr && (
+            <p role="alert" className="mt-3 rounded-lg bg-red-50 px-3 py-2.5 text-sm text-red-700">
+              {statusErr}
+            </p>
+          )}
         </Modal>
       )}
 

@@ -115,6 +115,25 @@ export function InvoicesProvider({ children }) {
     [isLive, fetchAll],
   )
 
+  // Admin: change the status of an assigned invoice (assigned/settled/past_due/
+  // partial). The borrower sees the new status but cannot change it (RLS).
+  const updateInvoiceStatus = useCallback(
+    async (id, status) => {
+      if (!isLive) return { error: 'Live session required.' }
+      const { error } = await supabase
+        .from('invoices')
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq('id', id)
+      if (error) {
+        console.error('[invoices] status update failed:', error.message)
+        return { error: error.message }
+      }
+      await fetchAll()
+      return {}
+    },
+    [isLive, fetchAll],
+  )
+
   const deleteInvoice = useCallback(
     async (id) => {
       if (!isLive) return { error: 'Live session required.' }
@@ -130,8 +149,8 @@ export function InvoicesProvider({ children }) {
   )
 
   const value = useMemo(
-    () => ({ invoices, loading, createInvoice, assignInvoice, deleteInvoice, refreshInvoices: fetchAll }),
-    [invoices, loading, createInvoice, assignInvoice, deleteInvoice, fetchAll],
+    () => ({ invoices, loading, createInvoice, assignInvoice, updateInvoiceStatus, deleteInvoice, refreshInvoices: fetchAll }),
+    [invoices, loading, createInvoice, assignInvoice, updateInvoiceStatus, deleteInvoice, fetchAll],
   )
 
   return <InvoicesContext.Provider value={value}>{children}</InvoicesContext.Provider>
