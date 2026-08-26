@@ -5,6 +5,7 @@ import { Badge, Button, Card, CardHeader, EmptyState, StatCard, Switch } from '.
 import Icon from '../../components/Icon'
 import PaymentList from '../../components/PaymentList'
 import RefreshButton from '../../components/RefreshButton'
+import { NextPaymentDueCard, PaymentDueBreakdown } from '../../components/PaymentDueSummary'
 import { usePersistedState } from '../../hooks/usePersistedState'
 import { setPageEntry } from '../../lib/pageStateStore'
 import { formatDate, formatPeso, toISODate } from '../../lib/amortization'
@@ -81,9 +82,22 @@ export default function UserDashboard() {
   // Hint figures derive from the tile's actual item set so they stay correct
   // under both the default calculation and an admin override.
   const pastDueItems = nextDueItems.filter((t) => effectiveStatus(t, today) === 'past_due')
-  const nextUnpaidDate = nextDueItems
-    .filter((t) => effectiveStatus(t, today) !== 'past_due')
-    .reduce((min, t) => (min == null || t.dueDate < min ? t.dueDate : min), null)
+  const upcomingDueItems = nextDueItems.filter((t) => effectiveStatus(t, today) !== 'past_due')
+  const nextUnpaidDate = upcomingDueItems.reduce(
+    (min, t) => (min == null || t.dueDate < min ? t.dueDate : min),
+    null,
+  )
+  // Summary consumed by the shared Next Payment Due card + breakdown (identical
+  // to the admin Payment Due preview).
+  const nextDueSummary = {
+    total: nextDueAmount,
+    pastDueTotal: pastDueItems.reduce((s, t) => s + t.amount, 0),
+    upcomingTotal: upcomingDueItems.reduce((s, t) => s + t.amount, 0),
+    count: nextDueItems.length,
+    pastDueCount: pastDueItems.length,
+    upcomingCount: upcomingDueItems.length,
+    nextDate: nextUnpaidDate,
+  }
 
   // Totals split by transaction type (across all of the borrower's records).
   const straightTxns = myTxns.filter((t) => t.type === 'Straight')
@@ -132,22 +146,14 @@ export default function UserDashboard() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <StatCard
-          icon="clock"
-          label="Next Payment Due"
-          value={nextDueItems.length ? formatPeso(nextDueAmount) : '—'}
-          hint={
-            nextDueItems.length
-              ? `${nextDueItems.length} item${nextDueItems.length === 1 ? '' : 's'} due${
-                  pastDueItems.length ? ` · incl. ${pastDueItems.length} past due` : ''
-                }${nextUnpaidDate ? ` · next ${formatDate(nextUnpaidDate)}` : ''}`
-              : 'No upcoming payments'
-          }
-          accent="text-sky-700 bg-sky-50"
-          onClick={goNextDue}
-          highlight
-        />
+      {/* Featured: Next Payment Due — the same big card + breakdown the admin
+          sees in the Payment Due preview. Reflects any admin override. */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <NextPaymentDueCard summary={nextDueSummary} onClick={goNextDue} />
+        <PaymentDueBreakdown summary={nextDueSummary} />
+      </div>
+
+      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard
           icon="wallet"
           label="Total Installment Transactions"

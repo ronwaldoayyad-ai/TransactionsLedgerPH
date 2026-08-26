@@ -3,8 +3,9 @@ import { useApp } from '../../context/AppContext'
 import { PageHeader } from '../../components/AppShell'
 import { Badge, Button, Card, CardHeader } from '../../components/ui'
 import Icon from '../../components/Icon'
-import { formatDate, formatPeso, toISODate } from '../../lib/amortization'
+import { formatDate, toISODate } from '../../lib/amortization'
 import { effectiveStatus, isReceivable } from '../../lib/transactions'
+import { NextPaymentDueCard, PaymentDueBreakdown } from '../../components/PaymentDueSummary'
 
 // How many upcoming due dates to surface, to keep the picker from crowding.
 const UPCOMING_LIMIT = 5
@@ -32,20 +33,6 @@ function SelectionCount({ n }) {
     <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
       {n} selected
     </span>
-  )
-}
-
-function BreakdownRow({ label, value, tone = 'slate' }) {
-  const tones = {
-    slate: 'text-slate-900',
-    red: 'text-red-600',
-    emerald: 'text-emerald-700',
-  }
-  return (
-    <div className="flex items-center justify-between gap-3 py-2.5">
-      <span className="text-sm text-slate-500">{label}</span>
-      <span className={`font-mono text-sm font-semibold ${tones[tone]}`}>{value}</span>
-    </div>
   )
 }
 
@@ -404,80 +391,29 @@ export default function PaymentDue() {
               </span>
             </p>
 
-            {/* The exact tile the borrower sees. */}
-            <div
-              className={`rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm transition-all duration-500 ${
-                flash ? 'ring-2 ring-navy-400 ring-offset-2' : 'ring-0'
-              }`}
-            >
-              <p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">
-                Next Payment Due
-              </p>
-              <p className="mt-3 font-mono text-4xl font-bold text-slate-900 sm:text-5xl">
-                {summary.count ? formatPeso(summary.total) : '—'}
-              </p>
-              <p className="mt-3 text-sm text-slate-500">
-                {summary.count ? (
-                  <>
-                    {summary.count} item{summary.count === 1 ? '' : 's'} due
-                    {summary.pastDueCount > 0 && (
-                      <>
-                        {' · incl. '}
-                        <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-600">
-                          {summary.pastDueCount} past due
-                        </span>
-                      </>
-                    )}
-                    {summary.nextDate && (
-                      <>
-                        {' · next '}
-                        <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
-                          {formatDate(summary.nextDate)}
-                        </span>
-                      </>
-                    )}
-                  </>
-                ) : (
-                  'No payments selected'
-                )}
-              </p>
-            </div>
+            {/* The exact tile the borrower sees — shared component. */}
+            <NextPaymentDueCard summary={summary} flash={flash} emptyText="No payments selected" />
           </div>
 
-          <Card className={`transition-all duration-500 ${flash ? 'ring-2 ring-navy-200' : ''}`}>
-            <CardHeader
-              title={
-                <span className="flex items-center gap-2">
-                  <Icon name="chart" className="h-4 w-4 text-navy-700" />
-                  Detailed Breakdown
-                </span>
-              }
-            />
-            <div className="grid gap-x-8 px-5 py-2 sm:grid-cols-2">
-              <div className="divide-y divide-slate-100">
-                <BreakdownRow label="Total Due" value={formatPeso(summary.total)} />
-                <BreakdownRow label="Upcoming" value={formatPeso(summary.upcomingTotal)} tone="emerald" />
-                <BreakdownRow label="Past Due Items" value={summary.pastDueCount} tone="red" />
-                <BreakdownRow label="Next Due Date" value={summary.nextDate ? formatDate(summary.nextDate) : '—'} tone="emerald" />
-              </div>
-              <div className="divide-y divide-slate-100">
-                <BreakdownRow label="Past Due" value={formatPeso(summary.pastDueTotal)} tone="red" />
-                <BreakdownRow label="Total Items" value={summary.count} />
-                <BreakdownRow label="Upcoming Items" value={summary.upcomingCount} tone="emerald" />
-                <BreakdownRow label="Borrowers Targeted" value={selectedBorrowers.size} />
-              </div>
-            </div>
-            <div className="border-t border-slate-100 px-5 py-3 text-xs text-slate-500">
-              {overrideActive ? (
+          <PaymentDueBreakdown
+            summary={summary}
+            flash={flash}
+            borrowersTargeted={selectedBorrowers.size}
+            footer={
+              overrideActive ? (
                 <span className="inline-flex items-center gap-1.5 text-emerald-700">
                   <Icon name="check" className="h-3.5 w-3.5" />
-                  Override live for {config.allBorrowers ? 'all borrowers' : `${config.borrowerIds.length} borrower${config.borrowerIds.length === 1 ? '' : 's'}`} · applied {formatDate(config.appliedAt.slice(0, 10))}
+                  Override live for{' '}
+                  {config.allBorrowers
+                    ? 'all borrowers'
+                    : `${config.borrowerIds.length} borrower${config.borrowerIds.length === 1 ? '' : 's'}`}{' '}
+                  · applied {formatDate(config.appliedAt.slice(0, 10))}
                 </span>
               ) : (
                 <span>No override applied — borrowers see the default auto-calculation.</span>
-              )}
-            </div>
-          </Card>
+              )
+            }
+          />
         </div>
       </div>
     </>
