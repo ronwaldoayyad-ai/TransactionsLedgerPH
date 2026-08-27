@@ -24,8 +24,9 @@ function DateChip({ date, kind, focus }) {
   )
 }
 
-// The big headline card: the exact tile a borrower sees.
-export function NextPaymentDueCard({ summary, flash = false, onClick, emptyText = 'No upcoming payments' }) {
+// The big headline card: the exact tile a borrower sees. `highlight` wraps the
+// tile in the animated rainbow border (the borrower dashboard's featured tile).
+export function NextPaymentDueCard({ summary, flash = false, onClick, emptyText = 'No upcoming payments', highlight = false }) {
   const [showAll, setShowAll] = useState(false)
   const dates = summary.dates ?? []
   const overflow = dates.length > MAX_VISIBLE_CHIPS
@@ -38,7 +39,7 @@ export function NextPaymentDueCard({ summary, flash = false, onClick, emptyText 
         onClick,
         role: 'button',
         tabIndex: 0,
-        'aria-label': `Next Payment Due: ${summary.count ? formatPeso(summary.total) : emptyText}`,
+        'aria-label': `Current Payment Due: ${summary.count ? formatPeso(summary.total) : emptyText}`,
         onKeyDown: (e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault()
@@ -48,14 +49,15 @@ export function NextPaymentDueCard({ summary, flash = false, onClick, emptyText 
       }
     : {}
 
-  return (
-    <>
+  const tile = (
       <div
-        className={`relative flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm transition-all duration-500 ${
-          flash ? 'ring-2 ring-navy-400 ring-offset-2' : ''
-        } ${
+        className={`relative flex h-full flex-col bg-white p-8 text-center transition-all duration-500 ${
+          highlight ? 'rounded-xl' : 'rounded-2xl border border-slate-200 shadow-sm'
+        } ${flash ? 'ring-2 ring-navy-400 ring-offset-2' : ''} ${
           clickable
-            ? 'cursor-pointer hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy-600'
+            ? highlight
+              ? 'cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy-600'
+              : 'cursor-pointer hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy-600'
             : ''
         }`}
         {...clickProps}
@@ -64,7 +66,7 @@ export function NextPaymentDueCard({ summary, flash = false, onClick, emptyText 
           <Icon name="clock" className="h-5 w-5" />
         </span>
         <p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">
-          Next Payment Due
+          Current Payment Due
           {clickable && (
             <Icon name="chevron" className="ml-1 inline h-3 w-3 -rotate-90 align-middle text-slate-400" />
           )}
@@ -79,7 +81,7 @@ export function NextPaymentDueCard({ summary, flash = false, onClick, emptyText 
               {summary.count} item{summary.count === 1 ? '' : 's'} due
               {summary.pastDueCount > 0 && (
                 <>
-                  {' · incl. '}
+                  {' · including '}
                   <span className="font-semibold text-red-600">{summary.pastDueCount} past due</span>
                 </>
               )}
@@ -108,6 +110,11 @@ export function NextPaymentDueCard({ summary, flash = false, onClick, emptyText 
           <p className="mt-2 text-sm text-slate-500">{emptyText}</p>
         )}
       </div>
+  )
+
+  return (
+    <>
+      {highlight ? <div className="rainbow-border h-full shadow-sm">{tile}</div> : tile}
 
       <Modal
         open={showAll}

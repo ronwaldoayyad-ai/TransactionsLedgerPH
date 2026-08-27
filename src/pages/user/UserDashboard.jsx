@@ -125,7 +125,7 @@ export default function UserDashboard() {
     setPageEntry('consolidated.statusSel', new Set())
     setPageEntry('consolidated.dueDateSel', new Set())
     setPageEntry('consolidated.typeSel', new Set(['Installment']))
-    setPageEntry('consolidated.hideSettled', false) // show all installments, incl. settled
+    setPageEntry('consolidated.hideSettled', false) // show all installments, including settled
     navigate('/portal/consolidated')
   }
 
@@ -153,10 +153,11 @@ export default function UserDashboard() {
         }
       />
 
-      {/* Featured: Next Payment Due — the same big card + breakdown the admin
-          sees in the Payment Due preview. Reflects any admin override. */}
+      {/* Featured: Current Payment Due — the same big card + breakdown the admin
+          sees in the Payment Due preview. Reflects any admin override. The
+          animated rainbow border marks it as the dashboard's headline tile. */}
       <div className="grid gap-4 lg:grid-cols-2">
-        <NextPaymentDueCard summary={nextDueSummary} onClick={goNextDue} />
+        <NextPaymentDueCard summary={nextDueSummary} onClick={goNextDue} highlight />
         <PaymentDueBreakdown summary={nextDueSummary} />
       </div>
 

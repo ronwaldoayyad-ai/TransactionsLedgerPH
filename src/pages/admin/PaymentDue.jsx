@@ -266,7 +266,7 @@ export default function PaymentDue() {
     <>
       <PageHeader
         title="Payment Due"
-        subtitle="Control how the borrower's Next Payment Due tile is calculated — by borrower and due date."
+        subtitle="Control how the borrower's Current Payment Due tile is calculated — by borrower and due date."
         action={
           <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
             <span className="relative flex h-2 w-2">
