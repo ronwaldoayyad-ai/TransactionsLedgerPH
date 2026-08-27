@@ -193,12 +193,12 @@ export default function Dashboard() {
                   <StatTile
                     icon={<Clock size={iconSize} color="#0369a1" />}
                     accentBg="bg-sky-50"
-                    label="Next Payment Due"
+                    label="Current Payment Due"
                     value={nextDueItems.length ? formatPeso(nextDueAmount) : '—'}
                     hint={
                       nextDueItems.length
                         ? `${nextDueItems.length} item${nextDueItems.length === 1 ? '' : 's'} due${
-                            pastDueItems.length ? ` · incl. ${pastDueItems.length} past due` : ''
+                            pastDueItems.length ? ` · including ${pastDueItems.length} past due` : ''
                           }${nextUnpaidDate ? ` · next ${formatDate(nextUnpaidDate)}` : ''}`
                         : 'No upcoming payments'
                     }

@@ -4,7 +4,7 @@ import PressableScale from './PressableScale'
 import RainbowBorder from './RainbowBorder'
 
 // Web StatCard port: icon chip, label, mono value, hint. `highlight` wraps the
-// tile in the animated rainbow border (Next Payment Due).
+// tile in the animated rainbow border (Current Payment Due).
 export default function StatTile({
   icon,
   label,

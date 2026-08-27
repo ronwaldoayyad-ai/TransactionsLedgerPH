@@ -184,7 +184,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [])
 
   // Progressive load: core slices (loans + transactions) clear dataLoading so
-  // the first screen paints; the rest (incl. admin-only slices) hydrate after.
+  // the first screen paints; the rest (including admin-only slices) hydrate after.
   // RLS scopes rows — admins get everything, borrowers only their own.
   const loadLiveData = useCallback(async () => {
     const failures: string[] = []

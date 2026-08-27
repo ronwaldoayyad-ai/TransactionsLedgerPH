@@ -63,7 +63,7 @@ export function buildLineItems(transactions, userId, today = toISODate(new Date(
 
 // Totals per the spec. `status` labels come from invoiceStatusLabel above.
 //   Subtotal            = sum of UNPAID amounts (Upcoming + Scheduled + Past Due)
-//   Amount Paid to Date = sum of PAID amounts, incl. the magnitude of negative
+//   Amount Paid to Date = sum of PAID amounts, including the magnitude of negative
 //                         amounts (a negative is a payment by the borrower)
 //   Total Amount Due    = Subtotal minus PARTIAL PAYMENTS only — i.e. PAID line
 //                         items whose description contains "Partial Payment".
