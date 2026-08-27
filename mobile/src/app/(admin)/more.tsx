@@ -7,6 +7,7 @@ import {
   Bell,
   Calculator,
   ChevronRight,
+  Clock,
   FileText,
   Inbox,
   LayoutDashboard,
@@ -37,6 +38,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
     title: 'Ledger',
     items: [
       { label: 'Overall Transactions', icon: List, href: '/(admin)/transactions' },
+      { label: 'Payment Due', icon: Clock, href: '/(admin)/payment-due' },
       { label: 'Payment Logs', icon: Wallet, href: '/(admin)/payment-logs' },
       { label: 'Invoices', icon: FileText, href: '/(admin)/invoices' },
       { label: 'Interest / Arbitrage', icon: TrendingUp, href: '/(admin)/arbitrage' },

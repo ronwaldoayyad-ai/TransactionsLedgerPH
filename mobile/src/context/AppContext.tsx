@@ -384,6 +384,76 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setRefreshing(false)
   }, [loadLiveData])
 
+  // --- Payment Due overrides (admin master control) -------------------------
+  const refreshPaymentDueOverrides = useCallback(async () => {
+    const { data, error } = await supabase.from('payment_due_overrides').select('*')
+    if (error) return
+    setPaymentDueOverrides(
+      (data ?? []).map((r: any) => ({
+        borrowerId: r.borrower_id,
+        dueDates: r.due_dates ?? [],
+        nextDueDates: r.next_due_dates ?? [],
+      })),
+    )
+  }, [])
+
+  // rows: [{ borrowerId, dueDates, nextDueDates }]. Rows with dates in EITHER
+  // set are upserted; rows empty in BOTH are removed. dueDates drives Current,
+  // nextDueDates drives Next.
+  const savePaymentDueOverrides = useCallback(
+    async (rows: any[]) => {
+      const appliedAt = new Date().toISOString()
+      const hasDates = (r: any) =>
+        (r.dueDates && r.dueDates.length > 0) || (r.nextDueDates && r.nextDueDates.length > 0)
+      const toUpsert = (rows ?? []).filter(hasDates)
+      const toDelete = (rows ?? []).filter((r: any) => !hasDates(r)).map((r: any) => r.borrowerId)
+      if (toUpsert.length) {
+        const { error } = await supabase.from('payment_due_overrides').upsert(
+          toUpsert.map((r: any) => ({
+            borrower_id: r.borrowerId,
+            due_dates: r.dueDates ?? [],
+            next_due_dates: r.nextDueDates ?? [],
+            applied_at: appliedAt,
+            updated_by: session?.user?.id ?? null,
+          })),
+          { onConflict: 'borrower_id' },
+        )
+        if (error) {
+          console.error('[supabase] payment due overrides save failed:', error.message)
+          return false
+        }
+      }
+      if (toDelete.length) {
+        const { error } = await supabase.from('payment_due_overrides').delete().in('borrower_id', toDelete)
+        if (error) {
+          console.error('[supabase] payment due overrides delete failed:', error.message)
+          return false
+        }
+      }
+      await refreshPaymentDueOverrides()
+      return true
+    },
+    [session, refreshPaymentDueOverrides],
+  )
+
+  const clearPaymentDueOverride = useCallback(
+    (borrowerId: string) => savePaymentDueOverrides([{ borrowerId, dueDates: [], nextDueDates: [] }]),
+    [savePaymentDueOverrides],
+  )
+
+  const clearAllPaymentDueOverrides = useCallback(async () => {
+    const { error } = await supabase
+      .from('payment_due_overrides')
+      .delete()
+      .neq('borrower_id', '00000000-0000-0000-0000-000000000000')
+    if (error) {
+      console.error('[supabase] clear all payment due overrides failed:', error.message)
+      return false
+    }
+    setPaymentDueOverrides([])
+    return true
+  }, [])
+
   const signInWithPassword = useCallback(async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password })
     return { error: error?.message ?? null }
@@ -1221,6 +1291,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       payments,
       paymentLogs,
       paymentDueOverrides,
+      savePaymentDueOverrides,
+      clearPaymentDueOverride,
+      clearAllPaymentDueOverrides,
       arbitrageLoans,
       interestRates,
       trackedLoans,
@@ -1283,6 +1356,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       payments,
       paymentLogs,
       paymentDueOverrides,
+      savePaymentDueOverrides,
+      clearPaymentDueOverride,
+      clearAllPaymentDueOverrides,
       arbitrageLoans,
       interestRates,
       trackedLoans,

@@ -71,6 +71,7 @@ export default function AdminLayout() {
       />
 
       {/* Non-tab destinations — reachable from More / Overview quick links. */}
+      <Tabs.Screen name="payment-due" options={{ href: null }} />
       <Tabs.Screen name="payment-logs" options={{ href: null }} />
       <Tabs.Screen name="invoices" options={{ href: null }} />
       <Tabs.Screen name="arbitrage" options={{ href: null }} />
