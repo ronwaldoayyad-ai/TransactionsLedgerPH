@@ -435,7 +435,39 @@ export default function AdminDashboard() {
             body="No transactions fall within the selected due-date range and status."
           />
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          {/* Mobile: read-only cards (mirrors the mobile app). */}
+          <div className="md:hidden">
+            {grandPag.pageItems.map((t, idx) => {
+              const effective = effectiveStatus(t, today)
+              return (
+                <div
+                  key={t.id}
+                  className={`flex items-center gap-3 px-4 py-3 ${
+                    idx > 0 ? 'border-t border-slate-100' : 'border-t border-slate-200'
+                  } ${effective === 'past_due' ? 'bg-red-50/60' : ''}`}
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[13px] font-semibold text-slate-900">{nameOf(t.userId)}</p>
+                    <p className="mt-0.5 text-[11px] leading-snug text-slate-500">
+                      {t.description} · Due {formatDate(t.dueDate)}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    <span className="font-mono text-[13px] font-semibold text-slate-900">{formatPeso(t.amount)}</span>
+                    <Badge status={effective}>{STATUS_LABELS[effective]}</Badge>
+                  </div>
+                </div>
+              )
+            })}
+            <div className="flex items-center justify-between border-t border-slate-200 bg-navy-50/70 px-4 py-3">
+              <span className="text-xs font-semibold text-navy-900">TOTAL ({grandRows.length})</span>
+              <span className="font-mono text-sm font-semibold text-navy-900">{formatPeso(sum(grandRows))}</span>
+            </div>
+          </div>
+
+          {/* Desktop / tablet: full table. */}
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[640px] text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -480,6 +512,7 @@ export default function AdminDashboard() {
               </tfoot>
             </table>
           </div>
+          </>
         )}
         {grandRows.length > 0 && pager(grandPag, 'records', [15, 25, 50, 100])}
       </Card>

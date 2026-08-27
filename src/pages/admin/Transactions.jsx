@@ -42,6 +42,9 @@ export default function Transactions() {
   const [txnDateSel, setTxnDateSel] = usePersistedState('txn.txnDateSel', () => new Set())
   const [dueDateSel, setDueDateSel] = usePersistedState('txn.dueDateSel', () => new Set())
   const [datePaidSel, setDatePaidSel] = usePersistedState('txn.datePaidSel', () => new Set())
+  // Type filter (Installment / Straight): surfaced in the mobile filter sheet;
+  // empty set = all, so it's inert on desktop where no control exposes it.
+  const [typeSel, setTypeSel] = usePersistedState('txn.typeSel', () => new Set())
   // Sorting applies after filtering, so it works on any filtered view.
   const [sortKey, setSortKey] = usePersistedState('txn.sortKey', 'dueDate') // dueDate | txnDate
   const [sortDir, setSortDir] = usePersistedState('txn.sortDir', 'asc')
@@ -49,6 +52,10 @@ export default function Transactions() {
   const [hideSettled, setHideSettled] = usePersistedState('txn.hideSettled', true)
   const [selected, setSelected] = useState(() => new Set())
   const [bulkStatus, setBulkStatus] = useState('paid')
+  // Mobile-only UI: a filter bottom sheet and a per-row status action sheet
+  // (the desktop table's inline controls don't fit a phone width).
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [actionTxn, setActionTxn] = useState(null)
   const importInputRef = useRef(null)
   const [importPreview, setImportPreview] = useState(null) // { rows, errors }
   const [importing, setImporting] = useState(false)
@@ -63,6 +70,7 @@ export default function Transactions() {
           if (hideSettled && ['paid', 'refunded', 'cancelled'].includes(t.status)) return false
           if (borrowerSel.size > 0 && !borrowerSel.has(t.userId)) return false
           if (statusSel.size > 0 && !statusSel.has(effectiveStatus(t, today))) return false
+          if (typeSel.size > 0 && !typeSel.has(t.type)) return false
           if (txnDateSel.size > 0 && !txnDateSel.has(t.txnDate)) return false
           if (dueDateSel.size > 0 && !dueDateSel.has(t.dueDate)) return false
           if (datePaidSel.size > 0 && !datePaidSel.has(t.datePaid ?? '__none__')) return false
@@ -79,7 +87,7 @@ export default function Transactions() {
           )
         }),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- nameOf derives from users
-    [transactions, borrowerSel, statusSel, txnDateSel, dueDateSel, datePaidSel, query, users, today, sortKey, sortDir, hideSettled],
+    [transactions, borrowerSel, statusSel, typeSel, txnDateSel, dueDateSel, datePaidSel, query, users, today, sortKey, sortDir, hideSettled],
   )
 
   // Distinct date options come from the full ledger, not the filtered view.
@@ -109,6 +117,16 @@ export default function Transactions() {
 
   // Live aggregate of the Amount column for whatever filters are applied.
   const filteredTotal = useMemo(() => filtered.reduce((s, t) => s + t.amount, 0), [filtered])
+
+  // Mobile filter sheet is single-select per group, mapped onto the shared
+  // multi-select Sets: one selection => a one-item Set, "All" => empty Set.
+  // (A Set carrying a desktop multi-selection collapses to "All" here.)
+  const singleVal = (set) => (set.size === 1 ? [...set][0] : 'all')
+  const selectSingle = (setter) => (value) =>
+    setter(value === 'all' ? new Set() : new Set([value]))
+  const activeFilterCount =
+    borrowerSel.size + statusSel.size + typeSel.size +
+    txnDateSel.size + dueDateSel.size + datePaidSel.size
 
   // Paginate the visible rows; select-all / totals still operate on the full
   // filtered set, so paging never changes what an action applies to.
@@ -398,7 +416,7 @@ export default function Transactions() {
           relative z-20: backdrop-blur gives each Card its own stacking
           context, so this card must sit above the grid card below for the
           dropdown panels to overlay it. */}
-      <Card className="relative z-20 mb-4 p-4">
+      <Card className="relative z-20 mb-4 hidden p-4 md:block">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
           <div>
             <label htmlFor="txn-search" className="mb-1 block text-xs font-medium text-slate-500">
@@ -448,7 +466,7 @@ export default function Transactions() {
 
       {/* Bulk action bar */}
       {selectedInView.length > 0 && (
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-navy-200 bg-navy-50 px-4 py-3">
+        <div className="mb-4 hidden flex-wrap items-center justify-between gap-3 rounded-xl border border-navy-200 bg-navy-50 px-4 py-3 md:flex">
           <p className="text-sm font-medium text-navy-900">
             {selectedInView.length} installment{selectedInView.length === 1 ? '' : 's'} selected
           </p>
@@ -481,26 +499,111 @@ export default function Transactions() {
       )}
 
       <Card>
-        <CardHeader
-          title="All Transactions"
-          subtitle={`${filtered.length} records · Amount total ${formatPeso(filteredTotal)}${Object.entries(statusCounts)
-            .map(([s, c]) => ` · ${c} ${STATUS_LABELS[s].toLowerCase()}`)
-            .join('')}`}
-          action={
-            <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
+        {/* Mobile toolbar: search + filter-sheet trigger, then record count
+            and the hide-settled toggle (mirrors the mobile app's header). */}
+        <div className="md:hidden">
+          <div className="flex items-center gap-2 px-4 pt-4">
+            <label htmlFor="txn-search-mobile" className="sr-only">
+              Search transactions
+            </label>
+            <input
+              id="txn-search-mobile"
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search borrower or item…"
+              className={inputClass}
+            />
+            <button
+              type="button"
+              onClick={() => setFiltersOpen(true)}
+              aria-label={`Filters${activeFilterCount ? ` (${activeFilterCount} active)` : ''}`}
+              className="relative shrink-0 rounded-xl border border-slate-300 p-2.5 text-slate-500 transition-colors hover:bg-slate-100"
+            >
+              <Icon name="list" className="h-5 w-5" />
+              {activeFilterCount > 0 && (
+                <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-navy-800 px-1 text-[10px] font-semibold text-white">
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
+          </div>
+          <div className="flex items-center justify-between px-4 py-2.5">
+            <span className="text-xs text-slate-500">
+              {filtered.length} record{filtered.length === 1 ? '' : 's'}
+            </span>
+            <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-500">
+              Hide settled
               <Switch
                 checked={hideSettled}
                 onChange={setHideSettled}
                 label={hideSettled ? 'Show all transactions' : 'Hide paid, refunded, and cancelled transactions'}
               />
-              {hideSettled ? 'Show all transactions' : 'Hide paid/refunded/cancelled'}
             </label>
-          }
-        />
+          </div>
+        </div>
+
+        <div className="hidden md:block">
+          <CardHeader
+            title="All Transactions"
+            subtitle={`${filtered.length} records · Amount total ${formatPeso(filteredTotal)}${Object.entries(statusCounts)
+              .map(([s, c]) => ` · ${c} ${STATUS_LABELS[s].toLowerCase()}`)
+              .join('')}`}
+            action={
+              <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
+                <Switch
+                  checked={hideSettled}
+                  onChange={setHideSettled}
+                  label={hideSettled ? 'Show all transactions' : 'Hide paid, refunded, and cancelled transactions'}
+                />
+                {hideSettled ? 'Show all transactions' : 'Hide paid/refunded/cancelled'}
+              </label>
+            }
+          />
+        </div>
         {filtered.length === 0 ? (
           <EmptyState icon="scroll" title="No matching transactions" body="Adjust your filters or search." />
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          {/* Mobile: tappable cards (mirrors the mobile app). Tap opens the
+              status action sheet. Same paged slice as the desktop table. */}
+          <div className="md:hidden">
+            {pag.pageItems.map((t, idx) => {
+              const eff = effectiveStatus(t, today)
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setActionTxn(t)}
+                  className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50 active:bg-slate-100 ${
+                    idx > 0 ? 'border-t border-slate-100' : 'border-t border-slate-200'
+                  } ${
+                    t.amount < 0 ? 'bg-emerald-50/50' : eff === 'past_due' ? 'bg-red-50/50' : ''
+                  }`}
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[13px] font-semibold text-slate-900">{nameOf(t.userId)}</p>
+                    <p className="mt-0.5 text-[11px] leading-snug text-slate-500">
+                      {t.description} · Due {formatDate(t.dueDate)}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    <span className="font-mono text-[13px] font-semibold text-slate-900">{formatPeso(t.amount)}</span>
+                    <Badge status={eff}>{STATUS_LABELS[eff]}</Badge>
+                  </div>
+                </button>
+              )
+            })}
+            <div className="flex items-center justify-between border-t border-slate-200 bg-navy-50/70 px-4 py-3">
+              <span className="text-xs font-semibold text-navy-900">
+                FILTERED TOTAL ({filtered.length})
+              </span>
+              <span className="font-mono text-sm font-semibold text-navy-900">{formatPeso(filteredTotal)}</span>
+            </div>
+          </div>
+
+          {/* Desktop / tablet: full editable table. */}
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[1060px] text-xs">
               <thead>
                 <tr className="border-b border-slate-200 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
@@ -645,6 +748,7 @@ export default function Transactions() {
               </tfoot>
             </table>
           </div>
+          </>
         )}
         {filtered.length > 0 && (
           <Pagination
@@ -741,6 +845,141 @@ export default function Transactions() {
           </div>
         )}
       </Modal>
+
+      {/* Mobile filter bottom sheet (single-select per group). */}
+      {filtersOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-end md:hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Filters"
+        >
+          <button
+            type="button"
+            aria-label="Close filters"
+            className="absolute inset-0 cursor-default bg-navy-950/40"
+            onClick={() => setFiltersOpen(false)}
+          />
+          <div className="relative flex max-h-[85vh] w-full flex-col rounded-t-3xl bg-white p-5">
+            <h2 className="mb-3 text-lg font-bold text-slate-900">Filters</h2>
+            <div className="-mx-1 flex-1 overflow-y-auto px-1">
+              <SheetGroup
+                title="Borrower"
+                options={[
+                  { value: 'all', label: 'All borrowers' },
+                  ...borrowers.map((b) => ({ value: b.id, label: b.name })),
+                ]}
+                value={singleVal(borrowerSel)}
+                onSelect={selectSingle(setBorrowerSel)}
+              />
+              <SheetGroup
+                title="Status"
+                options={[
+                  { value: 'all', label: 'All statuses' },
+                  ...Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label })),
+                ]}
+                value={singleVal(statusSel)}
+                onSelect={selectSingle(setStatusSel)}
+              />
+              <SheetGroup
+                title="Type"
+                options={[
+                  { value: 'all', label: 'All types' },
+                  { value: 'Installment', label: 'Installment' },
+                  { value: 'Straight', label: 'Straight' },
+                ]}
+                value={singleVal(typeSel)}
+                onSelect={selectSingle(setTypeSel)}
+              />
+            </div>
+            <Button className="mt-4 w-full" onClick={() => setFiltersOpen(false)}>
+              Apply
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile per-row status action sheet (tap a card to open). */}
+      {actionTxn && (
+        <div
+          className="fixed inset-0 z-50 flex items-end md:hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Transaction actions"
+        >
+          <button
+            type="button"
+            aria-label="Close"
+            className="absolute inset-0 cursor-default bg-navy-950/40"
+            onClick={() => setActionTxn(null)}
+          />
+          <div className="relative w-full rounded-t-3xl bg-white p-4 pb-8">
+            <p className="truncate px-2 pt-1 text-base font-bold text-slate-900">
+              {nameOf(actionTxn.userId)} · {formatPeso(actionTxn.amount)}
+            </p>
+            <p className="mb-2 truncate px-2 text-xs text-slate-500">
+              {actionTxn.description} · Due {formatDate(actionTxn.dueDate)}
+            </p>
+            <p className="mb-1 px-2 text-xs font-medium uppercase tracking-wide text-slate-400">
+              Set status
+            </p>
+            {Object.entries(STATUS_LABELS).map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => {
+                  setTransactionStatus([actionTxn.id], value)
+                  setActionTxn(null)
+                }}
+                className="flex w-full items-center justify-between rounded-xl px-4 py-3 text-left transition-colors hover:bg-slate-50 active:bg-slate-100"
+              >
+                <span className="text-[15px] font-medium text-slate-800">{label}</span>
+                {actionTxn.status === value && <Icon name="check" className="h-4 w-4 text-navy-700" />}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => {
+                archiveTransactions([actionTxn.id])
+                setActionTxn(null)
+              }}
+              className="mt-1 flex w-full items-center gap-2 rounded-xl px-4 py-3 text-left text-red-600 transition-colors hover:bg-red-50 active:bg-red-100"
+            >
+              <Icon name="trash" className="h-4 w-4" />
+              <span className="text-[15px] font-medium">Delete (move to Archives)</span>
+            </button>
+          </div>
+        </div>
+      )}
     </>
+  )
+}
+
+// Single-select filter group for the mobile filter sheet — a labeled list of
+// pill options with a check on the active one (ports the mobile app's
+// FilterGroup).
+function SheetGroup({ title, options, value, onSelect }) {
+  return (
+    <div className="mb-4">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{title}</p>
+      <div className="space-y-1.5">
+        {options.map((o) => {
+          const active = value === o.value
+          return (
+            <button
+              key={o.value}
+              type="button"
+              onClick={() => onSelect(o.value)}
+              className={`flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-left transition-colors ${
+                active ? 'border-navy-600 bg-navy-50' : 'border-slate-200 bg-white hover:bg-slate-50'
+              }`}
+            >
+              <span className="text-sm font-medium text-slate-900">{o.label}</span>
+              {active && <Icon name="check" className="h-4 w-4 text-navy-700" />}
+            </button>
+          )
+        })}
+      </div>
+    </div>
   )
 }

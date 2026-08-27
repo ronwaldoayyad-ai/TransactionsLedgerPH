@@ -40,9 +40,128 @@ export default function BorrowerScheduleTable({
   const paginate = pageSize > 0
   const pag = usePagination(transactions, paginate ? pageSize : 1)
   const rows = paginate ? pag.pageItems : transactions
+  // Background tint shared by table rows and mobile cards: emerald for credits
+  // (negative amounts), red for past due, transparent otherwise.
+  const tintFor = (t, status) =>
+    t.amount < 0
+      ? 'bg-emerald-50/70'
+      : status === 'past_due'
+        ? 'bg-red-50/70'
+        : ''
   return (
     <>
-    <div className="overflow-x-auto">
+    {/* Mobile: stacked cards (ports the mobile app's TxnRow) so each schedule
+        row fits a single phone-width view instead of a horizontally-scrolling
+        table. Hidden at md+, where the full table below takes over. */}
+    <div className="md:hidden">
+      {rows.map((t) => {
+        const status = borrowerStatus(t, today)
+        const tint = tintFor(t, status)
+        return editable ? (
+          <div key={t.id} className={`space-y-2.5 border-b border-slate-100 px-3 py-3 ${tint}`}>
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-mono text-xs font-medium text-slate-500">#{t.n}</span>
+              <select
+                value={t.status}
+                onChange={(e) => onUpdate(t.id, { status: e.target.value })}
+                aria-label={`Status for installment ${t.n}`}
+                className={`${inputClass} !min-h-8 !w-32 !px-2 !py-1 !text-xs`}
+              >
+                {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <label className="block">
+              <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-slate-400">
+                Item Description
+              </span>
+              <EditCell
+                value={t.description}
+                onCommit={(v) => onUpdate(t.id, { description: v })}
+                className="!w-full"
+              />
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {showTxnDate && (
+                <label className="block">
+                  <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-slate-400">
+                    Txn Date
+                  </span>
+                  <EditCell
+                    type="date"
+                    value={t.txnDate}
+                    onCommit={(v) => onUpdate(t.id, { txnDate: v })}
+                    className="!w-full"
+                  />
+                </label>
+              )}
+              <label className="block">
+                <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-slate-400">
+                  Payment Due Date
+                </span>
+                <EditCell
+                  type="date"
+                  value={t.dueDate}
+                  onCommit={(v) => onUpdate(t.id, { dueDate: v })}
+                  className="!w-full"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-slate-400">
+                  Payment Date
+                </span>
+                <EditCell
+                  type="date"
+                  value={t.datePaid ?? ''}
+                  onCommit={(v) => onUpdate(t.id, { datePaid: v || null })}
+                  className="!w-full"
+                />
+              </label>
+              <label className="block">
+                <span className="mb-1 block text-[11px] font-medium uppercase tracking-wide text-slate-400">
+                  Total Amortization
+                </span>
+                <EditCell
+                  type="number"
+                  value={t.amount}
+                  onCommit={(v) => onUpdate(t.id, { amount: Number(v) || 0 })}
+                  className="!w-full !text-right"
+                  step="0.01"
+                  min="0"
+                />
+              </label>
+            </div>
+          </div>
+        ) : (
+          <div key={t.id} className={`flex items-center gap-3 border-b border-slate-100 px-3 py-3 ${tint}`}>
+            <span className="w-6 shrink-0 font-mono text-xs text-slate-400">{t.n}</span>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[13px] font-medium text-slate-800">{t.description}</p>
+              <p className="mt-0.5 text-[11px] leading-snug text-slate-500">
+                {showTxnDate ? `Txn ${formatDate(t.txnDate)} · ` : ''}Due {formatDate(t.dueDate)}
+                {t.datePaid ? ` · Paid ${formatDate(t.datePaid)}` : ''}
+              </p>
+            </div>
+            <div className="flex shrink-0 flex-col items-end gap-1">
+              <span className="font-mono text-[13px] font-semibold text-slate-900">{formatPeso(t.amount)}</span>
+              <Badge status={status}>{BORROWER_STATUS_LABELS[status]}</Badge>
+            </div>
+          </div>
+        )
+      })}
+      <div className="flex items-center justify-between gap-3 bg-navy-50/70 px-3 py-3 text-sm font-semibold text-navy-900">
+        <span>
+          TOTALS ({transactions.length} item{transactions.length === 1 ? '' : 's'})
+        </span>
+        <span className="font-mono">{formatPeso(total)}</span>
+      </div>
+    </div>
+
+    {/* Desktop / tablet: full table (md and up). */}
+    <div className="hidden overflow-x-auto md:block">
       <table className={`w-full text-sm ${editable ? 'min-w-[820px]' : 'min-w-[640px]'}`}>
         <thead>
           <tr className="border-b border-slate-200 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
