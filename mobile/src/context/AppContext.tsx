@@ -156,6 +156,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [archivedTransactions, setArchivedTransactions] = useState<any[]>([])
   const [payments, setPayments] = useState<any[]>([])
   const [paymentLogs, setPaymentLogs] = useState<any[]>([])
+  const [paymentDueOverrides, setPaymentDueOverrides] = useState<any[]>([])
   const [arbitrageLoans, setArbitrageLoans] = useState<any[]>([])
   const [interestRates, setInterestRates] = useState<any[]>([])
   const [trackedLoans, setTrackedLoans] = useState<any[]>([])
@@ -228,6 +229,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
           () =>
             fetchAllRows(() => supabase.from('payment_logs').select('*').order('created_at').order('id')),
           (rows) => setPaymentLogs(rows.map(mapPaymentLog)),
+        ),
+        run(
+          'payment due overrides',
+          () => supabase.from('payment_due_overrides').select('*'),
+          (rows) =>
+            setPaymentDueOverrides(
+              rows.map((r: any) => ({
+                borrowerId: r.borrower_id,
+                dueDates: r.due_dates ?? [],
+                nextDueDates: r.next_due_dates ?? [],
+              })),
+            ),
         ),
         // Admin-only slices — RLS returns an empty set for borrowers (not an error).
         run(
@@ -1207,6 +1220,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       archivedTransactions,
       payments,
       paymentLogs,
+      paymentDueOverrides,
       arbitrageLoans,
       interestRates,
       trackedLoans,
@@ -1268,6 +1282,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       archivedTransactions,
       payments,
       paymentLogs,
+      paymentDueOverrides,
       arbitrageLoans,
       interestRates,
       trackedLoans,

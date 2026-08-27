@@ -1,10 +1,10 @@
+import { useRef, useState } from 'react'
 import { RefreshControl, ScrollView, Switch, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import {
   Check,
   ChevronRight,
-  Clock,
   FileText,
   List,
   ScrollText,
@@ -16,6 +16,9 @@ import { useLoanRequests } from '../../context/LoanRequestsContext'
 import { usePersistedState } from '../../hooks/usePersistedState'
 import { formatDate, formatPeso, toISODate } from '../../lib/amortization'
 import { effectiveStatus } from '../../lib/transactions'
+import { buildDueSummary } from '../../lib/paymentDueSummary'
+import { overrideForBorrower, rowForBorrower, PAYMENT_DUE_COLORS } from '../../lib/paymentDueConfig'
+import { PaymentDueCards, PaymentDueBreakdown } from '../../components/PaymentDueCards'
 import StatTile from '../../components/ui/StatTile'
 import ProgressBar from '../../components/ui/ProgressBar'
 import Badge from '../../components/ui/Badge'
@@ -30,10 +33,15 @@ import { colors } from '../../theme'
 // Borrower dashboard — port of web UserDashboard.jsx (same tile order, same
 // derivations, same tap-to-prefilter wiring through pageStateStore).
 export default function Dashboard() {
-  const { session, loans, payments, transactions, dataLoading, refreshing, refreshData } = useApp()
+  const { session, loans, payments, transactions, paymentDueOverrides, dataLoading, refreshing, refreshData } = useApp()
   const { canRequest } = useLoanRequests()
   const router = useRouter()
   const [hidePaid, setHidePaid] = usePersistedState('dashboard.hidePaid', true)
+  const [activeDueCard, setActiveDueCard] = useState(0)
+  // Monotonic nonce so each tile tap re-seeds the already-mounted Transactions
+  // tab (kept out of render — Date.now() during render is impure).
+  const seedNonce = useRef(0)
+  const nextSeed = () => String(++seedNonce.current)
 
   const myPayments = payments.filter((p: any) => p.userId === session.user.id)
   const myTxns = transactions.filter((t: any) => t.userId === session.user.id)
@@ -76,11 +84,27 @@ export default function Dashboard() {
     (min: string | null, t: any) => (min == null || t.dueDate < min ? t.dueDate : min),
     null,
   )
-  const nextDueItems = [
-    ...pastDueItems,
-    ...(nextUnpaidDate ? upcomingUnpaid.filter((t: any) => t.dueDate === nextUnpaidDate) : []),
-  ]
-  const nextDueAmount = nextDueItems.reduce((s: number, t: any) => s + t.amount, 0)
+  // Current Payment Due: admin-pinned Current set if active, else the default
+  // (all past due + the next upcoming due date).
+  const myOverride = overrideForBorrower(paymentDueOverrides, session.user.id)
+  const overrideDates: Set<string> | null = myOverride ? new Set(myOverride.dueDates) : null
+  const nextDueItems = overrideDates
+    ? unpaidTxns.filter((t: any) => overrideDates.has(t.dueDate))
+    : [
+        ...pastDueItems,
+        ...(nextUnpaidDate ? upcomingUnpaid.filter((t: any) => t.dueDate === nextUnpaidDate) : []),
+      ]
+  const currentSummary = buildDueSummary(nextDueItems, today)
+
+  // Next Payment Due: admin-defined only. When set, the two cards become a
+  // swipeable pair and the breakdown follows the active card.
+  const overrideRow = rowForBorrower(paymentDueOverrides, session.user.id)
+  const nextCardDates = new Set<string>(overrideRow?.nextDueDates ?? [])
+  const hasNextCard = nextCardDates.size > 0
+  const nextCardItems = hasNextCard ? unpaidTxns.filter((t: any) => nextCardDates.has(t.dueDate)) : []
+  const nextCardSummary = buildDueSummary(nextCardItems, today)
+  const activeIndex = hasNextCard ? activeDueCard : 0
+  const activeSummary = activeIndex === 1 ? nextCardSummary : currentSummary
 
   const straightTxns = myTxns.filter((t: any) => t.type === 'Straight')
   const installmentTxns = myTxns.filter((t: any) => t.type === 'Installment')
@@ -94,9 +118,21 @@ export default function Dashboard() {
     router.push({
       pathname: '/(tabs)/transactions',
       params: {
-        seedN: String(Date.now()),
+        seedN: nextSeed(),
         seedStatus: 'past_due,due,upcoming',
         seedDue: [...new Set(nextDueItems.map((t: any) => t.dueDate))].join(','),
+        seedType: '',
+        seedHide: '1',
+      },
+    })
+  }
+  const goNextCard = () => {
+    router.push({
+      pathname: '/(tabs)/transactions',
+      params: {
+        seedN: nextSeed(),
+        seedStatus: 'past_due,due,upcoming',
+        seedDue: [...new Set(nextCardItems.map((t: any) => t.dueDate))].join(','),
         seedType: '',
         seedHide: '1',
       },
@@ -106,7 +142,7 @@ export default function Dashboard() {
     router.push({
       pathname: '/(tabs)/transactions',
       params: {
-        seedN: String(Date.now()),
+        seedN: nextSeed(),
         seedStatus: '',
         seedDue: '',
         seedType: 'Installment',
@@ -177,6 +213,33 @@ export default function Dashboard() {
           </FadeInView>
         ) : null}
 
+        {/* Featured: Current / Next Payment Due. When the admin (web) has pinned
+            a Next set, the two cards become a swipeable pair and the breakdown
+            follows the active card. Otherwise just the Current card. */}
+        {!dataLoading ? (
+          <FadeInView delay={45} className="gap-4">
+            <PaymentDueCards
+              active={activeIndex}
+              onActive={setActiveDueCard}
+              cards={
+                hasNextCard
+                  ? [
+                      { summary: currentSummary, title: 'Current Payment Due', bg: PAYMENT_DUE_COLORS.current, onPress: goNextDue, emptyText: 'No current payment due' },
+                      { summary: nextCardSummary, title: 'Next Payment Due', bg: PAYMENT_DUE_COLORS.next, onPress: goNextCard, emptyText: 'No next payment set' },
+                    ]
+                  : [
+                      { summary: currentSummary, title: 'Current Payment Due', bg: PAYMENT_DUE_COLORS.current, onPress: goNextDue, emptyText: 'No upcoming payments' },
+                    ]
+              }
+            />
+            <PaymentDueBreakdown
+              summary={activeSummary}
+              label={activeIndex === 1 ? 'Next' : 'Current'}
+              accent={activeIndex === 1 ? PAYMENT_DUE_COLORS.next : PAYMENT_DUE_COLORS.current}
+            />
+          </FadeInView>
+        ) : null}
+
         {/* Stat tiles — exact web order */}
         {dataLoading ? (
           <View className="flex-row flex-wrap justify-between gap-y-3">
@@ -187,26 +250,6 @@ export default function Dashboard() {
         ) : (
           <View className="flex-row flex-wrap justify-between gap-y-3">
             {[
-              {
-                key: 'next-due',
-                el: (
-                  <StatTile
-                    icon={<Clock size={iconSize} color="#0369a1" />}
-                    accentBg="bg-sky-50"
-                    label="Current Payment Due"
-                    value={nextDueItems.length ? formatPeso(nextDueAmount) : '—'}
-                    hint={
-                      nextDueItems.length
-                        ? `${nextDueItems.length} item${nextDueItems.length === 1 ? '' : 's'} due${
-                            pastDueItems.length ? ` · including ${pastDueItems.length} past due` : ''
-                          }${nextUnpaidDate ? ` · next ${formatDate(nextUnpaidDate)}` : ''}`
-                        : 'No upcoming payments'
-                    }
-                    onPress={goNextDue}
-                    highlight
-                  />
-                ),
-              },
               {
                 key: 'installments',
                 el: (
