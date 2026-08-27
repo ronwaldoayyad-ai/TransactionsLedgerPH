@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ActivityIndicator, Alert, Platform, Pressable, Text, View } from 'react-native'
+import { ActivityIndicator, Alert, Platform, Pressable, Text, TextInput, View } from 'react-native'
 import * as WebBrowser from 'expo-web-browser'
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable'
 import { Image } from 'expo-image'
@@ -22,6 +22,7 @@ const TABS = ['all', 'pending', 'approved', 'rejected'].map((v) => ({ value: v, 
 export default function PaymentList({
   payments,
   showTabs = true,
+  showControls = false,
   canReview = false,
   showBorrower = false,
   pageSize = 50,
@@ -29,6 +30,7 @@ export default function PaymentList({
 }: {
   payments: any[]
   showTabs?: boolean
+  showControls?: boolean
   canReview?: boolean
   showBorrower?: boolean
   pageSize?: number
@@ -36,12 +38,42 @@ export default function PaymentList({
 }) {
   const { users, getProofUrl, deletePayment, reviewPayment } = useApp()
   const [filter, setFilter] = useState('all')
+  const [query, setQuery] = useState('')
+  const [sortKey, setSortKey] = useState<'date' | 'amount'>('date')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [viewing, setViewing] = useState<{ url: string; fileName: string } | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [limit, setLimit] = useState(pageSize)
 
   const nameOf = (userId: string) => users.find((u: any) => u.id === userId)?.name ?? 'Borrower'
-  const list = payments.filter((p) => filter === 'all' || p.status === filter)
+  const toggleSort = (k: 'date' | 'amount') => {
+    if (sortKey === k) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    else {
+      setSortKey(k)
+      setSortDir('asc')
+    }
+  }
+  const base = payments.filter((p) => filter === 'all' || p.status === filter)
+  const q = query.trim().toLowerCase()
+  const dir = sortDir === 'asc' ? 1 : -1
+  // Search + sort only when the host opts in (My Payments); otherwise keep the
+  // caller's order (dashboard preview, admin queue).
+  const list = !showControls
+    ? base
+    : base
+        .filter((p) => {
+          if (!q) return true
+          const loan = (p.loanId ?? '').toString().toLowerCase()
+          const hay = `${nameOf(p.userId)} ${loan} ${p.method ?? ''} ${p.reference ?? ''} ${p.fileName ?? ''} ${p.amount}`.toLowerCase()
+          return hay.includes(q)
+        })
+        .sort((a, b) => {
+          const cmp =
+            sortKey === 'amount'
+              ? (Number(a.amount) || 0) - (Number(b.amount) || 0)
+              : String(a.submittedAt || '').localeCompare(String(b.submittedAt || ''))
+          return (cmp || String(a.id).localeCompare(String(b.id))) * dir
+        })
   const shown = list.slice(0, limit)
 
   const openProof = async (p: any) => {
@@ -204,6 +236,33 @@ export default function PaymentList({
       {showTabs && (
         <View className="px-4 pb-3">
           <SegmentedTabs tabs={TABS} active={filter} onChange={setFilter} />
+        </View>
+      )}
+      {showControls && payments.length > 0 && (
+        <View className="gap-2 px-4 pb-3">
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search reference, method, loan…"
+            placeholderTextColor={colors.slate400}
+            className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-sans text-sm text-slate-900"
+          />
+          <View className="flex-row items-center gap-2">
+            <Text className="font-sans text-xs text-slate-500">Sort</Text>
+            <View className="flex-row rounded-lg border border-slate-300 bg-white p-0.5">
+              {(['date', 'amount'] as const).map((k) => {
+                const active = sortKey === k
+                return (
+                  <Pressable key={k} onPress={() => toggleSort(k)} className={`rounded-md px-2.5 py-1.5 ${active ? 'bg-navy-800' : ''}`}>
+                    <Text className={`font-sans-medium text-xs ${active ? 'text-white' : 'text-slate-600'}`}>
+                      {k === 'date' ? 'Date' : 'Amount'}
+                      {active ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ''}
+                    </Text>
+                  </Pressable>
+                )
+              })}
+            </View>
+          </View>
         </View>
       )}
       {list.length === 0 ? (

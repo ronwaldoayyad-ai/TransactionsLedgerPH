@@ -6,15 +6,26 @@ import { Check, ChevronDown, Download, FileText, Send, Trash2, X } from 'lucide-
 import { useApp } from '../../context/AppContext'
 import { useInvoices } from '../../context/InvoicesContext'
 import { formatDate, formatPeso, toISODate } from '../../lib/amortization'
-import { borrowerDueDates, buildLineItems, computeInvoiceTotals } from '../../lib/invoice'
+import {
+  borrowerDueDates,
+  buildLineItems,
+  computeInvoiceTotals,
+  EDITABLE_INVOICE_STATUSES,
+  INVOICE_STATUS_META,
+  invoiceStatusMeta,
+} from '../../lib/invoice'
 import { buildInvoiceHtml } from '../../lib/invoiceHtml'
 import { shareInvoicePdf } from '../../lib/invoicePrint'
+import Badge from '../../components/ui/Badge'
 import Button from '../../components/ui/Button'
 import FadeInView from '../../components/ui/FadeInView'
 import PressableScale from '../../components/ui/PressableScale'
 import EmptyState from '../../components/ui/EmptyState'
+import FilterSheet, { FilterChip } from '../../components/ui/FilterSheet'
 import { Card, CardHeader } from '../../components/ui/Card'
 import { colors } from '../../theme'
+
+const STATUS_RANK: Record<string, number> = { draft: 0, assigned: 1, upcoming: 2, partial: 3, past_due: 4, settled: 5 }
 
 const toPdf = (inv: any) => ({
   invoiceNumber: inv.invoiceNumber,
@@ -29,7 +40,7 @@ const toPdf = (inv: any) => ({
 
 export default function AdminInvoices() {
   const { users, transactions, refreshing, refreshData } = useApp()
-  const { invoices, createInvoice, assignInvoice, deleteInvoice } = useInvoices()
+  const { invoices, createInvoice, assignInvoice, updateInvoiceStatus, deleteInvoice } = useInvoices()
   const today = toISODate(new Date())
   const borrowers = useMemo(() => users.filter((u: any) => u.role === 'user'), [users])
   const nameOf = (id: string) => users.find((u: any) => u.id === id)?.name ?? id
@@ -42,6 +53,49 @@ export default function AdminInvoices() {
   const [borrowerPicker, setBorrowerPicker] = useState(false)
   const [duePicker, setDuePicker] = useState(false)
   const [preview, setPreview] = useState<any>(null)
+  const [statusEdit, setStatusEdit] = useState<any>(null) // invoice whose status is being changed
+
+  // List search / filter / sort.
+  const [query, setQuery] = useState('')
+  const [statusSel, setStatusSel] = useState<Set<string>>(() => new Set())
+  const [sortKey, setSortKey] = useState<'borrower' | 'dueDate' | 'status'>('borrower')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const toggleSort = (k: 'borrower' | 'dueDate' | 'status') => {
+    if (sortKey === k) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    else {
+      setSortKey(k)
+      setSortDir('asc')
+    }
+  }
+  const sortLabel: Record<string, string> = { borrower: 'Borrower', dueDate: 'Due', status: 'Status' }
+
+  const visibleInvoices = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    const dir = sortDir === 'asc' ? 1 : -1
+    return invoices
+      .filter((inv: any) => {
+        if (statusSel.size > 0 && !statusSel.has(inv.status)) return false
+        if (q) {
+          const hay = `${inv.billedToName || nameOf(inv.userId)} ${inv.invoiceNumber}`.toLowerCase()
+          if (!hay.includes(q)) return false
+        }
+        return true
+      })
+      .sort((a: any, b: any) => {
+        let cmp: number
+        if (sortKey === 'dueDate') cmp = String(a.dueDate || '').localeCompare(String(b.dueDate || ''))
+        else if (sortKey === 'status') cmp = (STATUS_RANK[a.status] ?? 0) - (STATUS_RANK[b.status] ?? 0)
+        else cmp = (a.billedToName || nameOf(a.userId)).localeCompare(b.billedToName || nameOf(b.userId))
+        return (cmp || String(a.invoiceNumber).localeCompare(String(b.invoiceNumber))) * dir
+      })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [invoices, query, statusSel, sortKey, sortDir, users])
+
+  const setStatus = async (inv: any, status: string) => {
+    setStatusEdit(null)
+    await updateInvoiceStatus(inv.id, status)
+  }
 
   const dueOptions = useMemo(() => (userId ? borrowerDueDates(transactions, userId) : []), [transactions, userId])
   const lineItems = useMemo(
@@ -162,11 +216,43 @@ export default function AdminInvoices() {
         {/* List */}
         <FadeInView delay={100}>
           <Card>
-            <CardHeader title="Generated Invoices" subtitle={`${invoices.length} total`} />
+            <CardHeader
+              title="Generated Invoices"
+              subtitle={invoices.length === visibleInvoices.length ? `${invoices.length} total` : `${visibleInvoices.length} of ${invoices.length}`}
+            />
+            {invoices.length > 0 && (
+              <View className="gap-2.5 px-4 pb-1 pt-1">
+                <TextInput
+                  value={query}
+                  onChangeText={setQuery}
+                  placeholder="Search borrower or invoice no…"
+                  placeholderTextColor={colors.slate400}
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-sans text-sm text-slate-900"
+                />
+                <View className="flex-row items-center justify-between">
+                  <FilterChip label="Status" count={statusSel.size} onPress={() => setSheetOpen(true)} />
+                  <View className="flex-row rounded-lg border border-slate-300 bg-white p-0.5">
+                    {(['borrower', 'dueDate', 'status'] as const).map((k) => {
+                      const active = sortKey === k
+                      return (
+                        <Pressable key={k} onPress={() => toggleSort(k)} className={`rounded-md px-2 py-1.5 ${active ? 'bg-navy-800' : ''}`}>
+                          <Text className={`font-sans-medium text-xs ${active ? 'text-white' : 'text-slate-600'}`}>
+                            {sortLabel[k]}
+                            {active ? (sortDir === 'asc' ? ' ↑' : ' ↓') : ''}
+                          </Text>
+                        </Pressable>
+                      )
+                    })}
+                  </View>
+                </View>
+              </View>
+            )}
             {invoices.length === 0 ? (
               <EmptyState icon={<FileText size={20} color={colors.slate500} />} title="No invoices yet" body="Generate one above to get started." />
+            ) : visibleInvoices.length === 0 ? (
+              <EmptyState icon={<FileText size={20} color={colors.slate500} />} title="No matching invoices" body="Adjust the search, filter, or sort." />
             ) : (
-              invoices.map((inv: any, idx: number) => (
+              visibleInvoices.map((inv: any, idx: number) => (
                 <View key={inv.id} className={`px-4 py-3.5 ${idx > 0 ? 'border-t border-slate-100' : ''}`}>
                   <View className="flex-row items-center justify-between gap-2">
                     <View className="min-w-0 flex-1">
@@ -178,11 +264,7 @@ export default function AdminInvoices() {
                     </View>
                     <View className="items-end gap-1">
                       <Text className="font-mono-semibold text-sm text-slate-900">{formatPeso(inv.totalDue)}</Text>
-                      <View className={`rounded-full px-2.5 py-1 ${inv.status === 'assigned' ? 'bg-emerald-50' : 'bg-amber-50'}`}>
-                        <Text className={`font-sans-semibold text-[10px] uppercase ${inv.status === 'assigned' ? 'text-emerald-700' : 'text-amber-700'}`}>
-                          {inv.status === 'assigned' ? 'Assigned' : 'Draft'}
-                        </Text>
-                      </View>
+                      <Badge status={invoiceStatusMeta(inv.status).badge} label={invoiceStatusMeta(inv.status).label} />
                     </View>
                   </View>
                   <View className="mt-2.5 flex-row gap-1.5">
@@ -190,7 +272,9 @@ export default function AdminInvoices() {
                     <ActBtn onPress={() => shareInvoicePdf(toPdf(inv))} bg="bg-navy-50"><Download size={14} color={colors.navy700} /><Text className="font-sans-medium text-xs text-navy-700">Download</Text></ActBtn>
                     {inv.status === 'draft' ? (
                       <ActBtn onPress={() => doAssign(inv)} bg="bg-emerald-50"><Check size={14} color="#059669" /><Text className="font-sans-medium text-xs text-emerald-700">Assign</Text></ActBtn>
-                    ) : null}
+                    ) : (
+                      <ActBtn onPress={() => setStatusEdit(inv)} bg="bg-slate-100"><ChevronDown size={14} color={colors.slate500} /><Text className="font-sans-medium text-xs text-slate-600">Status</Text></ActBtn>
+                    )}
                     <ActBtn onPress={() => confirmDelete(inv)} bg="bg-red-50"><Trash2 size={14} color="#dc2626" /><Text className="font-sans-medium text-xs text-red-600">Delete</Text></ActBtn>
                   </View>
                 </View>
@@ -217,8 +301,8 @@ export default function AdminInvoices() {
                 <Button variant="gold" onPress={() => preview && doAssign(preview)} loading={busy} icon={<Send size={15} color="#ffffff" />}>Assign</Button>
               </View>
             ) : (
-              <View className="flex-1 items-center justify-center rounded-2xl bg-emerald-50">
-                <Text className="font-sans-semibold text-sm text-emerald-700">Assigned</Text>
+              <View className="flex-1 items-center justify-center">
+                <Badge status={invoiceStatusMeta(preview?.status).badge} label={invoiceStatusMeta(preview?.status).label} />
               </View>
             )}
           </View>
@@ -270,6 +354,39 @@ export default function AdminInvoices() {
           </View>
         </View>
       </Modal>
+
+      {/* Status editor */}
+      <Modal visible={!!statusEdit} transparent animationType="slide" onRequestClose={() => setStatusEdit(null)}>
+        <Pressable className="flex-1 justify-end bg-black/40" onPress={() => setStatusEdit(null)}>
+          <View className="rounded-t-3xl bg-white p-4 pb-8">
+            <Text className="px-2 pb-1 font-sans-bold text-base text-slate-900" numberOfLines={1}>
+              {statusEdit ? `${statusEdit.billedToName || nameOf(statusEdit.userId)} · ${statusEdit.invoiceNumber}` : ''}
+            </Text>
+            <Text className="mb-2 px-2 font-sans-medium text-xs uppercase text-slate-400">Set status</Text>
+            {EDITABLE_INVOICE_STATUSES.map((s) => (
+              <Pressable
+                key={s}
+                onPress={() => statusEdit && setStatus(statusEdit, s)}
+                className="flex-row items-center justify-between rounded-xl px-4 py-3 active:bg-slate-50"
+              >
+                <Text className="font-sans-medium text-[15px] text-slate-800">{invoiceStatusMeta(s).label}</Text>
+                {statusEdit?.status === s ? <Check size={18} color={colors.navy700} /> : null}
+              </Pressable>
+            ))}
+          </View>
+        </Pressable>
+      </Modal>
+
+      {sheetOpen && (
+        <FilterSheet
+          visible
+          title="Filter by status"
+          options={Object.entries(INVOICE_STATUS_META).map(([value, meta]) => ({ value, label: (meta as any).label }))}
+          selected={statusSel}
+          onChange={setStatusSel}
+          onClose={() => setSheetOpen(false)}
+        />
+      )}
     </SafeAreaView>
   )
 }

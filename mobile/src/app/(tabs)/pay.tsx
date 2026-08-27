@@ -384,7 +384,7 @@ export default function Pay() {
             <Card>
               <CardHeader title="My submissions" subtitle="View status or open a proof" />
               <View className="pt-3">
-                <PaymentList payments={myPayments} emptyBody="Your submitted proofs will appear here." />
+                <PaymentList payments={myPayments} showControls emptyBody="Your submitted proofs will appear here." />
               </View>
             </Card>
           </FadeInView>

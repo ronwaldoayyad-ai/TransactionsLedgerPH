@@ -18,6 +18,23 @@ export const BILLED_FROM = {
   tin: '306-712-666',
 }
 
+// Invoice lifecycle statuses. `draft` is pre-assignment (admin-only, never shown
+// to the borrower); the rest are visible to the billed borrower. `badge` maps to
+// a key in the shared Badge component's palette.
+export const INVOICE_STATUS_META = {
+  draft: { label: 'Draft', badge: 'upcoming' },
+  assigned: { label: 'Assigned', badge: 'invited' },
+  upcoming: { label: 'Upcoming', badge: 'upcoming' },
+  settled: { label: 'Settled', badge: 'paid' },
+  past_due: { label: 'Past Due', badge: 'past_due' },
+  partial: { label: 'Partially Paid', badge: 'due' },
+}
+
+// The statuses an admin may set on an already-assigned invoice, in display order.
+export const EDITABLE_INVOICE_STATUSES = ['assigned', 'upcoming', 'partial', 'past_due', 'settled']
+
+export const invoiceStatusMeta = (status) => INVOICE_STATUS_META[status] ?? INVOICE_STATUS_META.draft
+
 const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100
 
 // Display label for a ledger row on the invoice. Matches the template's

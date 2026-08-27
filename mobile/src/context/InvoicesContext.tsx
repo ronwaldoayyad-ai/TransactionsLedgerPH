@@ -121,6 +121,23 @@ export function InvoicesProvider({ children }: { children: ReactNode }) {
     [isLive, fetchAll],
   )
 
+  const updateInvoiceStatus = useCallback(
+    async (id: string, status: string) => {
+      if (!isLive) return { error: 'Live session required.' }
+      const { error } = await supabase
+        .from('invoices')
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq('id', id)
+      if (error) {
+        console.error('[invoices] status update failed:', error.message)
+        return { error: error.message }
+      }
+      await fetchAll()
+      return {}
+    },
+    [isLive, fetchAll],
+  )
+
   const deleteInvoice = useCallback(
     async (id: string) => {
       if (!isLive) return { error: 'Live session required.' }
@@ -136,8 +153,8 @@ export function InvoicesProvider({ children }: { children: ReactNode }) {
   )
 
   const value = useMemo(
-    () => ({ invoices, loading, createInvoice, assignInvoice, deleteInvoice, refreshInvoices: fetchAll }),
-    [invoices, loading, createInvoice, assignInvoice, deleteInvoice, fetchAll],
+    () => ({ invoices, loading, createInvoice, assignInvoice, updateInvoiceStatus, deleteInvoice, refreshInvoices: fetchAll }),
+    [invoices, loading, createInvoice, assignInvoice, updateInvoiceStatus, deleteInvoice, fetchAll],
   )
 
   return <InvoicesContext.Provider value={value}>{children}</InvoicesContext.Provider>
