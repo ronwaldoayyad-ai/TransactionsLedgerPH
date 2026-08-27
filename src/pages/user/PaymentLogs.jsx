@@ -41,7 +41,41 @@ export default function PaymentLogs() {
             body="When the administrator records a payment received from you, it will appear here."
           />
         ) : (
-          <div className="overflow-x-auto px-1 py-2">
+          <>
+          {/* Mobile: stacked cards so every value stays visible (no clipping). */}
+          <div className="md:hidden">
+            {rows.map((l) => (
+              <div
+                key={l.id}
+                className={`border-b border-slate-100 px-3 py-3 ${l.consumed ? 'opacity-60' : ''}`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13px] font-semibold text-slate-900">
+                      {l.subject}
+                      {l.consumed && (
+                        <span className="ml-1 text-[11px] font-normal italic text-slate-500">(applied)</span>
+                      )}
+                    </p>
+                    <p className="mt-0.5 text-[11px] leading-snug text-slate-500">
+                      {formatDate(l.txnDate)}
+                      {l.method ? ` · ${l.method}` : ''}
+                      {l.reference ? ` · Ref ${l.reference}` : ''}
+                    </p>
+                  </div>
+                  <Badge status={allocBadge[l.allocStatus] ?? 'upcoming'}>{l.allocStatus}</Badge>
+                </div>
+                <div className="mt-1.5 text-[11px] leading-snug text-slate-500">
+                  Owed <span className="font-mono text-slate-700">{formatPeso(l.amountOwed)}</span> · Applied{' '}
+                  <span className="font-mono text-slate-700">{formatPeso(l.fundsApplied)}</span> · Remaining{' '}
+                  <span className="font-mono font-semibold text-slate-900">{formatPeso(l.remainingBalance)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop / tablet: full table. */}
+          <div className="hidden overflow-x-auto px-1 py-2 md:block">
             <table className="w-full min-w-[760px] text-sm">
               <thead>
                 <tr className="border-b border-slate-100 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -82,6 +116,7 @@ export default function PaymentLogs() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </Card>
     </>

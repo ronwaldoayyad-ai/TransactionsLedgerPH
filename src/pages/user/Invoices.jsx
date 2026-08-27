@@ -43,7 +43,50 @@ export default function Invoices() {
             body="When your administrator issues an invoice, it will appear here for you to view and download."
           />
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          {/* Mobile: stacked cards so every value stays visible (no clipping). */}
+          <div className="md:hidden">
+            {invoices.map((inv) => (
+              <div key={inv.id} className="border-b border-slate-100 px-4 py-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-mono text-[13px] font-semibold text-slate-900">{inv.invoiceNumber}</p>
+                    <p className="mt-0.5 text-[11px] leading-snug text-slate-500">
+                      Issued {formatDate(inv.invoiceDate)}
+                      {inv.dueDate ? ` · Due ${formatDate(inv.dueDate)}` : ''}
+                    </p>
+                  </div>
+                  <Badge status={invoiceStatusMeta(inv.status).badge}>
+                    {invoiceStatusMeta(inv.status).label}
+                  </Badge>
+                </div>
+                <div className="mt-1.5 flex items-center justify-between gap-2">
+                  <span className="font-mono text-[13px] font-semibold text-slate-900">{formatPeso(inv.totalDue)}</span>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <button
+                      onClick={() => setPreview(inv)}
+                      title="View"
+                      aria-label={`View ${inv.invoiceNumber}`}
+                      className="cursor-pointer rounded-lg p-2 text-slate-500 transition-colors duration-200 hover:bg-navy-50 hover:text-navy-800"
+                    >
+                      <Icon name="file" className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => downloadInvoicePdf(toPdf(inv))}
+                      title="Download PDF"
+                      aria-label={`Download ${inv.invoiceNumber}`}
+                      className="cursor-pointer rounded-lg p-2 text-slate-500 transition-colors duration-200 hover:bg-navy-50 hover:text-navy-800"
+                    >
+                      <Icon name="download" className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop / tablet: full table. */}
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[620px] text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -94,6 +137,7 @@ export default function Invoices() {
               </tbody>
             </table>
           </div>
+          </>
         )}
       </Card>
 

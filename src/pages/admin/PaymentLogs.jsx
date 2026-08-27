@@ -247,7 +247,73 @@ export default function PaymentLogs() {
             }
           />
         ) : (
-          <div className="overflow-x-auto px-1 py-2">
+          <>
+          {/* Mobile: stacked cards so every value stays visible (no clipping). */}
+          <div className="md:hidden">
+            {pag.pageItems.map((l) => {
+              const isCarry = l.kind === 'carry'
+              return (
+                <div
+                  key={l.id}
+                  className={`border-b border-slate-100 px-3 py-3 ${isCarry ? 'bg-slate-50/60' : ''} ${l.consumed ? 'opacity-60' : ''}`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13px] font-semibold text-slate-900">{nameOf(l.userId)}</p>
+                      <p className="mt-0.5 text-[11px] leading-snug text-slate-500">
+                        {formatDate(l.txnDate)}
+                        {l.method ? ` · ${l.method}` : ''}
+                        {l.reference ? ` · Ref ${l.reference}` : ''}
+                      </p>
+                    </div>
+                    <Badge status={allocBadge[l.allocStatus] ?? 'upcoming'}>{l.allocStatus}</Badge>
+                  </div>
+                  <p className="mt-1 text-[11px] leading-snug text-slate-600">
+                    {isCarry && <Icon name="list" className="mr-1 inline h-3 w-3 align-text-bottom" />}
+                    {l.subject}
+                    {l.consumed && <span className="ml-1 italic">(applied)</span>}
+                  </p>
+                  <div className="mt-1.5 flex items-end justify-between gap-2">
+                    <div className="text-[11px] leading-snug text-slate-500">
+                      {!isCarry && (
+                        <>
+                          Owed <span className="font-mono text-slate-700">{formatPeso(l.amountOwed)}</span> · Applied{' '}
+                          <span className="font-mono text-slate-700">{formatPeso(l.fundsApplied)}</span> ·{' '}
+                        </>
+                      )}
+                      Remaining{' '}
+                      <span className="font-mono font-semibold text-slate-900">{formatPeso(l.remainingBalance)}</span>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      {!isCarry && (
+                        <button
+                          onClick={() => openEdit(l)}
+                          aria-label="Edit log"
+                          className="cursor-pointer rounded-md p-1.5 text-slate-400 transition-colors duration-200 hover:bg-slate-100 hover:text-navy-700"
+                        >
+                          <Icon name="pencil" className="h-4 w-4" />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setConfirmDelete(l.id)}
+                        aria-label="Delete log"
+                        className="cursor-pointer rounded-md p-1.5 text-slate-400 transition-colors duration-200 hover:bg-red-50 hover:text-red-600"
+                      >
+                        <Icon name="trash" className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+            <div className="flex items-center justify-between border-t-2 border-slate-200 bg-navy-50/70 px-3 py-3 text-[11px] font-semibold text-navy-900">
+              <span>Totals ({rows.length} payment{rows.length === 1 ? '' : 's'})</span>
+              <span className="font-mono">{formatPeso(totals.remaining)}</span>
+            </div>
+          </div>
+
+          {/* Desktop / tablet: full table. */}
+          <div className="hidden overflow-x-auto px-1 py-2 md:block">
             <table className="w-full min-w-[920px] text-sm">
               <thead>
                 <tr className="border-b border-slate-100 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -325,6 +391,7 @@ export default function PaymentLogs() {
               </tfoot>
             </table>
           </div>
+          </>
         )}
         {rows.length > 0 && (
           <Pagination

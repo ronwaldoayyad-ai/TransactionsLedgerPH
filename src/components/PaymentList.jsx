@@ -168,10 +168,12 @@ export default function PaymentList({
                       {showBorrower && <span>{borrower?.name ?? p.userId} · </span>}
                       <span className="font-mono text-sm text-slate-700">{formatPeso(p.amount)}</span>
                     </p>
-                    <p className="truncate text-xs text-slate-500">
+                    {/* On mobile, wrap fully (no clipping) at a smaller size;
+                        keep the desktop single-line truncation unchanged. */}
+                    <p className="text-[11px] leading-snug text-slate-500 md:truncate md:text-xs md:leading-normal">
                       {loan?.label ?? p.loanId ?? 'Payment'} · {p.method} · Ref {p.reference}
                     </p>
-                    <p className="truncate text-xs text-slate-400">
+                    <p className="text-[11px] leading-snug text-slate-400 md:truncate md:text-xs md:leading-normal">
                       {p.fileName} · submitted {formatDate(p.submittedAt)}
                       {p.reviewedAt && ` · reviewed ${formatDate(p.reviewedAt)}`}
                     </p>

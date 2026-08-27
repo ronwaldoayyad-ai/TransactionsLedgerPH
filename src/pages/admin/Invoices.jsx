@@ -199,7 +199,42 @@ export default function Invoices() {
           {invoices.length === 0 ? (
             <EmptyState icon="file" title="No invoices yet" body="Generate one on the left to get started." />
           ) : (
-            <div className="overflow-x-auto">
+            <>
+            {/* Mobile: stacked cards so every value stays visible (no clipping). */}
+            <div className="md:hidden">
+              {invoices.map((inv) => (
+                <div key={inv.id} className="border-b border-slate-100 px-4 py-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-mono text-[13px] font-semibold text-slate-900">{inv.invoiceNumber}</p>
+                      <p className="mt-0.5 text-[11px] leading-snug text-slate-500">
+                        {inv.billedToName || nameOf(inv.userId)} · Issued {formatDate(inv.invoiceDate)}
+                        {inv.dueDate ? ` · Due ${formatDate(inv.dueDate)}` : ''}
+                      </p>
+                    </div>
+                    <Badge status={invoiceStatusMeta(inv.status).badge}>
+                      {invoiceStatusMeta(inv.status).label}
+                    </Badge>
+                  </div>
+                  <div className="mt-1.5 flex items-center justify-between gap-2">
+                    <span className="font-mono text-[13px] font-semibold text-slate-900">{formatPeso(inv.totalDue)}</span>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <IconBtn title="Preview" onClick={() => setPreview(inv)} icon="file" />
+                      <IconBtn title="Download PDF" onClick={() => downloadInvoicePdf(toPdf(inv))} icon="download" />
+                      {inv.status === 'draft' ? (
+                        <IconBtn title="Assign to borrower" tone="emerald" onClick={() => doAssign(inv)} icon="check" />
+                      ) : (
+                        <IconBtn title="Update status" onClick={() => openStatusEdit(inv)} icon="pencil" />
+                      )}
+                      <IconBtn title="Delete" tone="red" onClick={() => setConfirmDelete(inv)} icon="trash" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop / tablet: full table. */}
+            <div className="hidden overflow-x-auto md:block">
               <table className="w-full min-w-[720px] text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -242,6 +277,7 @@ export default function Invoices() {
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </Card>
       </div>

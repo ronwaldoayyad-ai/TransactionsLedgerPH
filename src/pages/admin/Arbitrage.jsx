@@ -356,7 +356,44 @@ export default function Arbitrage() {
             />
           ) : tab === 'ledger' ? (
             <>
-            <div className="overflow-x-auto px-1 py-2">
+            {/* Mobile: stacked cards so every value stays visible (no clipping). */}
+            <div className="md:hidden">
+              {ledgerPag.pageItems.map((r) => {
+                const c = computeArbitrage(r)
+                return (
+                  <div key={r.id} className="border-b border-slate-100 px-3 py-3">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[13px] font-semibold text-slate-800">{nameOf(r.userId)}</p>
+                        <p className="mt-0.5 text-[11px] leading-snug text-slate-500">
+                          Tx {r.txnDate} · {r.firstPaymentDate} to {r.lastPaymentDate}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setConfirmDelete(r.id)}
+                        aria-label="Delete record"
+                        className="shrink-0 cursor-pointer rounded-md p-1.5 text-slate-400 transition-colors duration-200 hover:bg-red-50 hover:text-red-600"
+                      >
+                        <Icon name="trash" className="h-4 w-4" />
+                      </button>
+                    </div>
+                    <div className="mt-1.5 text-[11px] leading-snug text-slate-500">
+                      Principal <span className="font-mono text-slate-700">{formatPeso(r.principal)}</span> · Gained{' '}
+                      <span className="font-mono text-blue-700">{formatPeso(c.borrowerInterest)}</span> · Cost{' '}
+                      <span className="font-mono text-red-600">{formatPeso(c.interestCost)}</span> · Fees{' '}
+                      <span className="font-mono text-sky-700">{formatPeso(c.fees)}</span>
+                    </div>
+                    <div className="mt-1 text-[11px] leading-snug text-slate-500">
+                      Net Gain{' '}
+                      <span className="font-mono font-semibold text-emerald-700">{formatPeso(c.netGain)}</span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Desktop / tablet: full table. */}
+            <div className="hidden overflow-x-auto px-1 py-2 md:block">
               <table className="w-full min-w-[820px] text-sm">
                 <thead>
                   <tr className="border-b border-slate-100 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -418,7 +455,28 @@ export default function Arbitrage() {
             )}
             </>
           ) : (
-            <div className="overflow-x-auto px-1 py-2">
+            <>
+            {/* Mobile: stacked cards so every value stays visible (no clipping). */}
+            <div className="md:hidden">
+              {perBorrower.map((b) => (
+                <div key={b.userId} className="border-b border-slate-100 px-3 py-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[13px] font-semibold text-slate-800">{b.name}</p>
+                    <span className="shrink-0 rounded-full bg-sky-50 px-2 py-0.5 text-[11px] font-medium text-sky-700">
+                      {b.loanCount} Loan(s)
+                    </span>
+                  </div>
+                  <div className="mt-1.5 text-[11px] leading-snug text-slate-500">
+                    Total Principal <span className="font-mono text-slate-700">{formatPeso(b.totalPrincipal)}</span> ·
+                    Net Gain{' '}
+                    <span className="font-mono font-semibold text-emerald-700">{formatPeso(b.totalNetGain)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop / tablet: full table. */}
+            <div className="hidden overflow-x-auto px-1 py-2 md:block">
               <table className="w-full min-w-[560px] text-sm">
                 <thead>
                   <tr className="border-b border-slate-100 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -444,6 +502,7 @@ export default function Arbitrage() {
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </Card>
       </div>
