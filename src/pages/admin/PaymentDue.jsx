@@ -5,8 +5,9 @@ import { Badge, Button, Card, CardHeader } from '../../components/ui'
 import Icon from '../../components/Icon'
 import { formatDate, formatPeso, toISODate } from '../../lib/amortization'
 import { effectiveStatus, isReceivable } from '../../lib/transactions'
-import { NextPaymentDueCard, PaymentDueBreakdown } from '../../components/PaymentDueSummary'
+import { NextPaymentDueCard, PaymentDueBreakdown, PaymentDueCardStack } from '../../components/PaymentDueSummary'
 import { buildDueSummary } from '../../lib/paymentDueSummary'
+import { PAYMENT_DUE_COLORS } from '../../lib/paymentDueConfig'
 
 // How many upcoming due dates to surface, to keep the picker from crowding.
 const UPCOMING_LIMIT = 5
@@ -107,6 +108,10 @@ export default function PaymentDue() {
   const [selectedDates, setSelectedDates] = useState(
     () => new Set(validDatesFor(new Set(activeBorrowers.map((b) => b.id))).map((d) => d.date)),
   )
+  // The "Next Payment Due" set is opt-in (starts empty). Admin picks a separate
+  // group of due dates to drive the borrower's second, swipeable card.
+  const [selectedNextDates, setSelectedNextDates] = useState(() => new Set())
+  const [previewActive, setPreviewActive] = useState(0) // 0 = Current, 1 = Next
   const [status, setStatus] = useState('')
   const [flash, setFlash] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -124,10 +129,12 @@ export default function PaymentDue() {
   // the borrower handlers (an event handler, not an effect).
   const pruneDatesFor = (borrowerSet) => {
     const valid = new Set(validDatesFor(borrowerSet).map((d) => d.date))
-    setSelectedDates((prev) => {
+    const prune = (prev) => {
       const next = new Set([...prev].filter((d) => valid.has(d)))
       return next.size === prev.size ? prev : next
-    })
+    }
+    setSelectedDates(prune)
+    setSelectedNextDates(prune)
   }
 
   // --- Live preview ----------------------------------------------------------
@@ -143,11 +150,26 @@ export default function PaymentDue() {
 
   const summary = useMemo(() => buildDueSummary(previewItems, today), [previewItems, today])
 
+  // Next-card preview: selected borrowers ∩ selected NEXT dates.
+  const previewNextItems = useMemo(
+    () =>
+      receivable.filter(
+        (t) => selectedBorrowers.has(t.userId) && selectedNextDates.has(t.dueDate),
+      ),
+    [receivable, selectedBorrowers, selectedNextDates],
+  )
+  const nextSummary = useMemo(() => buildDueSummary(previewNextItems, today), [previewNextItems, today])
+  const hasNextPreview = selectedNextDates.size > 0
+  const previewIndex = hasNextPreview ? previewActive : 0
+  const previewSummary = previewIndex === 1 ? nextSummary : summary
+
   // --- Actions ---------------------------------------------------------------
   const allBorrowersSelected =
     activeBorrowers.length > 0 && selectedBorrowers.size === activeBorrowers.length
   const allDatesSelected =
     dateOptions.length > 0 && selectedDates.size === dateOptions.length
+  const allNextDatesSelected =
+    dateOptions.length > 0 && selectedNextDates.size === dateOptions.length
 
   const toggleBorrower = (id, on) => {
     const next = new Set(selectedBorrowers)
@@ -180,6 +202,21 @@ export default function PaymentDue() {
     setStatus(allDatesSelected ? 'Cleared all due dates' : 'Selected all due dates')
   }
 
+  const toggleNextDate = (date, on) => {
+    setSelectedNextDates((prev) => {
+      const next = new Set(prev)
+      if (on) next.add(date)
+      else next.delete(date)
+      return next
+    })
+    setStatus('Next due date selection updated')
+  }
+
+  const toggleAllNextDates = () => {
+    setSelectedNextDates(allNextDatesSelected ? new Set() : new Set(dateOptions.map((d) => d.date)))
+    setStatus(allNextDatesSelected ? 'Cleared all next dates' : 'Selected all next dates')
+  }
+
   const triggerFlash = () => {
     setFlash(true)
     clearTimeout(flashTimer.current)
@@ -187,21 +224,29 @@ export default function PaymentDue() {
   }
   useEffect(() => () => clearTimeout(flashTimer.current), [])
 
-  const canApply = selectedBorrowers.size > 0 && selectedDates.size > 0
+  const canApply =
+    selectedBorrowers.size > 0 && (selectedDates.size > 0 || selectedNextDates.size > 0)
 
   // Build the per-borrower rows for the current selection: each selected
-  // borrower is pinned to the selected dates that are actually theirs.
+  // borrower is pinned to the Current and Next dates that are actually theirs.
   const rowsForSelection = () =>
     [...selectedBorrowers]
-      .map((borrowerId) => ({
-        borrowerId,
-        dueDates: receivable
-          .filter((t) => t.userId === borrowerId && selectedDates.has(t.dueDate))
-          .map((t) => t.dueDate),
-      }))
-      // De-dupe dates per borrower, and drop borrowers with no matching date.
-      .map((r) => ({ borrowerId: r.borrowerId, dueDates: [...new Set(r.dueDates)] }))
-      .filter((r) => r.dueDates.length > 0)
+      .map((borrowerId) => {
+        const mine = (dateSet) => [
+          ...new Set(
+            receivable
+              .filter((t) => t.userId === borrowerId && dateSet.has(t.dueDate))
+              .map((t) => t.dueDate),
+          ),
+        ]
+        return {
+          borrowerId,
+          dueDates: mine(selectedDates),
+          nextDueDates: mine(selectedNextDates),
+        }
+      })
+      // Drop borrowers with no matching date in either set.
+      .filter((r) => r.dueDates.length > 0 || r.nextDueDates.length > 0)
 
   const apply = async () => {
     if (!canApply || saving) return
@@ -230,6 +275,7 @@ export default function PaymentDue() {
     const allIds = new Set(activeBorrowers.map((b) => b.id))
     setSelectedBorrowers(allIds)
     setSelectedDates(new Set(validDatesFor(allIds).map((d) => d.date)))
+    setSelectedNextDates(new Set())
     triggerFlash()
     setStatus('Selection reset — all borrowers and dates')
   }
@@ -252,14 +298,14 @@ export default function PaymentDue() {
 
   // Active overrides, sorted by borrower name, for the Current Overrides panel.
   const activeOverrides = [...(paymentDueOverrides ?? [])]
-    .filter((o) => o.dueDates.length > 0)
+    .filter((o) => o.dueDates.length > 0 || (o.nextDueDates?.length ?? 0) > 0)
     .sort((a, b) => borrowerName(a.borrowerId).localeCompare(borrowerName(b.borrowerId)))
 
-  // The exact peso total a borrower sees for their pinned dates — the same
-  // receivable installments (on those dates) their Next Payment Due tile sums.
-  const overrideTotal = (o) =>
+  // The exact peso total a borrower sees for a pinned date set — the same
+  // receivable installments (on those dates) their card sums.
+  const totalForDates = (o, dates) =>
     receivable
-      .filter((t) => t.userId === o.borrowerId && o.dueDates.includes(t.dueDate))
+      .filter((t) => t.userId === o.borrowerId && (dates ?? []).includes(t.dueDate))
       .reduce((s, t) => s + t.amount, 0)
 
   return (
@@ -333,8 +379,8 @@ export default function PaymentDue() {
             <CardHeader
               title={
                 <span className="flex items-center gap-2">
-                  <Icon name="clock" className="h-4 w-4 text-navy-700" />
-                  Due Dates
+                  <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: PAYMENT_DUE_COLORS.current }} />
+                  Current Due Dates
                 </span>
               }
               action={
@@ -379,6 +425,58 @@ export default function PaymentDue() {
             </div>
           </Card>
 
+          <Card>
+            <CardHeader
+              title={
+                <span className="flex items-center gap-2">
+                  <span className="inline-block h-3 w-3 rounded-full" style={{ backgroundColor: PAYMENT_DUE_COLORS.next }} />
+                  Next Due Dates
+                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">optional</span>
+                </span>
+              }
+              action={
+                <button
+                  type="button"
+                  onClick={toggleAllNextDates}
+                  disabled={dateOptions.length === 0}
+                  className="cursor-pointer text-sm font-medium text-navy-700 transition-colors duration-200 hover:text-navy-900 disabled:cursor-not-allowed disabled:text-slate-300"
+                >
+                  {allNextDatesSelected ? 'Clear all' : 'Select all'}
+                </button>
+              }
+            />
+            <div className="p-3">
+              {dateOptions.length === 0 ? (
+                <p className="px-3 py-6 text-center text-sm text-slate-500">
+                  {selectedBorrowers.size === 0
+                    ? 'Select one or more borrowers to see their due dates.'
+                    : 'No past-due or upcoming dates for this selection.'}
+                </p>
+              ) : (
+                <div className="grid gap-1 sm:grid-cols-2">
+                  {dateOptions.map(({ date, kind }) => (
+                    <CheckRow
+                      key={date}
+                      checked={selectedNextDates.has(date)}
+                      onChange={(on) => toggleNextDate(date, on)}
+                      trailing={
+                        <Badge status={kind === 'past_due' ? 'past_due' : 'upcoming'}>
+                          {kind === 'past_due' ? 'past due' : 'upcoming'}
+                        </Badge>
+                      }
+                    >
+                      <span className="truncate">{formatDate(date)}</span>
+                    </CheckRow>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="flex items-center justify-between border-t border-slate-100 px-5 py-3">
+              <SelectionCount n={selectedNextDates.size} />
+              <span className="text-xs text-slate-400">Drives the borrower&apos;s second (Next) card</span>
+            </div>
+          </Card>
+
           <div className="flex flex-wrap items-center gap-3">
             <Button onClick={apply} disabled={!canApply || saving}>
               <Icon name="check" className="h-4 w-4" />
@@ -409,13 +507,35 @@ export default function PaymentDue() {
               </span>
             </p>
 
-            {/* The exact tile the borrower sees — shared component. */}
-            <NextPaymentDueCard summary={summary} flash={flash} emptyText="No payments selected" />
+            {/* The exact tile(s) the borrower sees — shared component. When a
+                Next set is selected, the preview becomes the same swipeable
+                stack the borrower gets; otherwise just the Current card. */}
+            {hasNextPreview ? (
+              <PaymentDueCardStack
+                active={previewIndex}
+                onSwitch={setPreviewActive}
+                highlightActive={false}
+                cards={[
+                  { summary, title: 'Current Payment Due', bg: PAYMENT_DUE_COLORS.current, emptyText: 'No payments selected' },
+                  { summary: nextSummary, title: 'Next Payment Due', bg: PAYMENT_DUE_COLORS.next, emptyText: 'No next payments selected' },
+                ]}
+              />
+            ) : (
+              <NextPaymentDueCard
+                summary={summary}
+                flash={flash}
+                title="Current Payment Due"
+                bg={PAYMENT_DUE_COLORS.current}
+                emptyText="No payments selected"
+              />
+            )}
           </div>
 
           <PaymentDueBreakdown
-            summary={summary}
+            summary={previewSummary}
             flash={flash}
+            label={previewIndex === 1 ? 'Next' : 'Current'}
+            accent={previewIndex === 1 ? PAYMENT_DUE_COLORS.next : PAYMENT_DUE_COLORS.current}
             borrowersTargeted={selectedBorrowers.size}
             footer={
               activeOverrides.length > 0 ? (
@@ -462,38 +582,39 @@ export default function PaymentDue() {
             ) : (
               <ul className="divide-y divide-slate-100">
                 {activeOverrides.map((o) => {
-                  const dates = [...o.dueDates].sort((a, b) => a.localeCompare(b))
+                  const curDates = [...(o.dueDates ?? [])].sort((a, b) => a.localeCompare(b))
+                  const nxtDates = [...(o.nextDueDates ?? [])].sort((a, b) => a.localeCompare(b))
+                  const chip = (d) => (
+                    <span
+                      key={d}
+                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                        effectiveStatus({ dueDate: d, status: 'unpaid' }, today) === 'past_due'
+                          ? 'bg-red-50 text-red-600'
+                          : 'bg-emerald-50 text-emerald-700'
+                      }`}
+                    >
+                      {formatDate(d)}
+                    </span>
+                  )
+                  const group = (label, color, dates, total) => (
+                    <div className="mt-2">
+                      <p className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                        <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: color }} />
+                        {label} · <span className="font-mono text-slate-500">{formatPeso(total)}</span>
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">{dates.map(chip)}</div>
+                    </div>
+                  )
                   return (
                     <li key={o.borrowerId} className="flex items-start justify-between gap-4 px-5 py-3.5">
                       <div className="min-w-0">
-                        <p className="flex items-center gap-2 font-semibold text-slate-900">
-                          {borrowerName(o.borrowerId)}
-                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500">
-                            {dates.length} date{dates.length === 1 ? '' : 's'}
-                          </span>
-                        </p>
-                        <div className="mt-1.5 flex flex-wrap gap-1.5">
-                          {dates.map((d) => (
-                            <span
-                              key={d}
-                              className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                                effectiveStatus({ dueDate: d, status: 'unpaid' }, today) === 'past_due'
-                                  ? 'bg-red-50 text-red-600'
-                                  : 'bg-emerald-50 text-emerald-700'
-                              }`}
-                            >
-                              {formatDate(d)}
-                            </span>
-                          ))}
-                        </div>
+                        <p className="font-semibold text-slate-900">{borrowerName(o.borrowerId)}</p>
+                        {curDates.length > 0 &&
+                          group('Current', PAYMENT_DUE_COLORS.current, curDates, totalForDates(o, o.dueDates))}
+                        {nxtDates.length > 0 &&
+                          group('Next', PAYMENT_DUE_COLORS.next, nxtDates, totalForDates(o, o.nextDueDates))}
                       </div>
                       <div className="flex shrink-0 flex-col items-end gap-2">
-                        <div className="text-right">
-                          <p className="font-mono text-sm font-semibold text-slate-900">
-                            {formatPeso(overrideTotal(o))}
-                          </p>
-                          <p className="text-[11px] text-slate-400">shown to borrower</p>
-                        </div>
                         <button
                           type="button"
                           onClick={() => clearOne(o.borrowerId)}

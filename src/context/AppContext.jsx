@@ -25,6 +25,7 @@ import { supabase } from '../supabaseClient'
 const mapPaymentDueOverride = (r) => ({
   borrowerId: r.borrower_id,
   dueDates: r.due_dates ?? [],
+  nextDueDates: r.next_due_dates ?? [],
   appliedAt: r.applied_at ?? null,
 })
 
@@ -1387,23 +1388,26 @@ export function AppProvider({ children }) {
     setPaymentDueOverrides((data ?? []).map(mapPaymentDueOverride))
   }, [])
 
-  // Apply per-borrower overrides. `rows` is [{ borrowerId, dueDates }]: rows
-  // with dates are upserted, rows with none are removed. Other borrowers'
-  // overrides are left untouched. Persisted to Supabase in live mode so it
-  // reaches every borrower's device; localStorage backs the demo/dev flow.
+  // Apply per-borrower overrides. `rows` is [{ borrowerId, dueDates,
+  // nextDueDates }]: rows with dates in EITHER set are upserted, rows empty in
+  // BOTH are removed. `dueDates` drives the Current card, `nextDueDates` the
+  // Next card. Other borrowers' overrides are left untouched. Persisted to
+  // Supabase in live mode so it reaches every borrower's device; localStorage
+  // backs the demo/dev flow.
   const savePaymentDueOverrides = useCallback(
     async (rows) => {
       const appliedAt = new Date().toISOString()
-      const toUpsert = (rows ?? []).filter((r) => r.dueDates && r.dueDates.length > 0)
-      const toDelete = (rows ?? [])
-        .filter((r) => !r.dueDates || r.dueDates.length === 0)
-        .map((r) => r.borrowerId)
+      const hasDates = (r) =>
+        (r.dueDates && r.dueDates.length > 0) || (r.nextDueDates && r.nextDueDates.length > 0)
+      const toUpsert = (rows ?? []).filter(hasDates)
+      const toDelete = (rows ?? []).filter((r) => !hasDates(r)).map((r) => r.borrowerId)
       if (isLive) {
         if (toUpsert.length) {
           const { error } = await supabase.from('payment_due_overrides').upsert(
             toUpsert.map((r) => ({
               borrower_id: r.borrowerId,
-              due_dates: r.dueDates,
+              due_dates: r.dueDates ?? [],
+              next_due_dates: r.nextDueDates ?? [],
               applied_at: appliedAt,
               updated_by: session?.user?.id ?? null,
             })),
@@ -1432,7 +1436,13 @@ export function AppProvider({ children }) {
       // demo path
       setPaymentDueOverrides((prev) => {
         const map = new Map(prev.map((o) => [o.borrowerId, o]))
-        for (const r of toUpsert) map.set(r.borrowerId, { borrowerId: r.borrowerId, dueDates: r.dueDates, appliedAt })
+        for (const r of toUpsert)
+          map.set(r.borrowerId, {
+            borrowerId: r.borrowerId,
+            dueDates: r.dueDates ?? [],
+            nextDueDates: r.nextDueDates ?? [],
+            appliedAt,
+          })
         for (const id of toDelete) map.delete(id)
         const next = [...map.values()]
         writeStoredOverrides(next)
@@ -1443,9 +1453,10 @@ export function AppProvider({ children }) {
     [isLive, session, refreshPaymentDueOverrides],
   )
 
-  // Clear one borrower's override (revert them to the default calculation).
+  // Clear one borrower's override entirely — both Current and Next sets —
+  // reverting them to the default calculation.
   const clearPaymentDueOverride = useCallback(
-    (borrowerId) => savePaymentDueOverrides([{ borrowerId, dueDates: [] }]),
+    (borrowerId) => savePaymentDueOverrides([{ borrowerId, dueDates: [], nextDueDates: [] }]),
     [savePaymentDueOverrides],
   )
 

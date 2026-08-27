@@ -12,12 +12,19 @@
 const KEY = 'll.paymentDueOverrides.v1'
 const isBrowser = typeof window !== 'undefined'
 
-// An override is { borrowerId, dueDates: string[], appliedAt }. The store holds
-// an array of them.
+// Card background colours that distinguish the two payment-due cards on the
+// borrower dashboard and the admin preview. Both are light, so the dark text
+// and the animated rainbow border read unchanged.
+export const PAYMENT_DUE_COLORS = { current: '#E6D5C3', next: '#E0F7FA' }
+
+// An override is { borrowerId, dueDates, nextDueDates, appliedAt } where
+// dueDates drives the Current card and nextDueDates drives the Next card. The
+// store holds an array of them.
 export function normalizeOverride(o) {
   return {
     borrowerId: o.borrowerId,
     dueDates: [...(o.dueDates ?? [])],
+    nextDueDates: [...(o.nextDueDates ?? [])],
     appliedAt: o.appliedAt ?? new Date().toISOString(),
   }
 }
@@ -46,9 +53,15 @@ export function writeStoredOverrides(list) {
 }
 
 // --- Pure helper (used live and in demo) -----------------------------------
-// The active override for a borrower, or null. An override with no dates is
-// treated as inactive so it never blanks a tile.
+// The active CURRENT override for a borrower, or null. An override with no
+// Current dates is treated as inactive so it never blanks the Current card.
 export function overrideForBorrower(overrides, userId) {
   const row = (overrides ?? []).find((o) => o.borrowerId === userId)
   return row && row.dueDates.length > 0 ? row : null
+}
+
+// The borrower's raw override row (both sets), or null. Use this to read the
+// NEXT set — which is independent of whether a Current override is active.
+export function rowForBorrower(overrides, userId) {
+  return (overrides ?? []).find((o) => o.borrowerId === userId) ?? null
 }

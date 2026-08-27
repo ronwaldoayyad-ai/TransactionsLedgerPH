@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
 import { PageHeader } from '../../components/AppShell'
@@ -5,13 +6,13 @@ import { Badge, Button, Card, CardHeader, EmptyState, StatCard, Switch } from '.
 import Icon from '../../components/Icon'
 import PaymentList from '../../components/PaymentList'
 import RefreshButton from '../../components/RefreshButton'
-import { NextPaymentDueCard, PaymentDueBreakdown } from '../../components/PaymentDueSummary'
+import { NextPaymentDueCard, PaymentDueBreakdown, PaymentDueCardStack } from '../../components/PaymentDueSummary'
 import { buildDueSummary } from '../../lib/paymentDueSummary'
 import { usePersistedState } from '../../hooks/usePersistedState'
 import { setPageEntry } from '../../lib/pageStateStore'
 import { formatDate, formatPeso, toISODate } from '../../lib/amortization'
 import { effectiveStatus } from '../../lib/transactions'
-import { overrideForBorrower } from '../../lib/paymentDueConfig'
+import { overrideForBorrower, rowForBorrower, PAYMENT_DUE_COLORS } from '../../lib/paymentDueConfig'
 
 export default function UserDashboard() {
   const { session, loans, payments, transactions, paymentDueOverrides } = useApp()
@@ -106,6 +107,20 @@ export default function UserDashboard() {
   // most recent one "to date" to highlight.
   const nextDueSummary = buildDueSummary(nextDueItems, today)
 
+  // Next Payment Due card: admin-defined only (no default). Sums the borrower's
+  // receivable installments on the admin's separate "next" due-date set. When
+  // unset, the borrower sees just the Current card (no stack).
+  const overrideRow = rowForBorrower(paymentDueOverrides, session.user.id)
+  const nextCardDates = new Set(overrideRow?.nextDueDates ?? [])
+  const hasNextCard = nextCardDates.size > 0
+  const nextCardItems = hasNextCard ? unpaidTxns.filter((t) => nextCardDates.has(t.dueDate)) : []
+  const nextCardSummary = buildDueSummary(nextCardItems, today)
+
+  // Which card is in front (0 = Current, 1 = Next); drives the coupled breakdown.
+  const [activeDueCard, setActiveDueCard] = useState(0)
+  const activeIndex = hasNextCard ? activeDueCard : 0
+  const activeSummary = activeIndex === 1 ? nextCardSummary : nextDueSummary
+
   // Totals split by transaction type (across all of the borrower's records).
   const straightTxns = myTxns.filter((t) => t.type === 'Straight')
   const installmentTxns = myTxns.filter((t) => t.type === 'Installment')
@@ -117,6 +132,13 @@ export default function UserDashboard() {
   const goNextDue = () => {
     setPageEntry('consolidated.statusSel', new Set(['past_due', 'due', 'upcoming']))
     setPageEntry('consolidated.dueDateSel', new Set(nextDueItems.map((t) => t.dueDate)))
+    setPageEntry('consolidated.typeSel', new Set())
+    setPageEntry('consolidated.hideSettled', true)
+    navigate('/portal/consolidated')
+  }
+  const goNextCard = () => {
+    setPageEntry('consolidated.statusSel', new Set(['past_due', 'due', 'upcoming']))
+    setPageEntry('consolidated.dueDateSel', new Set(nextCardItems.map((t) => t.dueDate)))
     setPageEntry('consolidated.typeSel', new Set())
     setPageEntry('consolidated.hideSettled', true)
     navigate('/portal/consolidated')
@@ -153,12 +175,45 @@ export default function UserDashboard() {
         }
       />
 
-      {/* Featured: Current Payment Due — the same big card + breakdown the admin
-          sees in the Payment Due preview. Reflects any admin override. The
-          animated rainbow border marks it as the dashboard's headline tile. */}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <NextPaymentDueCard summary={nextDueSummary} onClick={goNextDue} highlight />
-        <PaymentDueBreakdown summary={nextDueSummary} />
+      {/* Featured: Current / Next Payment Due. When the admin has pinned a Next
+          set, the two cards stack (swipe / arrow keys / dots to switch) and the
+          Detailed Breakdown follows the active card. Otherwise just Current. */}
+      <div className="grid items-start gap-4 lg:grid-cols-2">
+        {hasNextCard ? (
+          <PaymentDueCardStack
+            active={activeIndex}
+            onSwitch={setActiveDueCard}
+            cards={[
+              {
+                summary: nextDueSummary,
+                title: 'Current Payment Due',
+                bg: PAYMENT_DUE_COLORS.current,
+                onClick: goNextDue,
+                emptyText: 'No current payment due',
+              },
+              {
+                summary: nextCardSummary,
+                title: 'Next Payment Due',
+                bg: PAYMENT_DUE_COLORS.next,
+                onClick: goNextCard,
+                emptyText: 'No next payment set',
+              },
+            ]}
+          />
+        ) : (
+          <NextPaymentDueCard
+            summary={nextDueSummary}
+            onClick={goNextDue}
+            highlight
+            title="Current Payment Due"
+            bg={PAYMENT_DUE_COLORS.current}
+          />
+        )}
+        <PaymentDueBreakdown
+          summary={activeSummary}
+          label={activeIndex === 1 ? 'Next' : 'Current'}
+          accent={activeIndex === 1 ? PAYMENT_DUE_COLORS.next : PAYMENT_DUE_COLORS.current}
+        />
       </div>
 
       <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

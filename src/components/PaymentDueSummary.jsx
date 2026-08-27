@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import Icon from './Icon'
 import { Card, CardHeader, Modal } from './ui'
 import { formatDate, formatPeso } from '../lib/amortization'
@@ -26,7 +26,17 @@ function DateChip({ date, kind, focus }) {
 
 // The big headline card: the exact tile a borrower sees. `highlight` wraps the
 // tile in the animated rainbow border (the borrower dashboard's featured tile).
-export function NextPaymentDueCard({ summary, flash = false, onClick, emptyText = 'No upcoming payments', highlight = false }) {
+// `title` sets the heading (Current / Next Payment Due); `bg` is a solid card
+// background colour used to visually distinguish the two cards in the stack.
+export function NextPaymentDueCard({
+  summary,
+  flash = false,
+  onClick,
+  emptyText = 'No upcoming payments',
+  highlight = false,
+  title = 'Current Payment Due',
+  bg = null,
+}) {
   const [showAll, setShowAll] = useState(false)
   const dates = summary.dates ?? []
   const overflow = dates.length > MAX_VISIBLE_CHIPS
@@ -39,7 +49,7 @@ export function NextPaymentDueCard({ summary, flash = false, onClick, emptyText 
         onClick,
         role: 'button',
         tabIndex: 0,
-        'aria-label': `Current Payment Due: ${summary.count ? formatPeso(summary.total) : emptyText}`,
+        'aria-label': `${title}: ${summary.count ? formatPeso(summary.total) : emptyText}`,
         onKeyDown: (e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault()
@@ -51,9 +61,12 @@ export function NextPaymentDueCard({ summary, flash = false, onClick, emptyText 
 
   const tile = (
       <div
-        className={`relative flex h-full flex-col bg-white p-8 text-center transition-all duration-500 ${
-          highlight ? 'rounded-xl' : 'rounded-2xl border border-slate-200 shadow-sm'
-        } ${flash ? 'ring-2 ring-navy-400 ring-offset-2' : ''} ${
+        style={bg ? { backgroundColor: bg } : undefined}
+        className={`relative flex h-full flex-col p-8 text-center transition-all duration-500 ${
+          bg ? '' : 'bg-white'
+        } ${highlight ? 'rounded-xl' : 'rounded-2xl border border-slate-200 shadow-sm'} ${
+          flash ? 'ring-2 ring-navy-400 ring-offset-2' : ''
+        } ${
           clickable
             ? highlight
               ? 'cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy-600'
@@ -62,11 +75,11 @@ export function NextPaymentDueCard({ summary, flash = false, onClick, emptyText 
         }`}
         {...clickProps}
       >
-        <span className="absolute right-6 top-6 hidden rounded-xl bg-sky-50 p-2.5 text-sky-700 sm:block">
+        <span className="absolute right-6 top-6 hidden rounded-xl bg-white/60 p-2.5 text-sky-700 sm:block">
           <Icon name="clock" className="h-5 w-5" />
         </span>
-        <p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-500">
-          Current Payment Due
+        <p className="text-xs font-semibold uppercase tracking-[0.15em] text-slate-600">
+          {title}
           {clickable && (
             <Icon name="chevron" className="ml-1 inline h-3 w-3 -rotate-90 align-middle text-slate-400" />
           )}
@@ -152,6 +165,130 @@ export function NextPaymentDueCard({ summary, flash = false, onClick, emptyText 
   )
 }
 
+// A Google Wallet-style pair of stacked cards. The active card sits in front,
+// the other peeks behind. Switch by swiping left/right, pressing the arrow keys,
+// or tapping a dot. Controlled: the parent owns `active` and receives
+// `onSwitch(index)` so it can keep the Detailed Breakdown in sync. Honors
+// prefers-reduced-motion (the peeking card is hidden and transforms are off).
+export function PaymentDueCardStack({ cards, active, onSwitch, highlightActive = true }) {
+  const startX = useRef(null)
+  const moved = useRef(false)
+  const dragXRef = useRef(0) // latest delta; read on release (state can be stale)
+  const [dragX, setDragX] = useState(0)
+  const [dragging, setDragging] = useState(false)
+  const count = cards.length
+
+  const go = (dir) => {
+    const next = active + dir
+    if (next >= 0 && next < count) onSwitch(next)
+  }
+  const onPointerDown = (e) => {
+    startX.current = e.clientX
+    dragXRef.current = 0
+    moved.current = false
+    setDragging(true)
+  }
+  const onPointerMove = (e) => {
+    if (startX.current == null) return
+    const dx = e.clientX - startX.current
+    if (Math.abs(dx) > 6) moved.current = true
+    dragXRef.current = dx
+    setDragX(dx)
+  }
+  const endDrag = () => {
+    if (startX.current == null) return
+    const dx = dragXRef.current
+    startX.current = null
+    setDragging(false)
+    setDragX(0)
+    if (dx <= -48) go(1)
+    else if (dx >= 48) go(-1)
+  }
+
+  return (
+    <div className="flex flex-col">
+      <div
+        className="relative grid select-none"
+        style={{ perspective: '1400px', touchAction: 'pan-y' }}
+        role="group"
+        aria-roledescription="carousel"
+        aria-label="Payment due cards — swipe or use arrow keys to switch"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'ArrowRight') {
+            e.preventDefault()
+            go(1)
+          } else if (e.key === 'ArrowLeft') {
+            e.preventDefault()
+            go(-1)
+          }
+        }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={endDrag}
+        onPointerLeave={endDrag}
+        onPointerCancel={endDrag}
+      >
+        {cards.map((c, i) => {
+          const isFront = i === active
+          const offset = i - active
+          const style = {
+            gridArea: '1 / 1',
+            zIndex: isFront ? 20 : 10 - Math.abs(offset),
+            transform: isFront
+              ? `translateX(${dragX}px)`
+              : `translateX(${offset > 0 ? 28 : -28}px) scale(0.92) rotateY(${offset > 0 ? -8 : 8}deg)`,
+            transition:
+              dragging && isFront
+                ? 'none'
+                : 'transform 500ms cubic-bezier(0.2,0.8,0.2,1), opacity 400ms ease',
+          }
+          return (
+            <div
+              key={i}
+              aria-hidden={!isFront}
+              className={`${isFront ? '' : 'cursor-pointer opacity-90 motion-reduce:opacity-0'} motion-reduce:!transform-none`}
+              style={style}
+              onClickCapture={(e) => {
+                // A finished swipe must not also fire the front card's navigate.
+                if (isFront && moved.current) {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  moved.current = false
+                }
+              }}
+              onClick={isFront ? undefined : () => onSwitch(i)}
+            >
+              <NextPaymentDueCard
+                summary={c.summary}
+                title={c.title}
+                bg={c.bg}
+                emptyText={c.emptyText}
+                highlight={highlightActive && isFront}
+                onClick={isFront ? c.onClick : undefined}
+              />
+            </div>
+          )
+        })}
+      </div>
+      <div className="mt-3 flex items-center justify-center gap-2">
+        {cards.map((c, i) => (
+          <button
+            key={i}
+            type="button"
+            onClick={() => onSwitch(i)}
+            aria-label={`Show ${c.title}`}
+            aria-current={i === active}
+            className={`h-2 rounded-full transition-all duration-200 ${
+              i === active ? 'w-6 bg-navy-700' : 'w-2 bg-slate-300 hover:bg-slate-400'
+            }`}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function BreakdownRow({ label, value, tone = 'slate' }) {
   const tones = { slate: 'text-slate-900', red: 'text-red-600', emerald: 'text-emerald-700' }
   return (
@@ -163,7 +300,16 @@ function BreakdownRow({ label, value, tone = 'slate' }) {
 }
 
 // The two-column detail card. `borrowersTargeted` and `footer` are admin-only.
-export function PaymentDueBreakdown({ summary, borrowersTargeted = null, footer = null, flash = false }) {
+// `label` names which card the numbers reflect (Current / Next) and `accent` is
+// that card's colour, shown as a small chip so the coupling is obvious.
+export function PaymentDueBreakdown({
+  summary,
+  borrowersTargeted = null,
+  footer = null,
+  flash = false,
+  label = null,
+  accent = null,
+}) {
   const col2 = [
     <BreakdownRow key="pd" label="Past Due" value={formatPeso(summary.pastDueTotal)} tone="red" />,
     <BreakdownRow key="ti" label="Total Items" value={summary.count} />,
@@ -179,10 +325,18 @@ export function PaymentDueBreakdown({ summary, borrowersTargeted = null, footer 
           <span className="flex items-center gap-2">
             <Icon name="chart" className="h-4 w-4 text-navy-700" />
             Detailed Breakdown
+            {label && (
+              <span
+                className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-600"
+                style={accent ? { backgroundColor: accent } : undefined}
+              >
+                {label}
+              </span>
+            )}
           </span>
         }
       />
-      <div className="grid gap-x-8 px-5 py-2 sm:grid-cols-2">
+      <div key={label ?? 'x'} className="fade-in grid gap-x-8 px-5 py-2 sm:grid-cols-2" aria-live="polite">
         <div className="divide-y divide-slate-100">
           <BreakdownRow label="Total Due" value={formatPeso(summary.total)} />
           <BreakdownRow label="Upcoming" value={formatPeso(summary.upcomingTotal)} tone="emerald" />

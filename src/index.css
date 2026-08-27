@@ -77,6 +77,16 @@ body {
 .backdrop-fade {
   animation: fade 180ms ease-out backwards;
 }
+/* Cross-fade used when the Detailed Breakdown swaps between the Current and
+   Next payment-due cards. */
+.fade-in {
+  animation: fade 240ms ease-out backwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .fade-in {
+    animation: none;
+  }
+}
 
 /* Sign-in → home transition: brief scale-down with blur to mask the swap */
 @keyframes page-leave {
