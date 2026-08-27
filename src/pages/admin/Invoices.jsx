@@ -11,6 +11,7 @@ import {
   buildLineItems,
   computeInvoiceTotals,
   EDITABLE_INVOICE_STATUSES,
+  INVOICE_STATUS_META,
   invoiceStatusMeta,
 } from '../../lib/invoice'
 import { downloadInvoicePdf, invoicePdfBlobUrl } from '../../lib/invoicePdf'
@@ -46,6 +47,45 @@ export default function Invoices() {
   const [statusEdit, setStatusEdit] = useState(null) // invoice whose status is being edited
   const [statusDraft, setStatusDraft] = useState('assigned')
   const [statusErr, setStatusErr] = useState('')
+
+  // --- List filters / search / sort (the "Generated Invoices" table).
+  const [listQuery, setListQuery] = useState('')
+  const [listBorrower, setListBorrower] = useState('all')
+  const [listStatus, setListStatus] = useState('all')
+  const [listSortKey, setListSortKey] = useState('invoiceDate') // borrower | dueDate | status | invoiceDate
+  const [listSortDir, setListSortDir] = useState('desc')
+  const toggleListSort = (k) => {
+    if (listSortKey === k) setListSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    else {
+      setListSortKey(k)
+      setListSortDir('asc')
+    }
+  }
+  const STATUS_RANK = { draft: 0, assigned: 1, upcoming: 2, partial: 3, past_due: 4, settled: 5 }
+  const visibleInvoices = useMemo(() => {
+    const q = listQuery.trim().toLowerCase()
+    const dir = listSortDir === 'asc' ? 1 : -1
+    return invoices
+      .filter((inv) => {
+        if (listBorrower !== 'all' && inv.userId !== listBorrower) return false
+        if (listStatus !== 'all' && inv.status !== listStatus) return false
+        if (q) {
+          const hay = `${inv.billedToName || nameOf(inv.userId)} ${inv.invoiceNumber}`.toLowerCase()
+          if (!hay.includes(q)) return false
+        }
+        return true
+      })
+      .sort((a, b) => {
+        let cmp
+        if (listSortKey === 'borrower')
+          cmp = (a.billedToName || nameOf(a.userId)).localeCompare(b.billedToName || nameOf(b.userId))
+        else if (listSortKey === 'dueDate') cmp = String(a.dueDate || '').localeCompare(String(b.dueDate || ''))
+        else if (listSortKey === 'status') cmp = (STATUS_RANK[a.status] ?? 0) - (STATUS_RANK[b.status] ?? 0)
+        else cmp = String(a.invoiceDate || '').localeCompare(String(b.invoiceDate || ''))
+        return (cmp || String(a.invoiceNumber).localeCompare(String(b.invoiceNumber))) * dir
+      })
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- nameOf derives from users
+  }, [invoices, listQuery, listBorrower, listStatus, listSortKey, listSortDir, users])
 
   const dueOptions = useMemo(
     () => (userId ? borrowerDueDates(transactions, userId).map((d) => ({ value: d, label: formatDate(d) })) : []),
@@ -195,14 +235,83 @@ export default function Invoices() {
 
         {/* Generated invoices list */}
         <Card>
-          <CardHeader title="Generated Invoices" subtitle={`${invoices.length} total`} />
+          <CardHeader
+            title="Generated Invoices"
+            subtitle={
+              invoices.length === visibleInvoices.length
+                ? `${invoices.length} total`
+                : `${visibleInvoices.length} of ${invoices.length}`
+            }
+          />
+          {invoices.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 px-5 pt-4">
+              <input
+                type="search"
+                value={listQuery}
+                onChange={(e) => setListQuery(e.target.value)}
+                placeholder="Search borrower or invoice no…"
+                aria-label="Search invoices"
+                className={`${inputClass} sm:max-w-[16rem]`}
+              />
+              <select
+                value={listBorrower}
+                onChange={(e) => setListBorrower(e.target.value)}
+                aria-label="Filter by borrower"
+                className={`${inputClass} sm:w-auto`}
+              >
+                <option value="all">All borrowers</option>
+                {borrowers.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={listStatus}
+                onChange={(e) => setListStatus(e.target.value)}
+                aria-label="Filter by status"
+                className={`${inputClass} sm:w-auto`}
+              >
+                <option value="all">All statuses</option>
+                {Object.entries(INVOICE_STATUS_META).map(([value, meta]) => (
+                  <option key={value} value={value}>
+                    {meta.label}
+                  </option>
+                ))}
+              </select>
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-medium text-slate-500">Sort</span>
+                <div className="flex rounded-lg border border-slate-300 p-0.5">
+                  {[
+                    ['borrower', 'Borrower'],
+                    ['dueDate', 'Due Date'],
+                    ['status', 'Status'],
+                  ].map(([k, t]) => (
+                    <button
+                      key={k}
+                      type="button"
+                      onClick={() => toggleListSort(k)}
+                      aria-pressed={listSortKey === k}
+                      className={`min-h-8 cursor-pointer rounded-md px-2.5 py-1 text-xs font-medium transition-colors duration-150 ${
+                        listSortKey === k ? 'bg-navy-800 text-white' : 'text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      {listSortKey === k ? `${t} ${listSortDir === 'asc' ? '↑' : '↓'}` : t}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
           {invoices.length === 0 ? (
             <EmptyState icon="file" title="No invoices yet" body="Generate one on the left to get started." />
+          ) : visibleInvoices.length === 0 ? (
+            <EmptyState icon="file" title="No matching invoices" body="Adjust the search, filter, or sort." />
           ) : (
             <>
             {/* Mobile: stacked cards so every value stays visible (no clipping). */}
             <div className="md:hidden">
-              {invoices.map((inv) => (
+              {visibleInvoices.map((inv) => (
                 <div key={inv.id} className="border-b border-slate-100 px-4 py-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
@@ -248,7 +357,7 @@ export default function Invoices() {
                   </tr>
                 </thead>
                 <tbody>
-                  {invoices.map((inv) => (
+                  {visibleInvoices.map((inv) => (
                     <tr key={inv.id} className="border-b border-slate-100 hover:bg-navy-50/40">
                       <td className="px-4 py-3 font-mono text-xs text-slate-700">{inv.invoiceNumber}</td>
                       <td className="px-4 py-3 text-slate-800">{inv.billedToName || nameOf(inv.userId)}</td>

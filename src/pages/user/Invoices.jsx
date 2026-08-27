@@ -1,12 +1,14 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useInvoices } from '../../context/InvoicesContext'
 import { PageHeader } from '../../components/AppShell'
 import Icon from '../../components/Icon'
 import RefreshButton from '../../components/RefreshButton'
-import { Badge, Button, Card, CardHeader, EmptyState, Modal } from '../../components/ui'
+import { Badge, Button, Card, CardHeader, EmptyState, Modal, inputClass } from '../../components/ui'
 import { formatDate, formatPeso } from '../../lib/amortization'
-import { invoiceStatusMeta } from '../../lib/invoice'
+import { INVOICE_STATUS_META, invoiceStatusMeta } from '../../lib/invoice'
 import { downloadInvoicePdf, invoicePdfBlobUrl } from '../../lib/invoicePdf'
+
+const STATUS_RANK = { draft: 0, assigned: 1, upcoming: 2, partial: 3, past_due: 4, settled: 5 }
 
 const toPdf = (inv) => ({
   invoiceNumber: inv.invoiceNumber,
@@ -26,6 +28,36 @@ export default function Invoices() {
   const { invoices } = useInvoices()
   const [preview, setPreview] = useState(null)
 
+  // Search / filter / sort for the borrower's invoice list.
+  const [query, setQuery] = useState('')
+  const [statusSel, setStatusSel] = useState('all')
+  const [sortKey, setSortKey] = useState('invoiceDate') // invoiceDate | dueDate | status
+  const [sortDir, setSortDir] = useState('desc')
+  const toggleSort = (k) => {
+    if (sortKey === k) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    else {
+      setSortKey(k)
+      setSortDir('asc')
+    }
+  }
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    const dir = sortDir === 'asc' ? 1 : -1
+    return invoices
+      .filter((inv) => {
+        if (statusSel !== 'all' && inv.status !== statusSel) return false
+        if (q && !String(inv.invoiceNumber).toLowerCase().includes(q)) return false
+        return true
+      })
+      .sort((a, b) => {
+        let cmp
+        if (sortKey === 'dueDate') cmp = String(a.dueDate || '').localeCompare(String(b.dueDate || ''))
+        else if (sortKey === 'status') cmp = (STATUS_RANK[a.status] ?? 0) - (STATUS_RANK[b.status] ?? 0)
+        else cmp = String(a.invoiceDate || '').localeCompare(String(b.invoiceDate || ''))
+        return (cmp || String(a.invoiceNumber).localeCompare(String(b.invoiceNumber))) * dir
+      })
+  }, [invoices, query, statusSel, sortKey, sortDir])
+
   return (
     <>
       <PageHeader
@@ -35,18 +67,72 @@ export default function Invoices() {
       />
 
       <Card>
-        <CardHeader title="Invoices" subtitle={`${invoices.length} issued`} />
+        <CardHeader
+          title="Invoices"
+          subtitle={invoices.length === visible.length ? `${invoices.length} issued` : `${visible.length} of ${invoices.length}`}
+        />
+        {invoices.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 px-5 pt-4">
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search invoice no…"
+              aria-label="Search invoices"
+              className={`${inputClass} sm:max-w-[16rem]`}
+            />
+            <select
+              value={statusSel}
+              onChange={(e) => setStatusSel(e.target.value)}
+              aria-label="Filter by status"
+              className={`${inputClass} sm:w-auto`}
+            >
+              <option value="all">All statuses</option>
+              {Object.entries(INVOICE_STATUS_META)
+                .filter(([value]) => value !== 'draft')
+                .map(([value, meta]) => (
+                  <option key={value} value={value}>
+                    {meta.label}
+                  </option>
+                ))}
+            </select>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-medium text-slate-500">Sort</span>
+              <div className="flex rounded-lg border border-slate-300 p-0.5">
+                {[
+                  ['invoiceDate', 'Invoice Date'],
+                  ['dueDate', 'Due Date'],
+                  ['status', 'Status'],
+                ].map(([k, t]) => (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => toggleSort(k)}
+                    aria-pressed={sortKey === k}
+                    className={`min-h-8 cursor-pointer rounded-md px-2.5 py-1 text-xs font-medium transition-colors duration-150 ${
+                      sortKey === k ? 'bg-navy-800 text-white' : 'text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    {sortKey === k ? `${t} ${sortDir === 'asc' ? '↑' : '↓'}` : t}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
         {invoices.length === 0 ? (
           <EmptyState
             icon="file"
             title="No invoices yet"
             body="When your administrator issues an invoice, it will appear here for you to view and download."
           />
+        ) : visible.length === 0 ? (
+          <EmptyState icon="file" title="No matching invoices" body="Adjust the search, filter, or sort." />
         ) : (
           <>
           {/* Mobile: stacked cards so every value stays visible (no clipping). */}
           <div className="md:hidden">
-            {invoices.map((inv) => (
+            {visible.map((inv) => (
               <div key={inv.id} className="border-b border-slate-100 px-4 py-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
@@ -99,7 +185,7 @@ export default function Invoices() {
                 </tr>
               </thead>
               <tbody>
-                {invoices.map((inv) => (
+                {visible.map((inv) => (
                   <tr key={inv.id} className="border-b border-slate-100 hover:bg-navy-50/40">
                     <td className="px-5 py-3.5 font-mono text-xs text-slate-700">{inv.invoiceNumber}</td>
                     <td className="px-5 py-3.5 text-slate-600">{formatDate(inv.invoiceDate)}</td>

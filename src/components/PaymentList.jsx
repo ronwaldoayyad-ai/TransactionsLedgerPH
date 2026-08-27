@@ -27,6 +27,7 @@ export default function PaymentList({
   payments,
   canReview = false,
   showTabs = true,
+  showControls = false, // adds a search box + Date/Amount sort (My Payments)
   showBorrower = false,
   defaultTab,
   emptyBody = 'No submissions yet.',
@@ -52,8 +53,39 @@ export default function PaymentList({
   const [viewing, setViewing] = useState(null)
   const [deleting, setDeleting] = useState(null) // payment pending delete confirm
   const [busy, setBusy] = useState(false)
+  const [query, setQuery] = useState('')
+  const [sortKey, setSortKey] = useState('date') // date | amount
+  const [sortDir, setSortDir] = useState('desc')
+  const toggleSort = (k) => {
+    if (sortKey === k) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    else {
+      setSortKey(k)
+      setSortDir('asc')
+    }
+  }
 
-  const list = payments.filter((p) => filter === 'all' || p.status === filter)
+  const base = payments.filter((p) => filter === 'all' || p.status === filter)
+  const q = query.trim().toLowerCase()
+  const dir = sortDir === 'asc' ? 1 : -1
+  // Search + sort only when the host opts in (My Payments); otherwise the list
+  // keeps the caller's original order (dashboard preview, admin queue).
+  const list = !showControls
+    ? base
+    : base
+        .filter((p) => {
+          if (!q) return true
+          const borrower = users.find((u) => u.id === p.userId)?.name ?? ''
+          const loan = loans.find((l) => l.id === p.loanId)?.label ?? ''
+          const hay = `${borrower} ${loan} ${p.method ?? ''} ${p.reference ?? ''} ${p.fileName ?? ''} ${p.amount}`.toLowerCase()
+          return hay.includes(q)
+        })
+        .sort((a, b) => {
+          const cmp =
+            sortKey === 'amount'
+              ? (Number(a.amount) || 0) - (Number(b.amount) || 0)
+              : String(a.submittedAt || '').localeCompare(String(b.submittedAt || ''))
+          return (cmp || String(a.id).localeCompare(String(b.id))) * dir
+        })
   const pendingCount = payments.filter((p) => p.status === 'pending').length
   const paginate = pageSize > 0
   const pag = usePagination(list, paginate ? pageSize : 1)
@@ -110,6 +142,40 @@ export default function PaymentList({
               )}
             </button>
           ))}
+        </div>
+      )}
+
+      {showControls && payments.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 px-5 pt-3">
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search reference, method, loan…"
+            aria-label="Search payments"
+            className={`${inputClass} sm:max-w-[16rem]`}
+          />
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-medium text-slate-500">Sort</span>
+            <div className="flex rounded-lg border border-slate-300 p-0.5">
+              {[
+                ['date', 'Date'],
+                ['amount', 'Amount'],
+              ].map(([k, t]) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => toggleSort(k)}
+                  aria-pressed={sortKey === k}
+                  className={`min-h-8 cursor-pointer rounded-md px-2.5 py-1 text-xs font-medium transition-colors duration-150 ${
+                    sortKey === k ? 'bg-navy-800 text-white' : 'text-slate-600 hover:bg-slate-100'
+                  }`}
+                >
+                  {sortKey === k ? `${t} ${sortDir === 'asc' ? '↑' : '↓'}` : t}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
       )}
 

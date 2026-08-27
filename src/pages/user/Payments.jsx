@@ -304,6 +304,7 @@ export default function Payments() {
           <PaymentList
             payments={myPayments}
             defaultTab="all"
+            showControls
             emptyBody="Your uploaded proofs and their verification status will appear here."
           />
         </Card>

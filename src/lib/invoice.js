@@ -24,13 +24,14 @@ export const BILLED_FROM = {
 export const INVOICE_STATUS_META = {
   draft: { label: 'Draft', badge: 'upcoming' },
   assigned: { label: 'Assigned', badge: 'invited' },
+  upcoming: { label: 'Upcoming', badge: 'upcoming' },
   settled: { label: 'Settled', badge: 'paid' },
   past_due: { label: 'Past Due', badge: 'past_due' },
-  partial: { label: 'Partial', badge: 'due' },
+  partial: { label: 'Partially Paid', badge: 'due' },
 }
 
 // The statuses an admin may set on an already-assigned invoice, in display order.
-export const EDITABLE_INVOICE_STATUSES = ['assigned', 'settled', 'past_due', 'partial']
+export const EDITABLE_INVOICE_STATUSES = ['assigned', 'upcoming', 'partial', 'past_due', 'settled']
 
 export const invoiceStatusMeta = (status) => INVOICE_STATUS_META[status] ?? INVOICE_STATUS_META.draft
 

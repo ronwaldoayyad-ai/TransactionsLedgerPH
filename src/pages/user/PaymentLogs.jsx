@@ -1,7 +1,7 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useApp } from '../../context/AppContext'
 import { PageHeader } from '../../components/AppShell'
-import { Badge, Card, CardHeader, EmptyState } from '../../components/ui'
+import { Badge, Card, CardHeader, EmptyState, inputClass } from '../../components/ui'
 import { formatDate, formatPeso } from '../../lib/amortization'
 
 const allocBadge = {
@@ -10,6 +10,7 @@ const allocBadge = {
   Underpayment: 'past_due',
   Credited: 'active',
 }
+const ALLOC_STATUSES = ['Settled', 'Overpayment', 'Underpayment', 'Credited']
 
 // Borrower view of their own Payment Logs — strictly read-only. RLS scopes the
 // data to the signed-in borrower; we also filter by the effective session id so
@@ -26,6 +27,39 @@ export default function PaymentLogs() {
     [paymentLogs, myId],
   )
 
+  // Search / filter / sort.
+  const [query, setQuery] = useState('')
+  const [statusSel, setStatusSel] = useState('all')
+  const [sortKey, setSortKey] = useState('date') // date | amount
+  const [sortDir, setSortDir] = useState('desc')
+  const toggleSort = (k) => {
+    if (sortKey === k) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    else {
+      setSortKey(k)
+      setSortDir('asc')
+    }
+  }
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    const dir = sortDir === 'asc' ? 1 : -1
+    return rows
+      .filter((l) => {
+        if (statusSel !== 'all' && l.allocStatus !== statusSel) return false
+        if (q) {
+          const hay = `${l.subject ?? ''} ${l.reference ?? ''} ${l.method ?? ''}`.toLowerCase()
+          if (!hay.includes(q)) return false
+        }
+        return true
+      })
+      .sort((a, b) => {
+        const cmp =
+          sortKey === 'amount'
+            ? (Number(a.amountOwed) || 0) - (Number(b.amountOwed) || 0)
+            : String(a.txnDate || '').localeCompare(String(b.txnDate || ''))
+        return (cmp || String(a.id).localeCompare(String(b.id))) * dir
+      })
+  }, [rows, query, statusSel, sortKey, sortDir])
+
   return (
     <>
       <PageHeader
@@ -33,18 +67,69 @@ export default function PaymentLogs() {
         subtitle="Acknowledgements of payments received, recorded by the administrator. Read-only."
       />
       <Card>
-        <CardHeader title="My payment acknowledgements" subtitle={`${rows.filter((r) => r.kind === 'payment').length} on record`} />
+        <CardHeader
+          title="My payment acknowledgements"
+          subtitle={rows.length === visible.length ? `${rows.length} on record` : `${visible.length} of ${rows.length}`}
+        />
+        {rows.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 px-5 pt-4">
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search subject, reference, method…"
+              aria-label="Search payment logs"
+              className={`${inputClass} sm:max-w-[16rem]`}
+            />
+            <select
+              value={statusSel}
+              onChange={(e) => setStatusSel(e.target.value)}
+              aria-label="Filter by status"
+              className={`${inputClass} sm:w-auto`}
+            >
+              <option value="all">All statuses</option>
+              {ALLOC_STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-medium text-slate-500">Sort</span>
+              <div className="flex rounded-lg border border-slate-300 p-0.5">
+                {[
+                  ['date', 'Date'],
+                  ['amount', 'Amount'],
+                ].map(([k, t]) => (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => toggleSort(k)}
+                    aria-pressed={sortKey === k}
+                    className={`min-h-8 cursor-pointer rounded-md px-2.5 py-1 text-xs font-medium transition-colors duration-150 ${
+                      sortKey === k ? 'bg-navy-800 text-white' : 'text-slate-600 hover:bg-slate-100'
+                    }`}
+                  >
+                    {sortKey === k ? `${t} ${sortDir === 'asc' ? '↑' : '↓'}` : t}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
         {rows.length === 0 ? (
           <EmptyState
             icon="scroll"
             title="No payment logs yet"
             body="When the administrator records a payment received from you, it will appear here."
           />
+        ) : visible.length === 0 ? (
+          <EmptyState icon="scroll" title="No matching logs" body="Adjust the search, filter, or sort." />
         ) : (
           <>
           {/* Mobile: stacked cards so every value stays visible (no clipping). */}
           <div className="md:hidden">
-            {rows.map((l) => (
+            {visible.map((l) => (
               <div
                 key={l.id}
                 className={`border-b border-slate-100 px-3 py-3 ${l.consumed ? 'opacity-60' : ''}`}
@@ -90,7 +175,7 @@ export default function PaymentLogs() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((l) => {
+                {visible.map((l) => {
                   const isCarry = l.kind === 'carry'
                   return (
                     <tr
