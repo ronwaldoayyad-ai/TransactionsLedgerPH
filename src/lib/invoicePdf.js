@@ -5,7 +5,7 @@
 // subtotal, amountPaid, processingFee, totalDue }.
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
-import { BILLED_FROM } from './invoice'
+import { BILLED_FROM, PAYMENT_OPTIONS } from './invoice'
 
 const NAVY = [30, 58, 138] // #1e3a8a
 const SLATE = [100, 116, 139]
@@ -183,6 +183,31 @@ export function buildInvoiceDoc(invoice) {
   doc.setFont('helvetica', 'bold').setFontSize(11).setTextColor(...NAVY)
   doc.text('Total Amount Due', W - M - 210, ty + 8, { align: 'left' })
   doc.text(php(invoice.totalDue), W - M, ty + 8, { align: 'right' })
+
+  // --- Payment Options: banks the borrower can remit to (one column each) ---
+  const H = doc.internal.pageSize.getHeight()
+  let py = ty + 44
+  // Keep the block clear of the footer; move it to a fresh page if a long
+  // line-item table has pushed the totals too far down.
+  if (py + 43 > H - 52) {
+    doc.addPage()
+    py = 60
+  }
+  doc.setDrawColor(226, 232, 240).setLineWidth(0.5).line(M, py - 16, W - M, py - 16)
+  doc.setFont('helvetica', 'bold').setFontSize(8).setTextColor(...SLATE)
+  doc.text('PAYMENT OPTIONS', M, py)
+  doc.setFont('helvetica', 'normal').setFontSize(7.5).setTextColor(...SLATE)
+  doc.text('Remit your payment to any of the accounts below.', M, py + 11)
+
+  const colW = (W - 2 * M) / PAYMENT_OPTIONS.length
+  const optY = py + 30
+  PAYMENT_OPTIONS.forEach((opt, i) => {
+    const cx = M + colW * (i + 0.5)
+    doc.setFont('helvetica', 'bold').setFontSize(10).setTextColor(...DARK)
+    doc.text(opt.bank, cx, optY, { align: 'center' })
+    doc.setFont('helvetica', 'normal').setFontSize(8).setTextColor(...SLATE)
+    doc.text(`Account Number: ${opt.accountNumber}`, cx, optY + 13, { align: 'center' })
+  })
 
   // --- Footer ---
   const fy = doc.internal.pageSize.getHeight() - 40

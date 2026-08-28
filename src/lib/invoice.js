@@ -18,6 +18,15 @@ export const BILLED_FROM = {
   tin: '306-712-666',
 }
 
+// Bank accounts the borrower can remit payment to, shown on every invoice.
+// Account numbers are strings so leading zeros are preserved.
+export const PAYMENT_OPTIONS = [
+  { bank: 'Security Bank', accountNumber: '0000004102332' },
+  { bank: 'BPI', accountNumber: '1969109731' },
+  { bank: 'BDO', accountNumber: '012220015323' },
+  { bank: 'Mari Bank', accountNumber: '12121801589' },
+]
+
 // Invoice lifecycle statuses. `draft` is pre-assignment (admin-only, never shown
 // to the borrower); the rest are visible to the billed borrower. `badge` maps to
 // a key in the shared Badge component's palette.
