@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import { useMessages } from '../context/MessagesContext'
+import { useNotifications } from '../context/NotificationsContext'
 import Icon from './Icon'
 import ProfileModal from './ProfileModal'
 import AnnouncementBanner from './announcements/AnnouncementBanner'
@@ -27,6 +28,7 @@ const adminNav = [
     title: 'Communication',
     items: [
       { to: '/admin/messages', label: 'Messages', icon: 'mail' },
+      { to: '/admin/notifications', label: 'Notifications', icon: 'bell' },
       { to: '/admin/announcements', label: 'Announcements', icon: 'alert' },
     ],
   },
@@ -56,7 +58,10 @@ const userNav = [
   },
   {
     title: 'Messages',
-    items: [{ to: '/portal/messages', label: 'Messages', icon: 'mail' }],
+    items: [
+      { to: '/portal/messages', label: 'Messages', icon: 'mail' },
+      { to: '/portal/notifications', label: 'Notifications', icon: 'bell' },
+    ],
   },
   {
     title: 'Transactions',
@@ -91,6 +96,7 @@ function UnreadBadge({ count, className = '' }) {
 export default function AppShell({ children }) {
   const { session, realSession, isViewingAs, stopViewAs, signOut, payments } = useApp()
   const { unreadTotal } = useMessages()
+  const { unreadCount: notifUnread } = useNotifications()
   const navigate = useNavigate()
   const [menuOpen, setMenuOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
@@ -112,7 +118,11 @@ export default function AppShell({ children }) {
   }
 
   const renderLink = (item) => {
-    const unread = item.to.endsWith('/messages') ? unreadTotal : 0
+    const unread = item.to.endsWith('/notifications')
+      ? notifUnread
+      : item.to.endsWith('/messages')
+        ? unreadTotal
+        : 0
     const pending = item.icon === 'inbox' ? pendingCount : 0
     return (
       <NavLink

@@ -4,6 +4,7 @@ import { MessagesProvider } from './context/MessagesContext'
 import { AnnouncementsProvider } from './context/AnnouncementsContext'
 import { LoanRequestsProvider } from './context/LoanRequestsContext'
 import { InvoicesProvider } from './context/InvoicesContext'
+import { NotificationsProvider } from './context/NotificationsContext'
 import AppShell from './components/AppShell'
 import Login from './pages/Login'
 import SetPassword from './pages/SetPassword'
@@ -32,6 +33,8 @@ import LoanRequest from './pages/user/LoanRequest'
 import LoanRequests from './pages/admin/LoanRequests'
 import Invoices from './pages/admin/Invoices'
 import UserInvoices from './pages/user/Invoices'
+import AdminNotifications from './pages/admin/Notifications'
+import UserNotifications from './pages/user/Notifications'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 
 // Two-tier RBAC route guard. Admin routes are unreachable for general users
@@ -61,6 +64,7 @@ export default function App() {
       <AnnouncementsProvider>
       <LoanRequestsProvider>
       <InvoicesProvider>
+      <NotificationsProvider>
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
@@ -77,6 +81,7 @@ export default function App() {
           <Route path="/portal/messages" element={<Protected role="user"><UserMessages /></Protected>} />
           <Route path="/portal/loan-request" element={<Protected role="user"><LoanRequest /></Protected>} />
           <Route path="/portal/invoices" element={<Protected role="user"><UserInvoices /></Protected>} />
+          <Route path="/portal/notifications" element={<Protected role="user"><UserNotifications /></Protected>} />
           <Route path="/portal/announcement/:id" element={<Protected role="user"><AnnouncementDetail /></Protected>} />
 
           <Route path="/admin" element={<Protected role="admin"><AdminDashboard /></Protected>} />
@@ -93,11 +98,13 @@ export default function App() {
           <Route path="/admin/announcements" element={<Protected role="admin"><Announcements /></Protected>} />
           <Route path="/admin/loan-requests" element={<Protected role="admin"><LoanRequests /></Protected>} />
           <Route path="/admin/invoices" element={<Protected role="admin"><Invoices /></Protected>} />
+          <Route path="/admin/notifications" element={<Protected role="admin"><AdminNotifications /></Protected>} />
           <Route path="/admin/logs" element={<Protected role="admin"><Logs /></Protected>} />
 
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </BrowserRouter>
+      </NotificationsProvider>
       </InvoicesProvider>
       </LoanRequestsProvider>
       </AnnouncementsProvider>
