@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
+import { useNotifications } from '../../context/NotificationsContext'
 import { PageHeader } from '../../components/AppShell'
 import { Badge, Button, Card, CardHeader, EmptyState, StatCard, Switch } from '../../components/ui'
 import Icon from '../../components/Icon'
@@ -17,6 +18,7 @@ import { overrideForBorrower, rowForBorrower, PAYMENT_DUE_COLORS } from '../../l
 
 export default function UserDashboard() {
   const { session, loans, payments, transactions, paymentDueOverrides } = useApp()
+  const { unreadCount } = useNotifications()
   const navigate = useNavigate()
   const [hidePaid, setHidePaid] = usePersistedState('dashboard.hidePaid', true)
   const myPayments = payments.filter((p) => p.userId === session.user.id)
@@ -179,6 +181,20 @@ export default function UserDashboard() {
                 <Icon name="scroll" className="h-4 w-4" />
                 Payment Logs
               </Button>
+            </Link>
+            <Link to="/portal/notifications" className="relative">
+              <Button variant="secondary">
+                <Icon name="bell" className="h-4 w-4" />
+                Notifications
+              </Button>
+              {unreadCount > 0 && (
+                <span
+                  aria-label={`${unreadCount} unread`}
+                  className="pointer-events-none absolute -right-1.5 -top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-bold leading-none text-white shadow-sm ring-2 ring-white"
+                >
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
             </Link>
             <RefreshButton />
           </div>
