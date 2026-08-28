@@ -10,12 +10,14 @@ import { formatDate, formatPeso } from '../lib/amortization'
 const MAX_VISIBLE_CHIPS = 6
 
 function DateChip({ date, kind, focus }) {
-  const base =
-    kind === 'past_due' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-700'
+  // Borderless: plain colour-coded text (red = past due, emerald = upcoming)
+  // with no pill background. The most recent "to date" is bolded and flagged
+  // with a clock icon instead of an outline.
+  const base = kind === 'past_due' ? 'text-red-600' : 'text-emerald-700'
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ${base} ${
-        focus ? 'font-bold ring-2 ring-navy-600 ring-offset-1' : ''
+      className={`inline-flex items-center gap-1 px-1 py-0.5 text-xs font-medium ${base} ${
+        focus ? 'font-bold' : ''
       }`}
     >
       {focus && <Icon name="clock" className="h-3 w-3" />}
@@ -271,7 +273,12 @@ export function PaymentDueCardStack({ cards, active, onSwitch, highlightActive =
           )
         })}
       </div>
-      <div className="mt-3 flex items-center justify-center gap-2">
+      <p className="mt-3 flex items-center justify-center gap-1.5 text-center text-[11px] font-medium text-slate-400">
+        <Icon name="chevron" className="h-3 w-3 rotate-90" />
+        Swipe left or right to switch between Current and Next Payment Due
+        <Icon name="chevron" className="h-3 w-3 -rotate-90" />
+      </p>
+      <div className="mt-2 flex items-center justify-center gap-2">
         {cards.map((c, i) => (
           <button
             key={i}
@@ -310,10 +317,13 @@ export function PaymentDueBreakdown({
   label = null,
   accent = null,
 }) {
+  // Fields flow down column one, then column two, giving the reading order:
+  // Due Date · Total Due · Upcoming · Past Due · Past Due Items · Upcoming
+  // Items · Total Items (+ Borrowers Targeted for the admin preview).
   const col2 = [
-    <BreakdownRow key="pd" label="Past Due" value={formatPeso(summary.pastDueTotal)} tone="red" />,
-    <BreakdownRow key="ti" label="Total Items" value={summary.count} />,
+    <BreakdownRow key="pdi" label="Past Due Items" value={summary.pastDueCount} tone="red" />,
     <BreakdownRow key="ui" label="Upcoming Items" value={summary.upcomingCount} tone="emerald" />,
+    <BreakdownRow key="ti" label="Total Items" value={summary.count} />,
   ]
   if (borrowersTargeted != null) {
     col2.push(<BreakdownRow key="bt" label="Borrowers Targeted" value={borrowersTargeted} />)
@@ -338,14 +348,14 @@ export function PaymentDueBreakdown({
       />
       <div key={label ?? 'x'} className="fade-in grid gap-x-8 px-5 py-2 sm:grid-cols-2" aria-live="polite">
         <div className="divide-y divide-slate-100">
-          <BreakdownRow label="Total Due" value={formatPeso(summary.total)} />
-          <BreakdownRow label="Upcoming" value={formatPeso(summary.upcomingTotal)} tone="emerald" />
-          <BreakdownRow label="Past Due Items" value={summary.pastDueCount} tone="red" />
           {/* Latest selected due date, regardless of status. */}
           <BreakdownRow
             label="Due Date"
             value={summary.latestDate ? formatDate(summary.latestDate) : '—'}
           />
+          <BreakdownRow label="Total Due" value={formatPeso(summary.total)} />
+          <BreakdownRow label="Upcoming" value={formatPeso(summary.upcomingTotal)} tone="emerald" />
+          <BreakdownRow label="Past Due" value={formatPeso(summary.pastDueTotal)} tone="red" />
         </div>
         <div className="divide-y divide-slate-100">{col2}</div>
       </div>

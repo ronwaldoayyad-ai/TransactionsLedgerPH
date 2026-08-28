@@ -5,6 +5,7 @@ import { PageHeader } from '../../components/AppShell'
 import { Badge, Button, Card, CardHeader, EmptyState, StatCard, Switch } from '../../components/ui'
 import Icon from '../../components/Icon'
 import PaymentList from '../../components/PaymentList'
+import BorrowerScheduleTable from '../../components/BorrowerScheduleTable'
 import RefreshButton from '../../components/RefreshButton'
 import { NextPaymentDueCard, PaymentDueBreakdown, PaymentDueCardStack } from '../../components/PaymentDueSummary'
 import { buildDueSummary } from '../../lib/paymentDueSummary'
@@ -120,6 +121,15 @@ export default function UserDashboard() {
   const [activeDueCard, setActiveDueCard] = useState(0)
   const activeIndex = hasNextCard ? activeDueCard : 0
   const activeSummary = activeIndex === 1 ? nextCardSummary : nextDueSummary
+  // The individual transactions behind the active card, listed in full by the
+  // Transactions Detailed Breakdown tile. Past due first, then by due date.
+  const activeLabel = activeIndex === 1 ? 'Next' : 'Current'
+  const activeAccent = activeIndex === 1 ? PAYMENT_DUE_COLORS.next : PAYMENT_DUE_COLORS.current
+  const activeItems = [...(activeIndex === 1 ? nextCardItems : nextDueItems)].sort((a, b) => {
+    const ap = effectiveStatus(a, today) === 'past_due' ? 0 : 1
+    const bp = effectiveStatus(b, today) === 'past_due' ? 0 : 1
+    return ap - bp || a.dueDate.localeCompare(b.dueDate) || a.id.localeCompare(b.id)
+  })
 
   // Totals split by transaction type (across all of the borrower's records).
   const straightTxns = myTxns.filter((t) => t.type === 'Straight')
@@ -209,11 +219,42 @@ export default function UserDashboard() {
             bg={PAYMENT_DUE_COLORS.current}
           />
         )}
-        <PaymentDueBreakdown
-          summary={activeSummary}
-          label={activeIndex === 1 ? 'Next' : 'Current'}
-          accent={activeIndex === 1 ? PAYMENT_DUE_COLORS.next : PAYMENT_DUE_COLORS.current}
-        />
+        <PaymentDueBreakdown summary={activeSummary} label={activeLabel} accent={activeAccent} />
+      </div>
+
+      {/* Full list of the transactions behind the active card. The pill mirrors
+          the Detailed Breakdown label so it's clear which selection is shown. */}
+      <div className="mt-4">
+        <Card>
+          <CardHeader
+            title={
+              <span className="flex items-center gap-2">
+                <Icon name="list" className="h-4 w-4 text-navy-700" />
+                Transactions Detailed Breakdown
+                <span
+                  className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-2.5 py-0.5 text-xs font-semibold text-slate-600"
+                  style={activeAccent ? { backgroundColor: activeAccent } : undefined}
+                >
+                  {activeLabel}
+                </span>
+              </span>
+            }
+            subtitle={`Every item making up the ${activeLabel} Payment Due total`}
+          />
+          {activeItems.length === 0 ? (
+            <EmptyState
+              icon="clock"
+              title="No transactions to show"
+              body={
+                activeIndex === 1
+                  ? 'Your administrator has not set a Next Payment Due yet.'
+                  : 'You have no current payment due right now.'
+              }
+            />
+          ) : (
+            <BorrowerScheduleTable transactions={activeItems} showTxnDate />
+          )}
+        </Card>
       </div>
 
       <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
