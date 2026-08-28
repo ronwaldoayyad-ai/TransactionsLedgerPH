@@ -13,6 +13,7 @@ import {
   ATTACHMENT_ACCEPT,
   MAX_ATTACHMENTS,
 } from '../../lib/notifications'
+import { templatesForCategory } from '../../lib/notificationTemplates'
 
 const fmt = (iso) =>
   iso ? new Date(iso).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' }) : ''
@@ -47,6 +48,14 @@ export default function AdminNotifications() {
 
   const set = (patch) => setForm((f) => ({ ...f, ...patch }))
   const canSave = form.body.trim().length > 0 && (form.audience === 'all' || targetSel.size > 0)
+
+  // Preset templates for the selected category (pre-fill the title + message).
+  const categoryTemplates = templatesForCategory(form.category)
+  const applyTemplate = (index) => {
+    const tpl = categoryTemplates[Number(index)]
+    if (!tpl) return
+    set({ title: tpl.title, body: tpl.message })
+  }
 
   const reset = () => {
     setForm(emptyForm)
@@ -141,6 +150,26 @@ export default function AdminNotifications() {
                   </button>
                 ))}
               </div>
+            </Field>
+
+            <Field
+              label="Start from a template"
+              htmlFor="ntf-tpl"
+              hint="Pick a ready-made message for this category to fill the fields below."
+            >
+              <select
+                id="ntf-tpl"
+                className={inputClass}
+                value=""
+                onChange={(e) => applyTemplate(e.target.value)}
+              >
+                <option value="">— Select a {categoryMeta(form.category).label} template —</option>
+                {categoryTemplates.map((t, i) => (
+                  <option key={i} value={i}>
+                    {t.title}
+                  </option>
+                ))}
+              </select>
             </Field>
 
             <Field label="Title (optional)" htmlFor="ntf-title">
