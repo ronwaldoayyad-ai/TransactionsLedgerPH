@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
 import { useNotifications } from '../../context/NotificationsContext'
@@ -102,11 +102,30 @@ function NotificationRow({ n, read, onMarkRead, onMarkUnread, onReply }) {
   const [reply, setReply] = useState('')
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
+  const replyRef = useRef(null)
+  const attachRef = useRef(null)
+  const hasAttachments = (n.attachments?.length ?? 0) > 0
 
   const expand = () => {
     const next = !open
     setOpen(next)
     if (next && !read) onMarkRead(n.id) // opening a notification marks it read
+  }
+
+  // The visible Reply button opens the card (marking it read) and focuses the
+  // reply box, resetting the "sent" state so the composer is ready again.
+  const openReply = () => {
+    setOpen(true)
+    setSent(false)
+    if (!read) onMarkRead(n.id)
+    setTimeout(() => replyRef.current?.focus(), 0)
+  }
+
+  // The visible View-attachment button opens the card and scrolls to the files.
+  const openAttachments = () => {
+    setOpen(true)
+    if (!read) onMarkRead(n.id)
+    setTimeout(() => attachRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 0)
   }
 
   const send = async () => {
@@ -145,12 +164,6 @@ function NotificationRow({ n, read, onMarkRead, onMarkUnread, onReply }) {
           <p className={`mt-1 whitespace-pre-wrap text-sm text-slate-600 ${open ? '' : 'line-clamp-2'}`}>
             {n.body}
           </p>
-          {!open && n.attachments?.length > 0 && (
-            <p className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-navy-700">
-              <Icon name="file" className="h-3.5 w-3.5" />
-              {n.attachments.length} attachment{n.attachments.length === 1 ? '' : 's'}
-            </p>
-          )}
         </button>
 
         {/* Read/unread toggle */}
@@ -164,9 +177,31 @@ function NotificationRow({ n, read, onMarkRead, onMarkUnread, onReply }) {
         </button>
       </div>
 
+      {/* Always-visible actions: Reply, and View attachment(s) when present. */}
+      <div className="mt-2.5 flex flex-wrap items-center gap-2 pl-6">
+        <button
+          onClick={openReply}
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-navy-200 bg-navy-50 px-3 py-1.5 text-sm font-medium text-navy-800 transition-colors hover:bg-navy-100"
+        >
+          <Icon name="mail" className="h-4 w-4" />
+          Reply
+        </button>
+        {hasAttachments && (
+          <button
+            onClick={openAttachments}
+            className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+          >
+            <Icon name="file" className="h-4 w-4" />
+            View attachment{n.attachments.length === 1 ? '' : `s (${n.attachments.length})`}
+          </button>
+        )}
+      </div>
+
       {open && (
         <div className="mt-3 pl-6">
-          <AttachmentList attachments={n.attachments} />
+          <div ref={attachRef}>
+            <AttachmentList attachments={n.attachments} />
+          </div>
 
           {/* Inline reply — posts a quoted copy into the Messages thread. */}
           <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50/70 p-3">
@@ -191,6 +226,7 @@ function NotificationRow({ n, read, onMarkRead, onMarkUnread, onReply }) {
             ) : (
               <>
                 <textarea
+                  ref={replyRef}
                   rows={2}
                   value={reply}
                   onChange={(e) => setReply(e.target.value)}
