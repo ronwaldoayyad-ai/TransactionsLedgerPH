@@ -20,6 +20,7 @@ import { buildDueSummary } from '../../lib/paymentDueSummary'
 import { overrideForBorrower, rowForBorrower, PAYMENT_DUE_COLORS } from '../../lib/paymentDueConfig'
 import { PaymentDueCards, PaymentDueBreakdown } from '../../components/PaymentDueCards'
 import DuesOverview from '../../components/DuesOverview'
+import TxnRow from '../../components/TxnRow'
 import StatTile from '../../components/ui/StatTile'
 import ProgressBar from '../../components/ui/ProgressBar'
 import Badge from '../../components/ui/Badge'
@@ -106,6 +107,15 @@ export default function Dashboard() {
   const nextCardSummary = buildDueSummary(nextCardItems, today)
   const activeIndex = hasNextCard ? activeDueCard : 0
   const activeSummary = activeIndex === 1 ? nextCardSummary : currentSummary
+  const activeLabel = activeIndex === 1 ? 'Next' : 'Current'
+  const activeAccent = activeIndex === 1 ? PAYMENT_DUE_COLORS.next : PAYMENT_DUE_COLORS.current
+  // The individual transactions behind the active card — past due first, then by
+  // due date. Powers the Transactions Detailed Breakdown list (web parity).
+  const activeItems = [...(activeIndex === 1 ? nextCardItems : nextDueItems)].sort((a: any, b: any) => {
+    const ap = effectiveStatus(a, today) === 'past_due' ? 0 : 1
+    const bp = effectiveStatus(b, today) === 'past_due' ? 0 : 1
+    return ap - bp || a.dueDate.localeCompare(b.dueDate) || String(a.id).localeCompare(String(b.id))
+  })
 
   const straightTxns = myTxns.filter((t: any) => t.type === 'Straight')
   const installmentTxns = myTxns.filter((t: any) => t.type === 'Installment')
@@ -238,6 +248,39 @@ export default function Dashboard() {
               label={activeIndex === 1 ? 'Next' : 'Current'}
               accent={activeIndex === 1 ? PAYMENT_DUE_COLORS.next : PAYMENT_DUE_COLORS.current}
             />
+          </FadeInView>
+        ) : null}
+
+        {/* Transactions Detailed Breakdown — every item behind the active
+            Current/Next Payment Due card (web parity). */}
+        {!dataLoading ? (
+          <FadeInView delay={48}>
+            <Card>
+              <CardHeader
+                title="Transactions Detailed Breakdown"
+                subtitle={`Every item making up the ${activeLabel} Payment Due total`}
+                action={
+                  <View
+                    className="rounded-full border border-slate-200 px-2.5 py-0.5"
+                    style={{ backgroundColor: activeAccent }}
+                  >
+                    <Text className="font-sans-semibold text-xs text-slate-700">{activeLabel}</Text>
+                  </View>
+                }
+              />
+              {activeItems.length === 0 ? (
+                <EmptyState
+                  title="No transactions to show"
+                  body={
+                    activeIndex === 1
+                      ? 'Your administrator has not set a Next Payment Due yet.'
+                      : 'You have no current payment due right now.'
+                  }
+                />
+              ) : (
+                activeItems.map((t: any) => <TxnRow key={t.id} txn={t} today={today} />)
+              )}
+            </Card>
           </FadeInView>
         ) : null}
 

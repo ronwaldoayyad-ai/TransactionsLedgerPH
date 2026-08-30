@@ -1,14 +1,16 @@
-import { useRef, useState } from 'react'
-import { ScrollView, Text, View } from 'react-native'
+import { useMemo, useRef, useState } from 'react'
+import { ScrollView, Switch, Text, View } from 'react-native'
 import { useRouter } from 'expo-router'
 import { CalendarClock, Flame, Target } from 'lucide-react-native'
 import { formatDate, formatPeso, toISODate } from '../lib/amortization'
 import { buildDuesBreakdown, DuesSegmentKey } from '../lib/duesBreakdown'
+import { usePersistedState } from '../hooks/usePersistedState'
 import DuesDonutChart from './DuesDonutChart'
 import { Card, CardHeader } from './ui/Card'
 import PressableScale from './ui/PressableScale'
 import EmptyState from './ui/EmptyState'
 import { tapHaptic } from '../lib/haptics'
+import { colors } from '../theme'
 
 type Mode = 'amount' | 'count'
 
@@ -121,13 +123,36 @@ export default function DuesOverview({
   const router = useRouter()
   const [mode, setMode] = useState<Mode>('amount')
   const [loanId, setLoanId] = useState<string>('all')
+  const [hidePaidLoans, setHidePaidLoans] = usePersistedState('duesOverview.hidePaidLoans', false)
   const [w, setW] = useState(0)
   const seedNonce = useRef(0)
   const nextSeed = () => String(++seedNonce.current)
 
   const today = toISODate(new Date())
-  const selected = loanId === 'all' ? undefined : loanId
-  const b = buildDuesBreakdown(myTxns, today, selected)
+
+  // A loan is "fully paid" when it has installment records and all are paid.
+  const fullyPaidIds = useMemo(() => {
+    const ids = new Set<string>()
+    for (const l of myLoans) {
+      const t = myTxns.filter((x: any) => x.loanId === l.id && x.type === 'Installment')
+      if (t.length > 0 && t.every((x: any) => x.status === 'paid')) ids.add(l.id)
+    }
+    return ids
+  }, [myLoans, myTxns])
+  const hasFullyPaid = fullyPaidIds.size > 0
+
+  // When hiding, drop fully-paid loans from the aggregation, the chips, and any
+  // stale drill-down selection.
+  const visibleLoans = hidePaidLoans ? myLoans.filter((l: any) => !fullyPaidIds.has(l.id)) : myLoans
+  const effectiveLoanId = hidePaidLoans && fullyPaidIds.has(loanId) ? 'all' : loanId
+  const scopedTxns = useMemo(
+    () => (hidePaidLoans ? myTxns.filter((t: any) => !fullyPaidIds.has(t.loanId)) : myTxns),
+    [hidePaidLoans, myTxns, fullyPaidIds],
+  )
+
+  const selected = effectiveLoanId === 'all' ? undefined : effectiveLoanId
+  const b = buildDuesBreakdown(scopedTxns, today, selected)
+  const allHidden = hidePaidLoans && hasFullyPaid && b.isEmpty
 
   const donutSize = w > 0 ? Math.min(w, Math.max(240, Math.min(340, Math.round(w * 0.72)))) : 0
 
@@ -164,7 +189,10 @@ export default function DuesOverview({
         ? `Due today · ${formatDate(np.dueDate)}`
         : `Due in ${np.daysUntil} day${np.daysUntil === 1 ? '' : 's'}`
 
-  const loanChips = [{ id: 'all', label: 'All loans' }, ...myLoans.map((l) => ({ id: l.id, label: l.label }))]
+  const loanChips = [
+    { id: 'all', label: 'All loans' },
+    ...visibleLoans.map((l: any) => ({ id: l.id, label: l.label })),
+  ]
 
   return (
     <Card>
@@ -176,20 +204,38 @@ export default function DuesOverview({
 
       {b.isEmpty ? (
         <EmptyState
-          title="No installment loans yet"
-          body="Once you have an installment loan schedule, your dues breakdown will appear here."
+          title={allHidden ? 'All loans fully paid' : 'No installment loans yet'}
+          body={
+            allHidden
+              ? 'Turn off “Hide fully paid” to see your completed loans.'
+              : 'Once you have an installment loan schedule, your dues breakdown will appear here.'
+          }
         />
       ) : (
         <View className="gap-4 p-5">
-          {/* Loan drill-down chips (only when there's more than one loan). */}
-          {myLoans.length > 1 && (
+          {/* Hide fully-paid loans — only shown when there is one to hide. */}
+          {hasFullyPaid && (
+            <View className="flex-row items-center justify-between">
+              <Text className="font-sans-medium text-xs text-slate-500">Hide fully paid loans</Text>
+              <Switch
+                value={hidePaidLoans}
+                onValueChange={setHidePaidLoans}
+                trackColor={{ true: colors.navy800, false: '#cbd5e1' }}
+                thumbColor="#ffffff"
+                accessibilityLabel="Hide fully paid loans"
+              />
+            </View>
+          )}
+
+          {/* Loan drill-down chips (only when more than one loan is visible). */}
+          {visibleLoans.length > 1 && (
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerClassName="gap-2 pr-2"
             >
               {loanChips.map((c) => {
-                const on = loanId === c.id
+                const on = effectiveLoanId === c.id
                 return (
                   <PressableScale
                     key={c.id}
