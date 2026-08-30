@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts'
-import { Card, CardHeader, EmptyState } from './ui'
+import { Card, CardHeader, EmptyState, Switch } from './ui'
 import Icon from './Icon'
 import { buildDuesBreakdown } from '../lib/duesBreakdown'
 import { setPageEntry } from '../lib/pageStateStore'
 import { formatDate, formatPeso, toISODate } from '../lib/amortization'
+import { usePersistedState } from '../hooks/usePersistedState'
 
 // Peso / count switch.
 function ModeToggle({ mode, onChange }) {
@@ -54,11 +55,32 @@ export default function DuesOverview({
   const navigate = useNavigate()
   const [mode, setMode] = useState('amount')
   const [loanId, setLoanId] = useState('all')
+  const [hidePaidLoans, setHidePaidLoans] = usePersistedState('duesOverview.hidePaidLoans', false)
   const today = toISODate(new Date())
 
+  // A loan is "fully paid" when it has installment records and all are paid.
+  const fullyPaidIds = useMemo(() => {
+    const ids = new Set()
+    for (const l of myLoans) {
+      const t = myTxns.filter((x) => x.loanId === l.id && x.type === 'Installment')
+      if (t.length > 0 && t.every((x) => x.status === 'paid')) ids.add(l.id)
+    }
+    return ids
+  }, [myLoans, myTxns])
+  const hasFullyPaid = fullyPaidIds.size > 0
+
+  // When hiding, drop fully-paid loans from the aggregation, the chips, and any
+  // stale drill-down selection.
+  const visibleLoans = hidePaidLoans ? myLoans.filter((l) => !fullyPaidIds.has(l.id)) : myLoans
+  const effectiveLoanId = hidePaidLoans && fullyPaidIds.has(loanId) ? 'all' : loanId
+  const scopedTxns = useMemo(
+    () => (hidePaidLoans ? myTxns.filter((t) => !fullyPaidIds.has(t.loanId)) : myTxns),
+    [hidePaidLoans, myTxns, fullyPaidIds],
+  )
+
   const b = useMemo(
-    () => buildDuesBreakdown(myTxns, today, loanId === 'all' ? undefined : loanId),
-    [myTxns, today, loanId],
+    () => buildDuesBreakdown(scopedTxns, today, effectiveLoanId === 'all' ? undefined : effectiveLoanId),
+    [scopedTxns, today, effectiveLoanId],
   )
 
   // Segment → Consolidated ledger, prefiltered by borrower status (same
@@ -100,26 +122,50 @@ export default function DuesOverview({
 
   const loanChips = [
     { id: 'all', label: 'All loans' },
-    ...myLoans.map((l) => ({ id: l.id, label: l.label })),
+    ...visibleLoans.map((l) => ({ id: l.id, label: l.label })),
   ]
+
+  const allHidden = hidePaidLoans && hasFullyPaid && b.isEmpty
 
   return (
     <Card>
-      <CardHeader title={title} subtitle={subtitle} action={<ModeToggle mode={mode} onChange={setMode} />} />
+      <CardHeader
+        title={title}
+        subtitle={subtitle}
+        action={
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            {hasFullyPaid && (
+              <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-slate-600">
+                <Switch
+                  checked={hidePaidLoans}
+                  onChange={setHidePaidLoans}
+                  label="Hide fully paid loans"
+                />
+                Hide fully paid
+              </label>
+            )}
+            <ModeToggle mode={mode} onChange={setMode} />
+          </div>
+        }
+      />
 
       {b.isEmpty ? (
         <EmptyState
-          icon="chart"
-          title="No installment loans yet"
-          body="Once you have an installment loan schedule, your dues breakdown will appear here."
+          icon={allHidden ? 'check' : 'chart'}
+          title={allHidden ? 'All loans fully paid' : 'No installment loans yet'}
+          body={
+            allHidden
+              ? 'Turn off “Hide fully paid” to see your completed loans.'
+              : 'Once you have an installment loan schedule, your dues breakdown will appear here.'
+          }
         />
       ) : (
         <div className="p-5">
-          {/* Loan drill-down chips (only when there's more than one loan). */}
-          {myLoans.length > 1 && (
+          {/* Loan drill-down chips (only when more than one loan is visible). */}
+          {visibleLoans.length > 1 && (
             <div className="mb-4 flex flex-wrap gap-2">
               {loanChips.map((c) => {
-                const on = loanId === c.id
+                const on = effectiveLoanId === c.id
                 return (
                   <button
                     key={c.id}
