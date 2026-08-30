@@ -227,3 +227,16 @@ export function buildInvoiceDoc(invoice) {
 export const invoicePdfBlobUrl = (invoice) => buildInvoiceDoc(invoice).output('bloburl')
 export const downloadInvoicePdf = (invoice) =>
   buildInvoiceDoc(invoice).save(`${invoice.invoiceNumber || 'invoice'}.pdf`)
+
+// Notification-attachment shape: a clean base64 data URL plus a name/type/size,
+// matching what fileToAttachment produces for manually-added files.
+export function invoicePdfAttachment(invoice) {
+  const raw = buildInvoiceDoc(invoice).output('datauristring')
+  const b64 = raw.slice(raw.indexOf(',') + 1) // strip the `data:...;base64,` header
+  return {
+    name: `${invoice.invoiceNumber || 'invoice'}.pdf`,
+    type: 'application/pdf',
+    size: Math.round((b64.length * 3) / 4), // approximate decoded byte size
+    dataUrl: `data:application/pdf;base64,${b64}`,
+  }
+}

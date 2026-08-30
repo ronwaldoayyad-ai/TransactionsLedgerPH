@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react'
 import { useApp } from '../../context/AppContext'
 import { useInvoices } from '../../context/InvoicesContext'
+import { useNotifications } from '../../context/NotificationsContext'
 import { PageHeader } from '../../components/AppShell'
 import Icon from '../../components/Icon'
 import RefreshButton from '../../components/RefreshButton'
 import { Badge, Button, Card, CardHeader, EmptyState, Field, Modal, MultiSelect, inputClass } from '../../components/ui'
-import { formatDate, formatPeso, toISODate } from '../../lib/amortization'
+import { formatDate, formatPeso, parseISODate, toISODate } from '../../lib/amortization'
 import {
   borrowerDueDates,
   buildLineItems,
@@ -14,7 +15,7 @@ import {
   INVOICE_STATUS_META,
   invoiceStatusMeta,
 } from '../../lib/invoice'
-import { downloadInvoicePdf, invoicePdfBlobUrl } from '../../lib/invoicePdf'
+import { downloadInvoicePdf, invoicePdfAttachment, invoicePdfBlobUrl } from '../../lib/invoicePdf'
 
 // Snapshot (DB camelCase) → the shape invoicePdf expects. Same for a freshly
 // created invoice and one loaded from the list, so previews are identical.
@@ -33,6 +34,7 @@ const toPdf = (inv) => ({
 export default function Invoices() {
   const { users, transactions } = useApp()
   const { invoices, createInvoice, assignInvoice, updateInvoiceStatus, deleteInvoice } = useInvoices()
+  const { createNotification } = useNotifications()
   const today = toISODate(new Date())
   const borrowers = useMemo(() => users.filter((u) => u.role === 'user'), [users])
   const nameOf = (id) => users.find((u) => u.id === id)?.name ?? id
@@ -134,6 +136,29 @@ export default function Invoices() {
   const doAssign = async (inv) => {
     setBusy(true)
     await assignInvoice(inv.id)
+    // Notify the borrower with the "Statement Ready" template, attaching the
+    // generated invoice PDF. Done client-side (not a DB trigger) because the PDF
+    // is rendered here; a failure here must not undo the successful assignment.
+    try {
+      const periodDate = inv.dueDate || inv.invoiceDate
+      const period = periodDate
+        ? parseISODate(periodDate).toLocaleDateString('en-PH', {
+            month: 'long',
+            day: 'numeric',
+            year: 'numeric',
+          })
+        : ''
+      await createNotification({
+        category: 'general',
+        title: '📊 Statement Ready',
+        body: `Your monthly statement${period ? ` for ${period}` : ''} is now available for review.`,
+        audience: 'targeted',
+        targetUserIds: [inv.userId],
+        attachments: [invoicePdfAttachment(toPdf(inv))],
+      })
+    } catch (e) {
+      console.error('[invoices] statement-ready notification failed:', e?.message ?? e)
+    }
     setBusy(false)
     setPreview((p) => (p && p.id === inv.id ? { ...p, status: 'assigned' } : p))
   }
