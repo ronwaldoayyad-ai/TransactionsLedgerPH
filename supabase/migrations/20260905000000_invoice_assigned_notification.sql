@@ -4,8 +4,8 @@
 -- When an admin generates and assigns an invoice to a borrower (the invoice
 -- enters status 'assigned' — the point at which the borrower can see it), send
 -- that borrower the "Statement Ready" notification. The template's [period]
--- variable is derived from the invoice Due Date (its month + year, falling back
--- to the invoice date when no due date is set).
+-- variable is the full invoice Due Date (e.g. "September 15, 2026"), falling back
+-- to the invoice date when no due date is set.
 --
 -- Fires once on entering 'assigned' (a draft->assigned update, or an invoice
 -- inserted already assigned) and not on later edits that keep it assigned.
@@ -23,7 +23,7 @@ begin
       'general',
       '📊 Statement Ready',
       'Your monthly statement for '
-        || to_char(coalesce(new.due_date, new.invoice_date), 'FMMonth YYYY')
+        || to_char(coalesce(new.due_date, new.invoice_date), 'FMMonth FMDD, YYYY')
         || ' is now available for review.',
       'targeted',
       array[new.user_id],
