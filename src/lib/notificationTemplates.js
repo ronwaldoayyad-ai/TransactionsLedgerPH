@@ -33,6 +33,7 @@ export const NOTIFICATION_TEMPLATES = {
     { title: '🎉 Welcome!', message: 'Welcome to [Product Name]! Your account has been created. Complete your profile to get started.' },
   ],
   general: [
+    { title: '📝 Loan Request Received', message: "We've received your loan request for ₱[amount]. Our team will review it and update you on the status soon." },
     { title: '📢 System Maintenance', message: 'We will be performing scheduled maintenance on [date] from [start] to [end]. Some services may be unavailable.' },
     { title: 'ℹ️ Policy Update', message: 'We have updated our [policy name]. Please review the changes by [date].' },
     { title: '🎯 Loan Offer Available', message: 'You are pre‑qualified for a loan of up to ₱[amount]. Apply now to lock in your rate.' },
