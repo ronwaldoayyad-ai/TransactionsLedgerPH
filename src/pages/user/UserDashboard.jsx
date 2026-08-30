@@ -283,10 +283,13 @@ export default function UserDashboard() {
         </div>
       )}
 
-      {/* Swipeable stat tiles — 3D coverflow (swipe / drag or tap a side card). */}
-      <div className="mt-4">
-        <SwipeCoverflow
-          items={[
+      {/* Swipeable stat tiles — 3D coverflow (swipe / drag or tap a side card),
+          contained in a card so the tilted neighbours don't spill off-screen. */}
+      <Card className="mt-4 overflow-hidden">
+        <CardHeader title="Summary" subtitle="Your transaction totals" />
+        <div className="py-4">
+          <SwipeCoverflow
+            items={[
             {
               id: 'installments',
               icon: 'wallet',
@@ -321,11 +324,12 @@ export default function UserDashboard() {
             },
           ]}
           onActivate={(t) => t.onActivate?.()}
-          renderItem={(t) => (
-            <StatCard icon={t.icon} label={t.label} value={t.value} hint={t.hint} accent={t.accent} />
-          )}
-        />
-      </div>
+            renderItem={(t) => (
+              <StatCard icon={t.icon} label={t.label} value={t.value} hint={t.hint} accent={t.accent} />
+            )}
+          />
+        </div>
+      </Card>
 
       <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Card className="p-5">

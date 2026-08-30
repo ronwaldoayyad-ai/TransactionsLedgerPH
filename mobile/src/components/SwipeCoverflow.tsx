@@ -5,7 +5,7 @@ import { Animated, PanResponder, Platform, Pressable, Text, View } from 'react-n
 // Wallet look: one card centered + flat, neighbours tilted back in 3D. Tap a
 // side card to centre it; tap the centred card to fire onActivate. Uses RN's
 // built-in Animated (not reanimated) so it behaves on native and web alike.
-const SPACING = 132 // px between neighbouring card centres
+const SPACING = 116 // px between neighbouring card centres
 const SWIPE_DX = 40 // horizontal travel that counts as a swipe
 
 export default function SwipeCoverflow<T extends { id: string; label?: string }>({
@@ -13,14 +13,16 @@ export default function SwipeCoverflow<T extends { id: string; label?: string }>
   renderItem,
   onActivate,
   hint = 'Swipe to switch',
-  cardWidth = 236,
-  height = 168,
+  cardWidth = 228,
+  cardHeight = 120,
+  height = 152,
 }: {
   items: T[]
   renderItem: (item: T, isActive: boolean) => ReactNode
   onActivate?: (item: T) => void
   hint?: string
   cardWidth?: number
+  cardHeight?: number
   height?: number
 }) {
   const n = items.length
@@ -50,7 +52,7 @@ export default function SwipeCoverflow<T extends { id: string; label?: string }>
 
   return (
     <View>
-      <View {...pan.panHandlers} style={{ height }} className="items-center justify-center">
+      <View {...pan.panHandlers} style={{ height, overflow: 'hidden' }}>
         {items.map((it, i) => {
           const off = Animated.subtract(i, indexAnim)
           const translateX = off.interpolate({
@@ -81,6 +83,11 @@ export default function SwipeCoverflow<T extends { id: string; label?: string }>
               style={{
                 position: 'absolute',
                 width: cardWidth,
+                // Centre the card in the container, then translateX offsets it.
+                left: '50%',
+                top: '50%',
+                marginLeft: -cardWidth / 2,
+                marginTop: -cardHeight / 2,
                 zIndex: 100 - absActive,
                 opacity,
                 transform: [{ perspective: 1000 }, { translateX }, { rotateY }, { scale }],

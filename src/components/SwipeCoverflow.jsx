@@ -34,7 +34,7 @@ export default function SwipeCoverflow({ items, renderItem, onActivate, hint = '
   return (
     <div className="select-none">
       <div
-        className="relative touch-pan-y"
+        className="relative touch-pan-y overflow-hidden"
         style={{ height, perspective: '1300px' }}
         onPointerDown={onDown}
         onPointerMove={onMove}

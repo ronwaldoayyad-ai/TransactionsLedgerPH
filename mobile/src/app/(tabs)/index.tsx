@@ -303,10 +303,13 @@ export default function Dashboard() {
           </View>
         ) : (
           <FadeInView delay={60} className="gap-3">
-            <SwipeCoverflow
-              items={[
-                {
-                  id: 'installments',
+            <Card>
+              <CardHeader title="Summary" subtitle="Your transaction totals" />
+              <View className="overflow-hidden py-4">
+                <SwipeCoverflow
+                  items={[
+                    {
+                      id: 'installments',
                   label: 'Total Installment Transactions',
                   onActivate: goInstallments,
                   el: (
@@ -359,9 +362,11 @@ export default function Dashboard() {
                   ),
                 },
               ]}
-              renderItem={(t: any) => t.el}
-              onActivate={(t: any) => t.onActivate?.()}
-            />
+                  renderItem={(t: any) => t.el}
+                  onActivate={(t: any) => t.onActivate?.()}
+                />
+              </View>
+            </Card>
             <StatTile
               icon={<ScrollText size={iconSize} color={colors.navy600} />}
               accentBg="bg-navy-50"
