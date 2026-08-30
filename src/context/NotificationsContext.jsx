@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { useApp } from './AppContext'
 import { supabase } from '../supabaseClient'
+import { NOTIFICATION_TEMPLATES } from '../lib/notificationTemplates'
 
 // Data layer for the Notification Center. Dual-mode like the rest of the app:
 // live sessions read/write the `notifications` + `notification_reads` tables and
@@ -80,6 +81,28 @@ demoNotifications = [
 const targetsMe = (n, meId) => n.audience === 'all' || (n.targetUserIds || []).includes(meId)
 const byRecent = (a, b) => String(b.createdAt).localeCompare(String(a.createdAt))
 
+// Admin-managed notification templates (mirror of announcement templates).
+const mapTemplate = (r) => ({
+  id: r.id,
+  name: r.name ?? '',
+  category: r.category,
+  title: r.title ?? '',
+  body: r.body ?? '',
+})
+// Demo store seeded from the former hardcoded presets so the composer's template
+// picker works on localhost without the DB.
+let demoTemplates = Object.entries(NOTIFICATION_TEMPLATES).flatMap(([category, list]) =>
+  list.map((t, i) => ({
+    id: `nt-demo-${category}-${i}`,
+    name: t.title.replace(/^[^A-Za-z0-9]+/, '').trim(),
+    category,
+    title: t.title,
+    body: t.message,
+  })),
+)
+let demoTplSeq = 0
+const demoTplId = () => `nt-${Date.now()}-${++demoTplSeq}`
+
 export function NotificationsProvider({ children }) {
   const { realSession, session, users } = useApp()
   const isLive = realSession?.source === 'supabase'
@@ -91,6 +114,8 @@ export function NotificationsProvider({ children }) {
   const [liveReads, setLiveReads] = useState([])
   const [demoVersion, setDemoVersion] = useState(0)
   const [loading, setLoading] = useState(isLive)
+  const [liveTemplates, setLiveTemplates] = useState([])
+  const [tplVersion, setTplVersion] = useState(0)
 
   const borrowerCount = useMemo(() => users.filter((u) => u.role === 'user').length, [users])
 
@@ -321,6 +346,91 @@ export function NotificationsProvider({ children }) {
     [isLive, fetchAll, fetchReads],
   )
 
+  // ---- Templates (admin-managed presets for the composer) ----
+  const fetchTemplates = useCallback(async () => {
+    if (!isLive || !isAdmin) return
+    const { data, error } = await supabase
+      .from('notification_templates')
+      .select('*')
+      .order('category')
+      .order('created_at', { ascending: false })
+    if (error) {
+      console.warn('[notifications] templates load failed (run the migration?):', error.message)
+      return
+    }
+    setLiveTemplates((data ?? []).map(mapTemplate))
+  }, [isLive, isAdmin])
+
+  useEffect(() => {
+    if (!isLive || !isAdmin) return undefined
+    let active = true
+    ;(async () => {
+      await fetchTemplates()
+      if (!active) return
+    })()
+    return () => {
+      active = false
+    }
+  }, [isLive, isAdmin, fetchTemplates])
+
+  const templates = useMemo(() => {
+    if (!isAdmin) return []
+    return isLive ? liveTemplates : demoTemplates
+    // tplVersion forces recompute after in-memory demo mutations.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLive, liveTemplates, tplVersion, isAdmin])
+
+  const createTemplate = useCallback(
+    async ({ name = '', category = 'general', title = '', body = '' }) => {
+      if (isLive) {
+        const { error } = await supabase
+          .from('notification_templates')
+          .insert({ name, category, title, body })
+        if (error) return { error: error.message }
+        await fetchTemplates()
+      } else {
+        demoTemplates = [{ id: demoTplId(), name, category, title, body }, ...demoTemplates]
+        setTplVersion((v) => v + 1)
+      }
+      return {}
+    },
+    [isLive, fetchTemplates],
+  )
+
+  const updateTemplate = useCallback(
+    async (id, { name, category, title, body }) => {
+      if (isLive) {
+        const { error } = await supabase
+          .from('notification_templates')
+          .update({ name, category, title, body })
+          .eq('id', id)
+        if (error) return { error: error.message }
+        await fetchTemplates()
+      } else {
+        demoTemplates = demoTemplates.map((t) =>
+          t.id === id ? { ...t, name, category, title, body } : t,
+        )
+        setTplVersion((v) => v + 1)
+      }
+      return {}
+    },
+    [isLive, fetchTemplates],
+  )
+
+  const deleteTemplate = useCallback(
+    async (id) => {
+      if (isLive) {
+        const { error } = await supabase.from('notification_templates').delete().eq('id', id)
+        if (error) return
+        await fetchTemplates()
+      } else {
+        demoTemplates = demoTemplates.filter((t) => t.id !== id)
+        setTplVersion((v) => v + 1)
+      }
+    },
+    [isLive, fetchTemplates],
+  )
+
   const value = useMemo(
     () => ({
       notifications,
@@ -335,10 +445,15 @@ export function NotificationsProvider({ children }) {
       createNotification,
       updateNotification,
       deleteNotification,
+      templates,
+      createTemplate,
+      updateTemplate,
+      deleteTemplate,
     }),
     [
       notifications, loading, isAdmin, isRead, unreadCount, markRead, markUnread, readCountFor,
       recipientCountFor, createNotification, updateNotification, deleteNotification,
+      templates, createTemplate, updateTemplate, deleteTemplate,
     ],
   )
 

@@ -13,7 +13,7 @@ import {
   ATTACHMENT_ACCEPT,
   MAX_ATTACHMENTS,
 } from '../../lib/notifications'
-import { templatesForCategory } from '../../lib/notificationTemplates'
+import TemplatesModal from '../../components/notifications/TemplatesModal'
 
 const fmt = (iso) =>
   iso ? new Date(iso).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' }) : ''
@@ -32,8 +32,10 @@ const emptyForm = { category: 'general', title: '', body: '', audience: 'all', a
 
 export default function AdminNotifications() {
   const { users } = useApp()
-  const { notifications, createNotification, updateNotification, deleteNotification, readCountFor, recipientCountFor } =
-    useNotifications()
+  const {
+    notifications, createNotification, updateNotification, deleteNotification, readCountFor, recipientCountFor,
+    templates, createTemplate, updateTemplate, deleteTemplate,
+  } = useNotifications()
 
   const borrowers = useMemo(() => users.filter((u) => u.role === 'user'), [users])
   const options = useMemo(() => borrowers.map((b) => ({ value: b.id, label: b.name })), [borrowers])
@@ -44,17 +46,35 @@ export default function AdminNotifications() {
   const [editingId, setEditingId] = useState(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [tplOpen, setTplOpen] = useState(false)
+  const [tplDraft, setTplDraft] = useState(null)
   const fileRef = useRef(null)
 
   const set = (patch) => setForm((f) => ({ ...f, ...patch }))
   const canSave = form.body.trim().length > 0 && (form.audience === 'all' || targetSel.size > 0)
 
-  // Preset templates for the selected category (pre-fill the title + message).
-  const categoryTemplates = templatesForCategory(form.category)
-  const applyTemplate = (index) => {
-    const tpl = categoryTemplates[Number(index)]
+  // Admin-managed templates for the selected category (pre-fill title + message).
+  const categoryTemplates = useMemo(
+    () => templates.filter((t) => t.category === form.category),
+    [templates, form.category],
+  )
+  const applyTemplate = (id) => {
+    const tpl = templates.find((t) => t.id === id)
     if (!tpl) return
-    set({ title: tpl.title, body: tpl.message })
+    set({ title: tpl.title, body: tpl.body })
+  }
+  const openSaveAsTemplate = () => {
+    setTplDraft({
+      name: form.title.trim(),
+      category: form.category,
+      title: form.title.trim(),
+      body: form.body.trim(),
+    })
+    setTplOpen(true)
+  }
+  const openManageTemplates = () => {
+    setTplDraft(null)
+    setTplOpen(true)
   }
 
   const reset = () => {
@@ -155,21 +175,31 @@ export default function AdminNotifications() {
             <Field
               label="Start from a template"
               htmlFor="ntf-tpl"
-              hint="Pick a ready-made message for this category to fill the fields below."
+              hint="Pick a saved message for this category to fill the fields below, or manage your templates."
             >
-              <select
-                id="ntf-tpl"
-                className={inputClass}
-                value=""
-                onChange={(e) => applyTemplate(e.target.value)}
-              >
-                <option value="">— Select a {categoryMeta(form.category).label} template —</option>
-                {categoryTemplates.map((t, i) => (
-                  <option key={i} value={i}>
-                    {t.title}
+              <div className="flex items-center gap-2">
+                <select
+                  id="ntf-tpl"
+                  className={inputClass}
+                  value=""
+                  onChange={(e) => applyTemplate(e.target.value)}
+                >
+                  <option value="">
+                    {categoryTemplates.length
+                      ? `— Select a ${categoryMeta(form.category).label} template —`
+                      : `No ${categoryMeta(form.category).label} templates yet`}
                   </option>
-                ))}
-              </select>
+                  {categoryTemplates.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name || t.title}
+                    </option>
+                  ))}
+                </select>
+                <Button variant="secondary" onClick={openManageTemplates} className="shrink-0 whitespace-nowrap">
+                  <Icon name="pencil" className="h-4 w-4" />
+                  Manage
+                </Button>
+              </div>
             </Field>
 
             <Field label="Title (optional)" htmlFor="ntf-title">
@@ -261,6 +291,14 @@ export default function AdminNotifications() {
                   Cancel
                 </Button>
               )}
+              <Button
+                variant="secondary"
+                onClick={openSaveAsTemplate}
+                disabled={form.body.trim().length === 0}
+              >
+                <Icon name="file" className="h-4 w-4" />
+                Save as template
+              </Button>
               <Button variant="gold" onClick={submit} disabled={!canSave || saving}>
                 <Icon name="send" className="h-4 w-4" />
                 {saving ? 'Saving…' : editingId ? 'Update notification' : 'Send notification'}
@@ -361,6 +399,18 @@ export default function AdminNotifications() {
           </ul>
         )}
       </Card>
+
+      {tplOpen && (
+        <TemplatesModal
+          key={tplDraft ? 'draft' : 'manage'}
+          initialDraft={tplDraft}
+          templates={templates}
+          onCreate={createTemplate}
+          onUpdate={updateTemplate}
+          onDelete={deleteTemplate}
+          onClose={() => setTplOpen(false)}
+        />
+      )}
     </>
   )
 }
