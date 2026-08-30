@@ -130,12 +130,14 @@ export default function DuesOverview({
 
   const today = toISODate(new Date())
 
-  // A loan is "fully paid" when it has installment records and all are paid.
+  // A loan is "settled" (hidden by the toggle) when it has installment records
+  // and every one is paid, refunded, or cancelled.
   const fullyPaidIds = useMemo(() => {
     const ids = new Set<string>()
+    const SETTLED = ['paid', 'refunded', 'cancelled']
     for (const l of myLoans) {
       const t = myTxns.filter((x: any) => x.loanId === l.id && x.type === 'Installment')
-      if (t.length > 0 && t.every((x: any) => x.status === 'paid')) ids.add(l.id)
+      if (t.length > 0 && t.every((x: any) => SETTLED.includes(x.status))) ids.add(l.id)
     }
     return ids
   }, [myLoans, myTxns])

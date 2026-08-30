@@ -58,12 +58,14 @@ export default function DuesOverview({
   const [hidePaidLoans, setHidePaidLoans] = usePersistedState('duesOverview.hidePaidLoans', true)
   const today = toISODate(new Date())
 
-  // A loan is "fully paid" when it has installment records and all are paid.
+  // A loan is "settled" (hidden by the toggle) when it has installment records
+  // and every one is paid, refunded, or cancelled.
   const fullyPaidIds = useMemo(() => {
     const ids = new Set()
+    const SETTLED = ['paid', 'refunded', 'cancelled']
     for (const l of myLoans) {
       const t = myTxns.filter((x) => x.loanId === l.id && x.type === 'Installment')
-      if (t.length > 0 && t.every((x) => x.status === 'paid')) ids.add(l.id)
+      if (t.length > 0 && t.every((x) => SETTLED.includes(x.status))) ids.add(l.id)
     }
     return ids
   }, [myLoans, myTxns])

@@ -7,6 +7,7 @@ import { Badge, Button, Card, CardHeader, EmptyState, StatCard, Switch } from '.
 import Icon from '../../components/Icon'
 import PaymentList from '../../components/PaymentList'
 import DuesOverview from '../../components/DuesOverview'
+import SwipeCoverflow from '../../components/SwipeCoverflow'
 import BorrowerScheduleTable from '../../components/BorrowerScheduleTable'
 import RefreshButton from '../../components/RefreshButton'
 import { NextPaymentDueCard, PaymentDueBreakdown, PaymentDueCardStack } from '../../components/PaymentDueSummary'
@@ -282,35 +283,51 @@ export default function UserDashboard() {
         </div>
       )}
 
+      {/* Swipeable stat tiles — 3D coverflow (swipe / drag or tap a side card). */}
+      <div className="mt-4">
+        <SwipeCoverflow
+          items={[
+            {
+              id: 'installments',
+              icon: 'wallet',
+              label: 'Total Installment Transactions',
+              value: formatPeso(installmentTotal),
+              hint: `${installmentTxns.length} installment${installmentTxns.length === 1 ? '' : 's'}`,
+              accent: 'text-navy-800 bg-navy-50',
+              onActivate: goInstallments,
+            },
+            {
+              id: 'straight',
+              icon: 'list',
+              label: 'Total Straight Transactions',
+              value: formatPeso(straightTotal),
+              hint: `${straightTxns.length} item${straightTxns.length === 1 ? '' : 's'}`,
+              accent: 'text-violet-700 bg-violet-50',
+              onActivate: () => navigate('/portal/straight'),
+            },
+            {
+              id: 'outstanding',
+              icon: 'trendingUp',
+              label: 'Outstanding Balance',
+              value: formatPeso(outstanding),
+              accent: 'text-gold-600 bg-amber-50',
+            },
+            {
+              id: 'proceeds',
+              icon: 'wallet',
+              label: 'Net Proceeds Received',
+              value: formatPeso(totalNetProceeds),
+              hint: 'After fees & deductions',
+            },
+          ]}
+          onActivate={(t) => t.onActivate?.()}
+          renderItem={(t) => (
+            <StatCard icon={t.icon} label={t.label} value={t.value} hint={t.hint} accent={t.accent} />
+          )}
+        />
+      </div>
+
       <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <StatCard
-          icon="wallet"
-          label="Total Installment Transactions"
-          value={formatPeso(installmentTotal)}
-          hint={`${installmentTxns.length} installment${installmentTxns.length === 1 ? '' : 's'}`}
-          accent="text-navy-800 bg-navy-50"
-          onClick={goInstallments}
-        />
-        <StatCard
-          icon="list"
-          label="Total Straight Transactions"
-          value={formatPeso(straightTotal)}
-          hint={`${straightTxns.length} item${straightTxns.length === 1 ? '' : 's'}`}
-          accent="text-violet-700 bg-violet-50"
-          onClick={() => navigate('/portal/straight')}
-        />
-        <StatCard
-          icon="trendingUp"
-          label="Outstanding Balance"
-          value={formatPeso(outstanding)}
-          accent="text-gold-600 bg-amber-50"
-        />
-        <StatCard
-          icon="wallet"
-          label="Net Proceeds Received"
-          value={formatPeso(totalNetProceeds)}
-          hint="After fees & deductions"
-        />
         <Card className="p-5">
           <div className="flex items-start justify-between">
             <div className="min-w-0">

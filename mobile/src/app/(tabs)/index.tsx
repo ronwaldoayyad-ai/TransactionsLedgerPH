@@ -20,6 +20,7 @@ import { buildDueSummary } from '../../lib/paymentDueSummary'
 import { overrideForBorrower, rowForBorrower, PAYMENT_DUE_COLORS } from '../../lib/paymentDueConfig'
 import { PaymentDueCards, PaymentDueBreakdown } from '../../components/PaymentDueCards'
 import DuesOverview from '../../components/DuesOverview'
+import SwipeCoverflow from '../../components/SwipeCoverflow'
 import TxnRow from '../../components/TxnRow'
 import StatTile from '../../components/ui/StatTile'
 import ProgressBar from '../../components/ui/ProgressBar'
@@ -292,83 +293,83 @@ export default function Dashboard() {
           </FadeInView>
         ) : null}
 
-        {/* Stat tiles — exact web order */}
+        {/* Stat tiles — the four money tiles as a swipeable 3D coverflow, with
+            Active Loans kept as a standalone tile below. */}
         {dataLoading ? (
           <View className="flex-row flex-wrap justify-between gap-y-3">
-            {[...Array(6)].map((_, i) => (
+            {[...Array(4)].map((_, i) => (
               <Skeleton key={i} className="h-28 w-[48.7%]" />
             ))}
           </View>
         ) : (
-          <View className="flex-row flex-wrap justify-between gap-y-3">
-            {[
-              {
-                key: 'installments',
-                el: (
-                  <StatTile
-                    icon={<Wallet size={iconSize} color={colors.navy800} />}
-                    accentBg="bg-navy-50"
-                    label="Total Installment Transactions"
-                    value={formatPeso(installmentTotal)}
-                    hint={`${installmentTxns.length} installment${installmentTxns.length === 1 ? '' : 's'}`}
-                    onPress={goInstallments}
-                  />
-                ),
-              },
-              {
-                key: 'straight',
-                el: (
-                  <StatTile
-                    icon={<List size={iconSize} color="#6d28d9" />}
-                    accentBg="bg-violet-50"
-                    label="Total Straight Transactions"
-                    value={formatPeso(straightTotal)}
-                    hint={`${straightTxns.length} item${straightTxns.length === 1 ? '' : 's'}`}
-                    onPress={() => router.push('/straight')}
-                  />
-                ),
-              },
-              {
-                key: 'outstanding',
-                el: (
-                  <StatTile
-                    icon={<TrendingUp size={iconSize} color={colors.gold600} />}
-                    accentBg="bg-amber-50"
-                    label="Outstanding Balance"
-                    value={formatPeso(outstanding)}
-                  />
-                ),
-              },
-              {
-                key: 'proceeds',
-                el: (
-                  <StatTile
-                    icon={<Wallet size={iconSize} color={colors.navy600} />}
-                    accentBg="bg-navy-50"
-                    label="Net Proceeds Received"
-                    value={formatPeso(totalNetProceeds)}
-                    hint="After fees & deductions"
-                  />
-                ),
-              },
-              {
-                key: 'active',
-                el: (
-                  <StatTile
-                    icon={<ScrollText size={iconSize} color={colors.navy600} />}
-                    accentBg="bg-navy-50"
-                    label="Active Loans"
-                    value={myLoans.length}
-                    hint={fullyPaidCount > 0 ? `${fullyPaidCount} fully paid` : undefined}
-                  />
-                ),
-              },
-            ].map((t, i) => (
-              <FadeInView key={t.key} delay={60 * i} className="w-[48.7%]">
-                {t.el}
-              </FadeInView>
-            ))}
-          </View>
+          <FadeInView delay={60} className="gap-3">
+            <SwipeCoverflow
+              items={[
+                {
+                  id: 'installments',
+                  label: 'Total Installment Transactions',
+                  onActivate: goInstallments,
+                  el: (
+                    <StatTile
+                      icon={<Wallet size={iconSize} color={colors.navy800} />}
+                      accentBg="bg-navy-50"
+                      label="Total Installment Transactions"
+                      value={formatPeso(installmentTotal)}
+                      hint={`${installmentTxns.length} installment${installmentTxns.length === 1 ? '' : 's'}`}
+                    />
+                  ),
+                },
+                {
+                  id: 'straight',
+                  label: 'Total Straight Transactions',
+                  onActivate: () => router.push('/straight'),
+                  el: (
+                    <StatTile
+                      icon={<List size={iconSize} color="#6d28d9" />}
+                      accentBg="bg-violet-50"
+                      label="Total Straight Transactions"
+                      value={formatPeso(straightTotal)}
+                      hint={`${straightTxns.length} item${straightTxns.length === 1 ? '' : 's'}`}
+                    />
+                  ),
+                },
+                {
+                  id: 'outstanding',
+                  label: 'Outstanding Balance',
+                  el: (
+                    <StatTile
+                      icon={<TrendingUp size={iconSize} color={colors.gold600} />}
+                      accentBg="bg-amber-50"
+                      label="Outstanding Balance"
+                      value={formatPeso(outstanding)}
+                    />
+                  ),
+                },
+                {
+                  id: 'proceeds',
+                  label: 'Net Proceeds Received',
+                  el: (
+                    <StatTile
+                      icon={<Wallet size={iconSize} color={colors.navy600} />}
+                      accentBg="bg-navy-50"
+                      label="Net Proceeds Received"
+                      value={formatPeso(totalNetProceeds)}
+                      hint="After fees & deductions"
+                    />
+                  ),
+                },
+              ]}
+              renderItem={(t: any) => t.el}
+              onActivate={(t: any) => t.onActivate?.()}
+            />
+            <StatTile
+              icon={<ScrollText size={iconSize} color={colors.navy600} />}
+              accentBg="bg-navy-50"
+              label="Active Loans"
+              value={myLoans.length}
+              hint={fullyPaidCount > 0 ? `${fullyPaidCount} fully paid` : undefined}
+            />
+          </FadeInView>
         )}
 
         {/* My Loan Schedules */}
