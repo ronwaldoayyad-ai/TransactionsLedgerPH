@@ -6,6 +6,7 @@ import { PageHeader } from '../../components/AppShell'
 import { Badge, Button, Card, CardHeader, EmptyState, StatCard, Switch } from '../../components/ui'
 import Icon from '../../components/Icon'
 import PaymentList from '../../components/PaymentList'
+import DuesOverview from '../../components/DuesOverview'
 import BorrowerScheduleTable from '../../components/BorrowerScheduleTable'
 import RefreshButton from '../../components/RefreshButton'
 import { NextPaymentDueCard, PaymentDueBreakdown, PaymentDueCardStack } from '../../components/PaymentDueSummary'
@@ -272,6 +273,14 @@ export default function UserDashboard() {
           )}
         </Card>
       </div>
+
+      {/* Dues Overview — interactive donut of the borrower's overall payment
+          status, with per-loan drill-down and insight cards. */}
+      {myLoans.length > 0 && (
+        <div className="mt-4">
+          <DuesOverview myTxns={myTxns} myLoans={myLoans} />
+        </div>
+      )}
 
       <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard

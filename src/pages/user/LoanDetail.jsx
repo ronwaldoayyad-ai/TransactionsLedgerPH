@@ -6,6 +6,7 @@ import BorrowerScheduleTable from '../../components/BorrowerScheduleTable'
 import RefreshButton from '../../components/RefreshButton'
 import Icon from '../../components/Icon'
 import { Button, Card, CardHeader, inputClass } from '../../components/ui'
+import DuesOverview from '../../components/DuesOverview'
 import { formatDate, formatPeso } from '../../lib/amortization'
 
 // Uncontrolled disclosure field that commits to updateLoan only on blur.
@@ -160,6 +161,16 @@ export default function LoanDetail() {
           </div>
         </div>
       )}
+
+      {/* Payment progress donut — scoped to this loan (chips auto-hide). */}
+      <div className="mb-6">
+        <DuesOverview
+          myTxns={loanTxns}
+          myLoans={[loan]}
+          title="Payment Progress"
+          subtitle="This loan's dues status"
+        />
+      </div>
 
       <div className="grid gap-6 xl:grid-cols-3">
         <Card>
