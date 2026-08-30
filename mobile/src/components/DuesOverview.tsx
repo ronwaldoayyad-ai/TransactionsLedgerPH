@@ -110,9 +110,13 @@ function Insight({
 export default function DuesOverview({
   myTxns,
   myLoans,
+  title = 'Dues Overview',
+  subtitle = 'Your overall payment status',
 }: {
   myTxns: any[]
   myLoans: any[]
+  title?: string
+  subtitle?: string
 }) {
   const router = useRouter()
   const [mode, setMode] = useState<Mode>('amount')
@@ -165,8 +169,8 @@ export default function DuesOverview({
   return (
     <Card>
       <CardHeader
-        title="Dues Overview"
-        subtitle="Your overall payment status"
+        title={title}
+        subtitle={subtitle}
         action={<ModeToggle mode={mode} onChange={setMode} />}
       />
 

@@ -5,6 +5,7 @@ import { useApp } from '../../context/AppContext'
 import { formatDate, formatPeso, toISODate } from '../../lib/amortization'
 import { Card, CardHeader } from '../../components/ui/Card'
 import EmptyState from '../../components/ui/EmptyState'
+import DuesOverview from '../../components/DuesOverview'
 import TxnRow from '../../components/TxnRow'
 import { colors, fonts } from '../../theme'
 
@@ -85,6 +86,16 @@ export default function LoanDetail() {
                   Congratulations — this loan is Fully Paid!
                 </Text>
               </View>
+            )}
+
+            {/* Payment progress donut — scoped to this loan (chips hidden). */}
+            {txns.length > 0 && (
+              <DuesOverview
+                myTxns={txns}
+                myLoans={[loan]}
+                title="Payment Progress"
+                subtitle="This loan's dues status"
+              />
             )}
 
             {/* Disclosure statement */}
