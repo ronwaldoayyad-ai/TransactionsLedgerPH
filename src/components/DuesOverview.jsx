@@ -83,6 +83,12 @@ export default function DuesOverview({
     [scopedTxns, today, effectiveLoanId],
   )
 
+  // When a specific loan is selected, surface its transaction date + principal.
+  const selectedLoan = effectiveLoanId === 'all' ? null : myLoans.find((l) => l.id === effectiveLoanId)
+  const selectedLoanTxnDate = selectedLoan
+    ? (myTxns.find((t) => t.loanId === selectedLoan.id)?.txnDate ?? selectedLoan.txnDate ?? null)
+    : null
+
   // Segment → Consolidated ledger, prefiltered by borrower status (same
   // page-state seeding the dashboard tiles already use).
   const goStatus = (key) => {
@@ -179,6 +185,22 @@ export default function DuesOverview({
                   </button>
                 )
               })}
+            </div>
+          )}
+
+          {/* Selected-loan details: transaction date + total principal. */}
+          {selectedLoan && (
+            <div className="mb-4 flex flex-wrap gap-x-8 gap-y-2 rounded-xl bg-slate-50 px-4 py-3">
+              <div>
+                <p className="text-xs text-slate-500">Transaction date</p>
+                <p className="text-sm font-medium text-slate-900">{formatDate(selectedLoanTxnDate)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">Total principal</p>
+                <p className="font-mono text-sm font-semibold text-slate-900">
+                  {formatPeso(selectedLoan.principal)}
+                </p>
+              </div>
             </div>
           )}
 

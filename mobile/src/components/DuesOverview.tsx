@@ -154,6 +154,12 @@ export default function DuesOverview({
   const b = buildDuesBreakdown(scopedTxns, today, selected)
   const allHidden = hidePaidLoans && hasFullyPaid && b.isEmpty
 
+  // When a specific loan is selected, surface its transaction date + principal.
+  const selectedLoan = selected ? myLoans.find((l: any) => l.id === selected) : undefined
+  const selectedLoanTxnDate = selectedLoan
+    ? (myTxns.find((t: any) => t.loanId === selectedLoan.id)?.txnDate ?? selectedLoan.txnDate ?? null)
+    : null
+
   const donutSize = w > 0 ? Math.min(w, Math.max(240, Math.min(340, Math.round(w * 0.72)))) : 0
 
   // Segment → Transactions tab, prefiltered by borrower status (same seed
@@ -259,6 +265,24 @@ export default function DuesOverview({
                 )
               })}
             </ScrollView>
+          )}
+
+          {/* Selected-loan details: transaction date + total principal. */}
+          {selectedLoan && (
+            <View className="flex-row flex-wrap gap-x-8 gap-y-2 rounded-xl bg-slate-50 px-4 py-3">
+              <View>
+                <Text className="font-sans text-xs text-slate-500">Transaction date</Text>
+                <Text className="font-sans-medium text-sm text-slate-900">
+                  {formatDate(selectedLoanTxnDate)}
+                </Text>
+              </View>
+              <View>
+                <Text className="font-sans text-xs text-slate-500">Total principal</Text>
+                <Text className="font-mono-semibold text-sm text-slate-900">
+                  {formatPeso(selectedLoan.principal)}
+                </Text>
+              </View>
+            </View>
           )}
 
           {/* Donut — sizes to the card, clamped so it stays legible on mobile web. */}
