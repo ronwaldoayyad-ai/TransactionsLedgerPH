@@ -19,6 +19,7 @@ import { effectiveStatus } from '../../lib/transactions'
 import { buildDueSummary } from '../../lib/paymentDueSummary'
 import { overrideForBorrower, rowForBorrower, PAYMENT_DUE_COLORS } from '../../lib/paymentDueConfig'
 import { PaymentDueCards, PaymentDueBreakdown } from '../../components/PaymentDueCards'
+import DuesOverview from '../../components/DuesOverview'
 import StatTile from '../../components/ui/StatTile'
 import ProgressBar from '../../components/ui/ProgressBar'
 import Badge from '../../components/ui/Badge'
@@ -237,6 +238,14 @@ export default function Dashboard() {
               label={activeIndex === 1 ? 'Next' : 'Current'}
               accent={activeIndex === 1 ? PAYMENT_DUE_COLORS.next : PAYMENT_DUE_COLORS.current}
             />
+          </FadeInView>
+        ) : null}
+
+        {/* Dues Overview — large, full-width hero donut with per-loan drill-down.
+            Stays legible on mobile web (sizes to the card, clamped). */}
+        {!dataLoading && myLoans.length > 0 ? (
+          <FadeInView delay={50}>
+            <DuesOverview myTxns={myTxns} myLoans={myLoans} />
           </FadeInView>
         ) : null}
 

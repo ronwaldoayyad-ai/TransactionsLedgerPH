@@ -4,6 +4,9 @@
 module.exports = {
   content: ['./src/**/*.{js,jsx,ts,tsx}'],
   presets: [require('nativewind/preset')],
+  // App ships no `dark:` variants; use class strategy so NativeWind on web
+  // doesn't throw when the browser color scheme changes (media strategy does).
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
