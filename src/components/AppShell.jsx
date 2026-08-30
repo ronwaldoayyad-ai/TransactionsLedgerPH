@@ -160,7 +160,7 @@ export default function AppShell({ children }) {
   }
 
   const navItems = (
-    <nav className="group/nav flex flex-1 flex-col gap-1 overflow-y-auto px-3 pb-3" aria-label="Main navigation">
+    <nav className="group/nav flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-3 pb-3" aria-label="Main navigation">
       {nav.map((group, gi) => (
         <div
           key={group.title ?? 'overview'}
@@ -259,7 +259,7 @@ export default function AppShell({ children }) {
 
       {/* Mobile drawer */}
       {menuOpen && (
-        <div className="fixed inset-x-0 top-12 z-20 flex flex-col gap-2 bg-navy-950 pb-4 pt-2 shadow-lg lg:hidden">
+        <div className="fixed inset-x-0 top-12 z-20 flex max-h-[calc(100dvh-3rem)] flex-col gap-2 bg-navy-950 pb-4 pt-2 shadow-lg lg:hidden">
           {navItems}
           {userFooter}
         </div>
