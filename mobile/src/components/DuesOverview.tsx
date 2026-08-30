@@ -123,7 +123,7 @@ export default function DuesOverview({
   const router = useRouter()
   const [mode, setMode] = useState<Mode>('amount')
   const [loanId, setLoanId] = useState<string>('all')
-  const [hidePaidLoans, setHidePaidLoans] = usePersistedState('duesOverview.hidePaidLoans', false)
+  const [hidePaidLoans, setHidePaidLoans] = usePersistedState('duesOverview.hidePaidLoans', true)
   const [w, setW] = useState(0)
   const seedNonce = useRef(0)
   const nextSeed = () => String(++seedNonce.current)

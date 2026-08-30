@@ -55,7 +55,7 @@ export default function DuesOverview({
   const navigate = useNavigate()
   const [mode, setMode] = useState('amount')
   const [loanId, setLoanId] = useState('all')
-  const [hidePaidLoans, setHidePaidLoans] = usePersistedState('duesOverview.hidePaidLoans', false)
+  const [hidePaidLoans, setHidePaidLoans] = usePersistedState('duesOverview.hidePaidLoans', true)
   const today = toISODate(new Date())
 
   // A loan is "fully paid" when it has installment records and all are paid.
