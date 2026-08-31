@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import { useMessages } from '../context/MessagesContext'
@@ -286,7 +286,21 @@ export default function AppShell({ children }) {
             </button>
           </div>
         )}
-        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">{children}</div>
+        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+          {/* Boundary lives INSIDE the shell so a code-split page loading only
+              shows the loader in this content area — the sidebar, mobile bar,
+              and their Notifications button stay mounted the whole time. */}
+          <Suspense
+            fallback={
+              <div className="flex min-h-[50vh] items-center justify-center" role="status" aria-live="polite">
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-slate-500" />
+                <span className="sr-only">Loading…</span>
+              </div>
+            }
+          >
+            {children}
+          </Suspense>
+        </div>
       </main>
 
       <ProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />

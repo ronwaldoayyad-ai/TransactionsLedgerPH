@@ -44,6 +44,22 @@ const LoanRequests = lazy(() => import('./pages/admin/LoanRequests'))
 const Invoices = lazy(() => import('./pages/admin/Invoices'))
 const AdminNotifications = lazy(() => import('./pages/admin/Notifications'))
 
+// Warm the two landing pages (whichever role lands here) once the browser is
+// idle, so their chunks download in parallel with session restore instead of
+// only after the router lands on the route. This keeps the dashboard — and its
+// Notifications button — from popping in a beat late on a cold cache.
+if (typeof window !== 'undefined') {
+  const warmLandingChunks = () => {
+    import('./pages/user/UserDashboard')
+    import('./pages/admin/AdminDashboard')
+  }
+  if ('requestIdleCallback' in window) {
+    window.requestIdleCallback(warmLandingChunks, { timeout: 2000 })
+  } else {
+    setTimeout(warmLandingChunks, 300)
+  }
+}
+
 // Lightweight route-transition fallback. Deliberately minimal (not the full
 // LoanLedger splash) so switching between lazy pages doesn't flash a 5s
 // branded animation on every navigation.
