@@ -74,6 +74,33 @@ export const STATUS_NOTES = {
   completed: 'Your loan has been successfully processed, and the funds have been transferred.',
 }
 
+// Per-status emoji for the borrower notification title (see statusNotification).
+const STATUS_EMOJI = {
+  submitted: '📨',
+  pending: '🔎',
+  coordinating: '🤝',
+  bank_approved: '✅',
+  transfer: '💸',
+  completed: '🎉',
+  declined: '❌',
+  canceled: '🚫',
+}
+
+// Build the borrower notification fired when an admin changes a request's status.
+// The title reflects the new status; the body is the admin's note (which already
+// auto-fills with the status default but is editable), falling back to the
+// standard status copy when the admin leaves the note blank.
+export function statusNotification({ status, note = '', reference = '' }) {
+  const label = STATUS_LABEL[status] ?? status
+  const emoji = STATUS_EMOJI[status] ?? '📋'
+  const body = (note || '').trim() || STATUS_NOTES[status] || `Your loan request is now ${label}.`
+  return {
+    category: 'general',
+    title: `${emoji} Loan Request ${label}`,
+    body: reference ? `${body}\n\nReference: ${reference}` : body,
+  }
+}
+
 // Statuses that end the workflow, and the early set a borrower may still cancel.
 export const TERMINAL_STATUSES = ['completed', 'declined', 'canceled']
 export const CANCELABLE_STATUSES = ['submitted', 'pending', 'coordinating']

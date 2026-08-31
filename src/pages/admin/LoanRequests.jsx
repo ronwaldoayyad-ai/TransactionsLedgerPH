@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useApp } from '../../context/AppContext'
 import { useLoanRequests } from '../../context/LoanRequestsContext'
+import { useNotifications } from '../../context/NotificationsContext'
 import { PageHeader } from '../../components/AppShell'
 import Icon from '../../components/Icon'
 import Pagination from '../../components/Pagination'
@@ -11,7 +12,7 @@ import RequestDetailBody from '../../components/loanrequest/RequestDetailBody'
 import UpdateStatusModal from '../../components/loanrequest/UpdateStatusModal'
 import { Button, Card, CardHeader, EmptyState, Field, Modal, Switch, inputClass } from '../../components/ui'
 import { formatPeso } from '../../lib/amortization'
-import { TERMS } from '../../lib/loanRequest'
+import { TERMS, statusNotification } from '../../lib/loanRequest'
 
 // --- Feature Visibility: enable/disable loan requests per borrower ---
 function AccessRow({ userId, initialEnabled, onSave }) {
@@ -119,6 +120,7 @@ export default function LoanRequests() {
   const { users } = useApp()
   const { requests, rates, ratesByTerm, eventsFor, updateStatus, updateFees, deleteRequests, setRate } =
     useLoanRequests()
+  const { createNotification } = useNotifications()
   const borrowers = useMemo(() => users.filter((u) => u.role === 'user'), [users])
   const nameOf = (id) => users.find((u) => u.id === id)?.name ?? '—'
 
@@ -135,7 +137,23 @@ export default function LoanRequests() {
       const feeRes = await updateFees(updating.id, fees)
       if (feeRes?.error) return feeRes
     }
-    return updateStatus(updating.id, status, note)
+    const statusChanged = status !== updating.status
+    const res = await updateStatus(updating.id, status, note)
+    // Automation: notify the borrower only when the status actually changed.
+    // The status update is the source of truth — a notify failure never fails
+    // the save (swallowed and logged), matching the disbursement automation.
+    if (!res?.error && statusChanged) {
+      try {
+        await createNotification({
+          ...statusNotification({ status, note, reference: updating.reference }),
+          audience: 'targeted',
+          targetUserIds: [updating.userId],
+        })
+      } catch (e) {
+        console.error('[loan-requests] status notification failed:', e?.message ?? e)
+      }
+    }
+    return res
   }
 
   const pageIds = pag.pageItems.map((r) => r.id)

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useApp } from '../../context/AppContext'
+import { useNotifications } from '../../context/NotificationsContext'
 import { PageHeader } from '../../components/AppShell'
 import Icon from '../../components/Icon'
 import RefreshButton from '../../components/RefreshButton'
@@ -13,6 +14,7 @@ import {
   PAY_LOG_STATUSES,
   allocate,
   defaultSubject,
+  paymentLogNotification,
   suggestedAmountOwed,
 } from '../../lib/paymentLogs'
 
@@ -38,6 +40,7 @@ export default function PaymentLogs() {
     deletePaymentLog,
     setTransactionStatus,
   } = useApp()
+  const { createNotification } = useNotifications()
   const borrowers = useMemo(() => users.filter((u) => u.role === 'user'), [users])
   const today = toISODate(new Date())
   const nameOf = (userId) => users.find((u) => u.id === userId)?.name ?? userId
@@ -129,6 +132,20 @@ export default function PaymentLogs() {
         fundsApplied: form.fundsApplied,
         status: effectiveStatus,
       })
+      // Automation: notify the borrower of the recorded payment. Message is
+      // dynamic per allocation status and carries the amounts. The recorded log
+      // is the source of truth — a notify failure never fails the save.
+      if (created) {
+        try {
+          await createNotification({
+            ...paymentLogNotification(created),
+            audience: 'targeted',
+            targetUserIds: [created.userId],
+          })
+        } catch (e) {
+          console.error('[payment-logs] payment notification failed:', e?.message ?? e)
+        }
+      }
       // A Settled / Overpayment recording also marks the borrower's outstanding
       // installments (up to this Due Date) as Paid with today's date.
       if (created && (effectiveStatus === 'Settled' || effectiveStatus === 'Overpayment')) {
