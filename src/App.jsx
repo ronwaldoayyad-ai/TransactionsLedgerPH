@@ -5,6 +5,7 @@ import { MessagesProvider } from './context/MessagesContext'
 import { AnnouncementsProvider } from './context/AnnouncementsContext'
 import { LoanRequestsProvider } from './context/LoanRequestsContext'
 import { InvoicesProvider } from './context/InvoicesContext'
+import { DisbursementsProvider } from './context/DisbursementsContext'
 import { NotificationsProvider } from './context/NotificationsContext'
 import AppShell from './components/AppShell'
 // Login is the unauthenticated landing page — keep it eager so first paint
@@ -25,6 +26,7 @@ const UserMessages = lazy(() => import('./pages/user/Messages'))
 const AnnouncementDetail = lazy(() => import('./pages/user/AnnouncementDetail'))
 const LoanRequest = lazy(() => import('./pages/user/LoanRequest'))
 const UserInvoices = lazy(() => import('./pages/user/Invoices'))
+const UserDisbursements = lazy(() => import('./pages/user/Disbursements'))
 const UserNotifications = lazy(() => import('./pages/user/Notifications'))
 
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'))
@@ -42,6 +44,7 @@ const AdminMessages = lazy(() => import('./pages/admin/Messages'))
 const Announcements = lazy(() => import('./pages/admin/Announcements'))
 const LoanRequests = lazy(() => import('./pages/admin/LoanRequests'))
 const Invoices = lazy(() => import('./pages/admin/Invoices'))
+const Disbursements = lazy(() => import('./pages/admin/Disbursements'))
 const AdminNotifications = lazy(() => import('./pages/admin/Notifications'))
 
 // Warm the two landing pages (whichever role lands here) once the browser is
@@ -99,6 +102,7 @@ export default function App() {
       <AnnouncementsProvider>
       <LoanRequestsProvider>
       <InvoicesProvider>
+      <DisbursementsProvider>
       <NotificationsProvider>
       <BrowserRouter>
         <Suspense fallback={<RouteFallback />}>
@@ -117,6 +121,7 @@ export default function App() {
           <Route path="/portal/messages" element={<Protected role="user"><UserMessages /></Protected>} />
           <Route path="/portal/loan-request" element={<Protected role="user"><LoanRequest /></Protected>} />
           <Route path="/portal/invoices" element={<Protected role="user"><UserInvoices /></Protected>} />
+          <Route path="/portal/disbursements" element={<Protected role="user"><UserDisbursements /></Protected>} />
           <Route path="/portal/notifications" element={<Protected role="user"><UserNotifications /></Protected>} />
           <Route path="/portal/announcement/:id" element={<Protected role="user"><AnnouncementDetail /></Protected>} />
 
@@ -134,6 +139,7 @@ export default function App() {
           <Route path="/admin/announcements" element={<Protected role="admin"><Announcements /></Protected>} />
           <Route path="/admin/loan-requests" element={<Protected role="admin"><LoanRequests /></Protected>} />
           <Route path="/admin/invoices" element={<Protected role="admin"><Invoices /></Protected>} />
+          <Route path="/admin/disbursements" element={<Protected role="admin"><Disbursements /></Protected>} />
           <Route path="/admin/notifications" element={<Protected role="admin"><AdminNotifications /></Protected>} />
           <Route path="/admin/logs" element={<Protected role="admin"><Logs /></Protected>} />
 
@@ -142,6 +148,7 @@ export default function App() {
         </Suspense>
       </BrowserRouter>
       </NotificationsProvider>
+      </DisbursementsProvider>
       </InvoicesProvider>
       </LoanRequestsProvider>
       </AnnouncementsProvider>

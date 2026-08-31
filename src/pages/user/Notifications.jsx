@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
 import { useNotifications } from '../../context/NotificationsContext'
+import { useDisbursements } from '../../context/DisbursementsContext'
 import { useMessages } from '../../context/MessagesContext'
 import { PageHeader } from '../../components/AppShell'
 import Icon from '../../components/Icon'
@@ -97,14 +98,28 @@ function FilterChip({ value, label, count, active, onSelect }) {
   )
 }
 
-function NotificationRow({ n, read, onMarkRead, onMarkUnread, onReply }) {
+function NotificationRow({ n, read, onMarkRead, onMarkUnread, onReply, disbursement, onAccept }) {
   const [open, setOpen] = useState(false)
   const [reply, setReply] = useState('')
   const [sending, setSending] = useState(false)
   const [sent, setSent] = useState(false)
+  const [confirming, setConfirming] = useState(false)
+  const [accepting, setAccepting] = useState(false)
+  const [acceptErr, setAcceptErr] = useState('')
   const replyRef = useRef(null)
   const attachRef = useRef(null)
   const hasAttachments = (n.attachments?.length ?? 0) > 0
+
+  // Accept the linked disbursement agreement inline. Two-step (confirm) because
+  // acceptance is binding and notifies the admin; once accepted it locks.
+  const accept = async () => {
+    setAccepting(true)
+    setAcceptErr('')
+    const { error } = await onAccept(disbursement)
+    setAccepting(false)
+    if (error) setAcceptErr(error)
+    else setConfirming(false)
+  }
 
   const expand = () => {
     const next = !open
@@ -195,7 +210,48 @@ function NotificationRow({ n, read, onMarkRead, onMarkUnread, onReply }) {
             View attachment{n.attachments.length === 1 ? '' : `s (${n.attachments.length})`}
           </button>
         )}
+
+        {/* Accept the loan-disbursement agreement, right from the notification. */}
+        {disbursement &&
+          (disbursement.acknowledgedAt ? (
+            <span className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-sm font-medium text-emerald-700">
+              <Icon name="check" className="h-4 w-4" />
+              Agreement accepted
+            </span>
+          ) : confirming ? (
+            <span className="inline-flex flex-wrap items-center gap-2">
+              <span className="text-sm font-medium text-slate-600">Accept this disbursement agreement?</span>
+              <button
+                onClick={accept}
+                disabled={accepting}
+                className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:opacity-60"
+              >
+                <Icon name="check" className="h-4 w-4" />
+                {accepting ? 'Accepting…' : 'Yes, accept'}
+              </button>
+              <button
+                onClick={() => setConfirming(false)}
+                disabled={accepting}
+                className="cursor-pointer rounded-lg px-2 py-1.5 text-sm font-medium text-slate-500 transition-colors hover:text-slate-700"
+              >
+                Cancel
+              </button>
+            </span>
+          ) : (
+            <button
+              onClick={() => {
+                setConfirming(true)
+                setAcceptErr('')
+                if (!read) onMarkRead(n.id)
+              }}
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-100"
+            >
+              <Icon name="check" className="h-4 w-4" />
+              Accept agreement
+            </button>
+          ))}
       </div>
+      {acceptErr && <p className="mt-1.5 pl-6 text-xs font-medium text-red-600">{acceptErr}</p>}
 
       {open && (
         <div className="mt-3 pl-6">
@@ -253,9 +309,24 @@ export default function UserNotifications() {
   const { session } = useApp()
   const meId = session.user.id
   const { notifications, isRead, markRead, markUnread, unreadCount } = useNotifications()
+  const { disbursements, acknowledgeDisbursement } = useDisbursements()
   const { sendMessage } = useMessages()
 
   const [filter, setFilter] = useState('all') // 'all' | category value | 'unread'
+
+  // A "Loan Disbursement Ready" notification references its disbursement by
+  // number (in the title/body/attachment name). Match it against the borrower's
+  // own disbursements so the row can offer an inline Accept action, and so the
+  // button reflects the live acknowledged state.
+  const linkedDisbursement = useMemo(() => {
+    return (n) => {
+      if (!disbursements.length) return null
+      const hay = `${n.title} ${n.body} ${(n.attachments || []).map((a) => a.name).join(' ')}`
+      return disbursements.find((d) => d.disbursementNumber && hay.includes(d.disbursementNumber)) || null
+    }
+  }, [disbursements])
+
+  const onAccept = (d) => acknowledgeDisbursement(d.id)
 
   // Categories that actually appear, so the filter bar only shows usable chips.
   const presentCategories = useMemo(() => {
@@ -322,6 +393,8 @@ export default function UserNotifications() {
                 onMarkRead={markRead}
                 onMarkUnread={markUnread}
                 onReply={onReply}
+                disbursement={linkedDisbursement(n)}
+                onAccept={onAccept}
               />
             ))}
           </ul>

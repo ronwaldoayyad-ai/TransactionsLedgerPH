@@ -22,6 +22,7 @@ const mapNotification = (r) => ({
   audience: r.audience,
   targetUserIds: r.target_user_ids ?? [],
   attachments: r.attachments ?? [],
+  createdBy: r.created_by ?? null,
   createdAt: r.created_at ?? null,
 })
 
@@ -46,6 +47,20 @@ const SEED_IMAGE =
   )
 const seedIso = (daysAgo) => new Date(Date.now() - daysAgo * 86400000).toISOString()
 demoNotifications = [
+  {
+    // Pairs with the seed disbursement DISB-2026-0001 in DisbursementsContext so
+    // the borrower's "Accept agreement" action is clickable on localhost. The
+    // disbursement number in the body is what links the two (no backend needed).
+    id: 'n-seed-disb-1',
+    category: 'general',
+    title: '💸 Loan Disbursement Ready',
+    body: 'Your loan disbursement DISB-2026-0001 (net PHP 608,333.33) is ready for your review and acceptance.',
+    audience: 'targeted',
+    targetUserIds: ['u-001'],
+    attachments: [],
+    createdBy: 'admin-1',
+    createdAt: seedIso(0),
+  },
   {
     id: 'n-seed-1',
     category: 'payment',
@@ -198,10 +213,23 @@ export function NotificationsProvider({ children }) {
 
   const isRead = useCallback((id) => myReadIds.has(id), [myReadIds])
 
+  // ---- Received inbox ----
+  // Notifications addressed to ME that someone else authored. For an admin this
+  // is their receiving inbox (e.g. a borrower's disbursement acknowledgment);
+  // 'all' broadcasts are excluded (those are outbound to borrowers).
+  const inboxNotifications = useMemo(() => {
+    if (!meId) return []
+    return notifications.filter(
+      (n) => (n.targetUserIds || []).includes(meId) && n.createdBy !== meId,
+    )
+  }, [notifications, meId])
+
+  // Borrowers count unread over everything delivered to them (incl. 'all'
+  // broadcasts); admins count unread over their received inbox only.
   const unreadCount = useMemo(() => {
-    if (isAdmin) return 0
-    return notifications.reduce((s, n) => s + (myReadIds.has(n.id) ? 0 : 1), 0)
-  }, [notifications, myReadIds, isAdmin])
+    const list = isAdmin ? inboxNotifications : notifications
+    return list.reduce((s, n) => s + (myReadIds.has(n.id) ? 0 : 1), 0)
+  }, [isAdmin, inboxNotifications, notifications, myReadIds])
 
   // Admin: how many distinct borrowers have read a given notification.
   const readCountFor = useCallback(
@@ -223,7 +251,7 @@ export function NotificationsProvider({ children }) {
 
   const markRead = useCallback(
     async (id) => {
-      if (!meId || isAdmin) return
+      if (!meId) return
       if (isLive) {
         const { error } = await supabase
           .from('notification_reads')
@@ -240,12 +268,12 @@ export function NotificationsProvider({ children }) {
         }
       }
     },
-    [isLive, meId, isAdmin, fetchReads],
+    [isLive, meId, fetchReads],
   )
 
   const markUnread = useCallback(
     async (id) => {
-      if (!meId || isAdmin) return
+      if (!meId) return
       if (isLive) {
         const { error } = await supabase
           .from('notification_reads')
@@ -262,7 +290,7 @@ export function NotificationsProvider({ children }) {
         setDemoVersion((v) => v + 1)
       }
     },
-    [isLive, meId, isAdmin, fetchReads],
+    [isLive, meId, fetchReads],
   )
 
   // ---- Admin writes ----
@@ -434,6 +462,7 @@ export function NotificationsProvider({ children }) {
   const value = useMemo(
     () => ({
       notifications,
+      inboxNotifications,
       loading,
       isAdmin,
       isRead,
@@ -451,8 +480,8 @@ export function NotificationsProvider({ children }) {
       deleteTemplate,
     }),
     [
-      notifications, loading, isAdmin, isRead, unreadCount, markRead, markUnread, readCountFor,
-      recipientCountFor, createNotification, updateNotification, deleteNotification,
+      notifications, inboxNotifications, loading, isAdmin, isRead, unreadCount, markRead, markUnread,
+      readCountFor, recipientCountFor, createNotification, updateNotification, deleteNotification,
       templates, createTemplate, updateTemplate, deleteTemplate,
     ],
   )

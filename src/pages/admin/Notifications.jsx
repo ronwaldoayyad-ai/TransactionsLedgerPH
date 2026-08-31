@@ -33,13 +33,22 @@ const emptyForm = { category: 'general', title: '', body: '', audience: 'all', a
 export default function AdminNotifications() {
   const { users } = useApp()
   const {
-    notifications, createNotification, updateNotification, deleteNotification, readCountFor, recipientCountFor,
+    notifications, inboxNotifications, createNotification, updateNotification, deleteNotification,
+    readCountFor, recipientCountFor, isRead, markRead, markUnread,
     templates, createTemplate, updateTemplate, deleteTemplate,
   } = useNotifications()
 
   const borrowers = useMemo(() => users.filter((u) => u.role === 'user'), [users])
   const options = useMemo(() => borrowers.map((b) => ({ value: b.id, label: b.name })), [borrowers])
   const nameOf = (id) => users.find((u) => u.id === id)?.name ?? id
+
+  // Received items (e.g. borrower disbursement acknowledgments) get their own
+  // Inbox; the Sent list below shows only notifications this admin authored.
+  const inboxIds = useMemo(() => new Set(inboxNotifications.map((n) => n.id)), [inboxNotifications])
+  const sentList = useMemo(
+    () => notifications.filter((n) => !inboxIds.has(n.id)),
+    [notifications, inboxIds],
+  )
 
   const [form, setForm] = useState(emptyForm)
   const [targetSel, setTargetSel] = useState(() => new Set())
@@ -335,14 +344,55 @@ export default function AdminNotifications() {
         </Card>
       </div>
 
+      {/* Inbox: notifications addressed to this admin (e.g. borrower acknowledgments) */}
+      {inboxNotifications.length > 0 && (
+        <Card className="mt-6">
+          <CardHeader
+            title="Inbox"
+            subtitle={`${inboxNotifications.length} received${
+              inboxNotifications.filter((n) => !isRead(n.id)).length
+                ? ` · ${inboxNotifications.filter((n) => !isRead(n.id)).length} unread`
+                : ''
+            }`}
+          />
+          <ul className="divide-y divide-slate-100">
+            {inboxNotifications.map((n) => {
+              const read = isRead(n.id)
+              return (
+                <li
+                  key={n.id}
+                  className={`flex items-start gap-3 px-5 py-3.5 ${read ? '' : 'bg-navy-50/40'}`}
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <CategoryChip category={n.category} />
+                      {!read && <span className="h-2 w-2 rounded-full bg-navy-600" aria-label="Unread" />}
+                      {n.title && <span className="text-sm font-semibold text-slate-900">{n.title}</span>}
+                    </div>
+                    <p className="mt-1 text-sm text-slate-600">{n.body}</p>
+                    <p className="mt-1 text-xs text-slate-500">{fmt(n.createdAt)}</p>
+                  </div>
+                  <button
+                    onClick={() => (read ? markUnread(n.id) : markRead(n.id))}
+                    className="shrink-0 cursor-pointer rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50"
+                  >
+                    {read ? 'Mark unread' : 'Mark read'}
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        </Card>
+      )}
+
       {/* Sent list */}
       <Card className="mt-6">
-        <CardHeader title="Sent" subtitle={`${notifications.length} notification${notifications.length === 1 ? '' : 's'}`} />
-        {notifications.length === 0 ? (
+        <CardHeader title="Sent" subtitle={`${sentList.length} notification${sentList.length === 1 ? '' : 's'}`} />
+        {sentList.length === 0 ? (
           <EmptyState icon="bell" title="No notifications yet" body="Send one above to deliver it to borrowers." />
         ) : (
           <ul className="divide-y divide-slate-100">
-            {notifications.map((n) => {
+            {sentList.map((n) => {
               const read = readCountFor(n.id)
               const total = recipientCountFor(n)
               return (
