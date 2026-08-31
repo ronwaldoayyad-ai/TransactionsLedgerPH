@@ -37,6 +37,30 @@ const mapEvent = (r) => ({
   createdAt: r.created_at,
 })
 
+// Demo seed: one already-approved request for the mock borrower Maria (u-001)
+// so the admin's Loan Disbursement generate flow is exercisable on localhost.
+// Matches the reference/amount of the seed disbursement in DisbursementsContext.
+// Live mode ignores this (rows come from Supabase).
+const DEMO_REQUESTS = [
+  {
+    id: 'req-demo-1',
+    reference: 'LOAN-20260831-0006',
+    userId: 'u-001',
+    amount: 650000,
+    termMonths: 12,
+    monthlyRate: 0.02,
+    bankName: 'Security Bank',
+    bankAccountNumber: '0000004102332',
+    bankAccountName: 'Maria Santos',
+    processingFee: 1500,
+    notarialFee: 2275,
+    dst: 4875,
+    status: 'bank_approved',
+    createdAt: new Date(Date.now() - 7 * 86400000).toISOString(),
+    updatedAt: new Date(Date.now() - 2 * 86400000).toISOString(),
+  },
+]
+
 export function LoanRequestsProvider({ children }) {
   const { realSession, session } = useApp()
   const isLive = realSession?.source === 'supabase'
@@ -46,7 +70,7 @@ export function LoanRequestsProvider({ children }) {
 
   const [rates, setRates] = useState([]) // [{ termMonths, monthlyRate }]
   const [accessList, setAccessList] = useState([]) // admin: all; borrower: own row
-  const [requests, setRequests] = useState([])
+  const [requests, setRequests] = useState(isLive ? [] : DEMO_REQUESTS)
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(isLive)
 

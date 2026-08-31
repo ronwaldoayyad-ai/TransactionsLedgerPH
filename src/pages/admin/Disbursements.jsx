@@ -57,6 +57,8 @@ export default function Disbursements() {
   const [loanAccountNumber, setLoanAccountNumber] = useState('')
   const [mode, setMode] = useState('bank_transfer')
   const [dedSel, setDedSel] = useState(() => new Set())
+  const [dateSel, setDateSel] = useState(() => new Set()) // txn-date pill filter (multi-select)
+  const [amountSort, setAmountSort] = useState('none') // 'none' | 'asc' | 'desc'
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [preview, setPreview] = useState(null)
@@ -80,6 +82,24 @@ export default function Disbursements() {
     [deductionAll, dedSel],
   )
 
+  // Distinct transaction dates of the still-unpaid installments — the pill
+  // options. (deductionAll is already only unpaid receivables.)
+  const txnDateOptions = useMemo(
+    () => [...new Set(deductionAll.map((it) => it.txnDate).filter(Boolean))].sort(),
+    [deductionAll],
+  )
+  // What the picker shows: filtered by the selected txn-date pills, then sorted
+  // by amount if requested. Selection (dedSel) is unaffected — filtering is
+  // purely a view, so items picked under one filter still count in the total.
+  const deductionView = useMemo(() => {
+    let list = deductionAll
+    if (dateSel.size) list = list.filter((it) => dateSel.has(it.txnDate))
+    if (amountSort !== 'none') {
+      list = [...list].sort((a, b) => (amountSort === 'asc' ? a.amount - b.amount : b.amount - a.amount))
+    }
+    return list
+  }, [deductionAll, dateSel, amountSort])
+
   const fees = selectedRequest
     ? { processingFee: selectedRequest.processingFee, notarialFee: selectedRequest.notarialFee, dst: selectedRequest.dst }
     : { processingFee: 0, notarialFee: 0, dst: 0 }
@@ -98,6 +118,8 @@ export default function Disbursements() {
     setGrossAmount('')
     setLoanAccountNumber('')
     setDedSel(new Set())
+    setDateSel(new Set())
+    setAmountSort('none')
     setError('')
   }
   const pickRequest = (id) => {
@@ -116,6 +138,16 @@ export default function Disbursements() {
       else next.add(id)
       return next
     })
+  const toggleDate = (d) =>
+    setDateSel((prev) => {
+      const next = new Set(prev)
+      if (next.has(d)) next.delete(d)
+      else next.add(d)
+      return next
+    })
+  // none → High→Low → Low→High → none
+  const cycleAmountSort = () =>
+    setAmountSort((s) => (s === 'none' ? 'desc' : s === 'desc' ? 'asc' : 'none'))
 
   const resetForm = () => {
     setUserId('')
@@ -127,6 +159,8 @@ export default function Disbursements() {
     setLoanAccountNumber('')
     setMode('bank_transfer')
     setDedSel(new Set())
+    setDateSel(new Set())
+    setAmountSort('none')
     setError('')
   }
 
@@ -256,19 +290,76 @@ export default function Disbursements() {
 
               {/* Deductions picker */}
               <div>
-                <p className="mb-2 text-sm font-semibold text-slate-800">
-                  Authorized Deductions
-                  <span className="ml-2 font-normal text-slate-500">
-                    {selectedItems.length} selected · {formatPeso(totalDeductions)}
-                  </span>
-                </p>
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-slate-800">
+                    Authorized Deductions
+                    <span className="ml-2 font-normal text-slate-500">
+                      {selectedItems.length} selected · {formatPeso(totalDeductions)}
+                    </span>
+                  </p>
+                  {deductionAll.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={cycleAmountSort}
+                      aria-label="Sort by amount"
+                      className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50"
+                    >
+                      {amountSort === 'none'
+                        ? 'Sort by amount'
+                        : amountSort === 'desc'
+                          ? 'Amount: High → Low'
+                          : 'Amount: Low → High'}
+                      <span aria-hidden="true">{amountSort === 'asc' ? '↑' : amountSort === 'desc' ? '↓' : '⇅'}</span>
+                    </button>
+                  )}
+                </div>
+
+                {/* Transaction-date filter — pills of the still-unpaid items' txn
+                    dates. Multi-select; click to narrow the list below. */}
+                {txnDateOptions.length > 0 && (
+                  <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                    <span className="mr-1 text-xs font-medium text-slate-500">Txn date:</span>
+                    {txnDateOptions.map((d) => {
+                      const on = dateSel.has(d)
+                      return (
+                        <button
+                          key={d}
+                          type="button"
+                          onClick={() => toggleDate(d)}
+                          aria-pressed={on}
+                          className={`inline-flex cursor-pointer items-center rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+                            on
+                              ? 'border-navy-300 bg-navy-800 text-white'
+                              : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                          }`}
+                        >
+                          {formatDate(d)}
+                        </button>
+                      )
+                    })}
+                    {dateSel.size > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setDateSel(new Set())}
+                        className="ml-1 cursor-pointer text-xs font-medium text-slate-500 underline-offset-2 hover:text-slate-700 hover:underline"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                )}
+
                 {deductionAll.length === 0 ? (
                   <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-4 text-sm text-slate-500">
                     This borrower has no unpaid installments to deduct.
                   </p>
+                ) : deductionView.length === 0 ? (
+                  <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-4 text-sm text-slate-500">
+                    No installments match the selected transaction date{dateSel.size === 1 ? '' : 's'}.
+                  </p>
                 ) : (
                   <div className="max-h-64 overflow-y-auto rounded-lg border border-slate-200 divide-y divide-slate-100">
-                    {deductionAll.map((it) => (
+                    {deductionView.map((it) => (
                       <label key={it.id} className="flex cursor-pointer items-center gap-3 px-3 py-2 text-sm hover:bg-navy-50/40">
                         <input
                           type="checkbox"
