@@ -1,7 +1,7 @@
 // Pure logic for the Payment Logs ledger (admin records payments received from
 // borrowers). Independent of the amortization ledger — these helpers only READ
 // transactions to compute how much a borrower owes; they never mutate them.
-import { formatDate, formatPeso } from './amortization'
+import { formatDate, formatManilaDateTime, formatPeso } from './amortization'
 import { isReceivable } from './transactions'
 
 // "Manual Credit" = the borrower's overpayment is credited against their amount
@@ -40,7 +40,7 @@ const PAY_LOG_STATUS_COPY = {
 // Build the borrower notification for a recorded payment log. Message is dynamic
 // per allocation status and includes the key figures (funds applied, remaining
 // balance) plus the reference/subject so the borrower can reconcile it.
-export function paymentLogNotification(log) {
+export function paymentLogNotification(log, at = new Date()) {
   const copy = PAY_LOG_STATUS_COPY[log.allocStatus] ?? {
     emoji: '🧾',
     label: 'Payment Recorded',
@@ -54,6 +54,8 @@ export function paymentLogNotification(log) {
   ]
   if (log.reference) lines.push(`Reference: ${log.reference}`)
   if (log.subject) lines.push(`Subject: ${log.subject}`)
+  const stamp = formatManilaDateTime(at)
+  if (stamp) lines.push(`Recorded: ${stamp}`)
   return {
     category: 'payment',
     title: `${copy.emoji} ${copy.label}`,

@@ -40,6 +40,21 @@ export function formatDate(date) {
   })
 }
 
+// Complete date + time in the Philippine timezone (Asia/Manila), independent of
+// the viewer's machine timezone. Used to stamp borrower notifications, e.g.
+// "August 31, 2026 at 3:45:12 PM PHT". Returns '' for an invalid/absent date.
+const manilaDateTime = new Intl.DateTimeFormat('en-PH', {
+  dateStyle: 'long',
+  timeStyle: 'medium',
+  timeZone: 'Asia/Manila',
+})
+
+export function formatManilaDateTime(date) {
+  const d = date instanceof Date ? date : new Date(date)
+  if (!date || Number.isNaN(d.getTime())) return ''
+  return `${manilaDateTime.format(d)} PHT`
+}
+
 // Parse 'YYYY-MM-DD' as a local date (avoids UTC off-by-one from new Date(str)).
 export function parseISODate(iso) {
   const [y, m, d] = iso.split('-').map(Number)
