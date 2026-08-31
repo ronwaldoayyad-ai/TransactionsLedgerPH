@@ -55,7 +55,8 @@ const DEMO_REQUESTS = [
     processingFee: 1500,
     notarialFee: 2275,
     dst: 4875,
-    status: 'bank_approved',
+    // Non-approved on purpose: a disbursement can be generated for any status.
+    status: 'pending',
     createdAt: new Date(Date.now() - 7 * 86400000).toISOString(),
     updatedAt: new Date(Date.now() - 2 * 86400000).toISOString(),
   },

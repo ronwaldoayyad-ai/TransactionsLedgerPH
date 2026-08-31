@@ -20,9 +20,7 @@ import {
   disbursementPdfBlobUrl,
   downloadDisbursementPdf,
 } from '../../lib/disbursementPdf'
-
-// Request statuses at/after which a disbursement may be generated.
-const APPROVED_STATUSES = ['bank_approved', 'transfer', 'completed']
+import { STATUS_LABEL } from '../../lib/loanRequest'
 
 // Snapshot (DB camelCase) → the shape disbursementPdf expects, injecting the
 // borrower's display name so the document reads correctly.
@@ -64,13 +62,15 @@ export default function Disbursements() {
   const [preview, setPreview] = useState(null)
   const [confirmDel, setConfirmDel] = useState(null)
 
-  const approvedRequests = useMemo(
-    () => requests.filter((r) => r.userId === userId && APPROVED_STATUSES.includes(r.status)),
+  // A disbursement can be generated for ANY of the borrower's loan requests,
+  // regardless of status — the request is only the source of the figures.
+  const borrowerRequests = useMemo(
+    () => requests.filter((r) => r.userId === userId),
     [requests, userId],
   )
   const selectedRequest = useMemo(
-    () => approvedRequests.find((r) => r.id === requestId) ?? null,
-    [approvedRequests, requestId],
+    () => borrowerRequests.find((r) => r.id === requestId) ?? null,
+    [borrowerRequests, requestId],
   )
 
   const deductionAll = useMemo(
@@ -124,7 +124,7 @@ export default function Disbursements() {
   }
   const pickRequest = (id) => {
     setRequestId(id)
-    const r = approvedRequests.find((x) => x.id === id)
+    const r = borrowerRequests.find((x) => x.id === id)
     if (r) {
       setGrossAmount(String(r.amount))
       setLoanAccountNumber(r.reference || '')
@@ -232,7 +232,7 @@ export default function Disbursements() {
 
       {/* --- Generate --- */}
       <Card>
-        <CardHeader title="Generate Disbursement" subtitle="Pick a borrower and their approved request, then authorize deductions." />
+        <CardHeader title="Generate Disbursement" subtitle="Pick a borrower and one of their loan requests, then authorize deductions." />
         <div className="space-y-4 px-5 py-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Borrower" htmlFor="d-borrower">
@@ -243,7 +243,7 @@ export default function Disbursements() {
                 ))}
               </select>
             </Field>
-            <Field label="Approved Loan Request" htmlFor="d-request">
+            <Field label="Loan Request" htmlFor="d-request">
               <select
                 id="d-request"
                 className={inputClass}
@@ -251,10 +251,10 @@ export default function Disbursements() {
                 onChange={(e) => pickRequest(e.target.value)}
                 disabled={!userId}
               >
-                <option value="">{userId ? '— Select an approved request —' : 'Select a borrower first'}</option>
-                {approvedRequests.map((r) => (
+                <option value="">{userId ? '— Select a loan request —' : 'Select a borrower first'}</option>
+                {borrowerRequests.map((r) => (
                   <option key={r.id} value={r.id}>
-                    {r.reference} · {formatPeso(r.amount)}
+                    {r.reference} · {formatPeso(r.amount)} · {STATUS_LABEL[r.status] ?? r.status}
                   </option>
                 ))}
               </select>
