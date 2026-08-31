@@ -5,9 +5,15 @@ import { useRef, useState } from 'react'
 // Tap a side item to centre it; tap the centred item to fire onActivate.
 const SWIPE_PX = 40 // horizontal travel that counts as a swipe
 
-export default function SwipeCoverflow({ items, renderItem, onActivate, hint = 'Swipe to switch', height = 260 }) {
+export default function SwipeCoverflow({ items, renderItem, onActivate, hint = 'Swipe to switch', height = 150 }) {
   const n = items.length
   const [active, setActive] = useState(0)
+  // Size the stage to the tallest actual card so it fits snugly (no dead space).
+  const [measuredH, setMeasuredH] = useState(0)
+  const cardH = measuredH || height
+  const measure = (el) => {
+    if (el) setMeasuredH((p) => (el.offsetHeight > p ? el.offsetHeight : p))
+  }
   const drag = useRef({ startX: 0, down: false, moved: false })
   const go = (i) => setActive(Math.max(0, Math.min(n - 1, i)))
 
@@ -35,7 +41,7 @@ export default function SwipeCoverflow({ items, renderItem, onActivate, hint = '
     <div className="select-none">
       <div
         className="relative touch-pan-y overflow-hidden"
-        style={{ height, perspective: '1300px' }}
+        style={{ height: cardH, perspective: '1300px' }}
         onPointerDown={onDown}
         onPointerMove={onMove}
         onPointerUp={onUp}
@@ -60,7 +66,7 @@ export default function SwipeCoverflow({ items, renderItem, onActivate, hint = '
                 filter: off === 0 ? 'none' : 'brightness(0.82)',
               }}
             >
-              {renderItem(it, off === 0)}
+              <div ref={measure}>{renderItem(it, off === 0)}</div>
             </button>
           )
         })}

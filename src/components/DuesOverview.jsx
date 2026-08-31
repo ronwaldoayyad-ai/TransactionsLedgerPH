@@ -190,14 +190,14 @@ export default function DuesOverview({
             </div>
           )}
 
-          {/* Selected-loan details: transaction date + total principal. */}
+          {/* Selected-loan details: transaction date (left) + principal (right). */}
           {selectedLoan && (
-            <div className="mb-4 flex flex-wrap gap-x-8 gap-y-2 rounded-xl bg-slate-50 px-4 py-3">
+            <div className="mb-4 flex items-start justify-between rounded-xl bg-slate-50 px-4 py-3">
               <div>
                 <p className="text-xs text-slate-500">Transaction date</p>
                 <p className="text-sm font-medium text-slate-900">{formatDate(selectedLoanTxnDate)}</p>
               </div>
-              <div>
+              <div className="text-right">
                 <p className="text-xs text-slate-500">Total principal</p>
                 <p className="font-mono text-sm font-semibold text-slate-900">
                   {formatPeso(selectedLoan.principal)}

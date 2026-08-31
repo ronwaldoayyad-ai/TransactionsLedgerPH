@@ -305,7 +305,7 @@ export default function Dashboard() {
           <FadeInView delay={60} className="gap-3">
             <Card>
               <CardHeader title="Summary" subtitle="Your transaction totals" />
-              <View className="overflow-hidden py-4">
+              <View className="overflow-hidden py-3">
                 <SwipeCoverflow
                   items={[
                     {

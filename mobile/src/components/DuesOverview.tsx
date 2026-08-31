@@ -269,16 +269,16 @@ export default function DuesOverview({
             </ScrollView>
           )}
 
-          {/* Selected-loan details: transaction date + total principal. */}
+          {/* Selected-loan details: transaction date (left) + principal (right). */}
           {selectedLoan && (
-            <View className="flex-row flex-wrap gap-x-8 gap-y-2 rounded-xl bg-slate-50 px-4 py-3">
+            <View className="flex-row items-start justify-between rounded-xl bg-slate-50 px-4 py-3">
               <View>
                 <Text className="font-sans text-xs text-slate-500">Transaction date</Text>
                 <Text className="font-sans-medium text-sm text-slate-900">
                   {formatDate(selectedLoanTxnDate)}
                 </Text>
               </View>
-              <View>
+              <View className="items-end">
                 <Text className="font-sans text-xs text-slate-500">Total principal</Text>
                 <Text className="font-mono-semibold text-sm text-slate-900">
                   {formatPeso(selectedLoan.principal)}

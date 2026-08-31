@@ -15,7 +15,6 @@ export default function SwipeCoverflow<T extends { id: string; label?: string }>
   hint = 'Swipe to switch',
   cardWidth = 228,
   cardHeight = 120,
-  height = 152,
 }: {
   items: T[]
   renderItem: (item: T, isActive: boolean) => ReactNode
@@ -23,10 +22,12 @@ export default function SwipeCoverflow<T extends { id: string; label?: string }>
   hint?: string
   cardWidth?: number
   cardHeight?: number
-  height?: number
 }) {
   const n = items.length
   const [active, setActive] = useState(0)
+  // Size the stage to the tallest actual card so it fits snugly (no dead space).
+  const [measuredH, setMeasuredH] = useState(0)
+  const cardH = measuredH || cardHeight
   // Lazy state (not refs) so the values are stable and render-safe.
   const [indexAnim] = useState(() => new Animated.Value(0))
   const [pan] = useState(() =>
@@ -52,7 +53,7 @@ export default function SwipeCoverflow<T extends { id: string; label?: string }>
 
   return (
     <View>
-      <View {...pan.panHandlers} style={{ height, overflow: 'hidden' }}>
+      <View {...pan.panHandlers} style={{ height: cardH, overflow: 'hidden' }}>
         {items.map((it, i) => {
           const off = Animated.subtract(i, indexAnim)
           const translateX = off.interpolate({
@@ -87,14 +88,21 @@ export default function SwipeCoverflow<T extends { id: string; label?: string }>
                 left: '50%',
                 top: '50%',
                 marginLeft: -cardWidth / 2,
-                marginTop: -cardHeight / 2,
+                marginTop: -cardH / 2,
                 zIndex: 100 - absActive,
                 opacity,
                 transform: [{ perspective: 1000 }, { translateX }, { rotateY }, { scale }],
               }}
             >
               <Pressable onPress={() => (i === active ? onActivate?.(it) : go(i))}>
-                {renderItem(it, i === active)}
+                <View
+                  onLayout={(e) => {
+                    const h = e.nativeEvent.layout.height
+                    setMeasuredH((p) => (h > p ? h : p))
+                  }}
+                >
+                  {renderItem(it, i === active)}
+                </View>
               </Pressable>
             </Animated.View>
           )
