@@ -62,6 +62,7 @@ export default function PaymentLogs() {
     method: PAY_LOG_METHODS[0],
     fundsApplied: 0,
     statusOverride: null, // null = use the computed allocation status
+    remainingOverride: null, // null = use the computed remaining balance
     subjectTouched: false,
     owedTouched: false,
   }
@@ -69,6 +70,9 @@ export default function PaymentLogs() {
 
   const { remaining, status: computedStatus } = allocate(form.amountOwed, form.fundsApplied)
   const effectiveStatus = form.statusOverride ?? computedStatus
+  // Admin may override the auto-computed Remaining Balance; until they do it
+  // tracks the amounts (Amount Owed − Funds Applied).
+  const effectiveRemaining = form.remainingOverride ?? remaining
 
   const openForm = () => {
     setForm(blank)
@@ -87,6 +91,7 @@ export default function PaymentLogs() {
       method: l.method ?? PAY_LOG_METHODS[0],
       fundsApplied: l.fundsApplied,
       statusOverride: l.allocStatus,
+      remainingOverride: l.remainingBalance,
       subjectTouched: true,
       owedTouched: true,
     })
@@ -117,7 +122,7 @@ export default function PaymentLogs() {
         amountOwed: form.amountOwed,
         method: form.method,
         fundsApplied: form.fundsApplied,
-        remainingBalance: remaining,
+        remainingBalance: effectiveRemaining,
         allocStatus: effectiveStatus,
       })
     } else {
@@ -130,6 +135,7 @@ export default function PaymentLogs() {
         amountOwed: form.amountOwed,
         method: form.method,
         fundsApplied: form.fundsApplied,
+        remainingBalance: effectiveRemaining,
         status: effectiveStatus,
       })
       // Automation: notify the borrower of the recorded payment. Message is
@@ -557,11 +563,19 @@ export default function PaymentLogs() {
             </Field>
           </div>
 
-          <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50/70 px-4 py-3">
-            <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Remaining Balance</p>
-              <p className="mt-0.5 font-mono text-lg font-semibold text-slate-900">{formatPeso(remaining)}</p>
-            </div>
+          <div className="flex items-end justify-between gap-4 rounded-lg border border-slate-200 bg-slate-50/70 px-4 py-3">
+            <Field
+              label="Remaining Balance"
+              htmlFor="pl-remaining"
+              hint="Auto-computed from the amounts; editable. Negative = still owed."
+            >
+              <CurrencyInput
+                id="pl-remaining"
+                allowNegative
+                value={effectiveRemaining}
+                onValueChange={(v) => setForm((f) => ({ ...f, remainingOverride: v ?? 0 }))}
+              />
+            </Field>
             <Badge status={allocBadge[effectiveStatus] ?? 'upcoming'}>{effectiveStatus}</Badge>
           </div>
         </div>

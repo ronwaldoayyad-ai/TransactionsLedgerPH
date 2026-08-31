@@ -1134,8 +1134,10 @@ export function AppProvider({ children }) {
     async (input) => {
       const borrower = users.find((u) => u.id === input.userId)
       const { remaining, status: computedStatus } = allocate(input.amountOwed, input.fundsApplied)
-      // The admin may override the computed status (e.g. to "Credited").
+      // The admin may override the computed status (e.g. to "Credited") and the
+      // computed Remaining Balance; fall back to the derived values otherwise.
       const status = input.status ?? computedStatus
+      const remainingBalance = input.remainingBalance ?? remaining
 
       const paymentDraft = {
         userId: input.userId,
@@ -1147,7 +1149,7 @@ export function AppProvider({ children }) {
         amountOwed: input.amountOwed,
         method: input.method,
         fundsApplied: input.fundsApplied,
-        remainingBalance: remaining,
+        remainingBalance,
         allocStatus: status,
         carryApplied: 0,
         parentId: null,
