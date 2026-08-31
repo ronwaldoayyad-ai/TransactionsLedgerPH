@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
 import { useNotifications } from '../../context/NotificationsContext'
 import { useDisbursements } from '../../context/DisbursementsContext'
+import { useAcceptDisbursement } from '../../hooks/useAcceptDisbursement'
 import { useMessages } from '../../context/MessagesContext'
 import { PageHeader } from '../../components/AppShell'
 import Icon from '../../components/Icon'
@@ -309,7 +310,8 @@ export default function UserNotifications() {
   const { session } = useApp()
   const meId = session.user.id
   const { notifications, isRead, markRead, markUnread, unreadCount } = useNotifications()
-  const { disbursements, acknowledgeDisbursement } = useDisbursements()
+  const { disbursements } = useDisbursements()
+  const acceptDisbursement = useAcceptDisbursement()
   const { sendMessage } = useMessages()
 
   const [filter, setFilter] = useState('all') // 'all' | category value | 'unread'
@@ -326,7 +328,7 @@ export default function UserNotifications() {
     }
   }, [disbursements])
 
-  const onAccept = (d) => acknowledgeDisbursement(d.id)
+  const onAccept = (d) => acceptDisbursement(d)
 
   // Categories that actually appear, so the filter bar only shows usable chips.
   const presentCategories = useMemo(() => {

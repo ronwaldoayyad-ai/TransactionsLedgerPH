@@ -8,6 +8,7 @@ import { Badge, Button, Card, CardHeader, EmptyState, Modal, inputClass } from '
 import { formatDate, formatPeso } from '../../lib/amortization'
 import { disbursementStatusMeta } from '../../lib/disbursement'
 import { disbursementPdfBlobUrl, downloadDisbursementPdf } from '../../lib/disbursementPdf'
+import { useAcceptDisbursement } from '../../hooks/useAcceptDisbursement'
 
 const SORT_OPTS = [
   ['disbursementDate', 'Disbursement Date'],
@@ -22,7 +23,8 @@ const SORT_OPTS = [
 // ASSIGNED disbursements.
 export default function Disbursements() {
   const { session } = useApp()
-  const { disbursements, acknowledgeDisbursement } = useDisbursements()
+  const { disbursements } = useDisbursements()
+  const acceptDisbursement = useAcceptDisbursement()
   const myName = session.user.name
 
   const [preview, setPreview] = useState(null)
@@ -60,7 +62,7 @@ export default function Disbursements() {
   const doAcknowledge = async (d) => {
     setAckErr('')
     setAckBusy(true)
-    const { disbursement, error } = await acknowledgeDisbursement(d.id)
+    const { disbursement, error } = await acceptDisbursement(d)
     setAckBusy(false)
     if (error) {
       setAckErr(error)
