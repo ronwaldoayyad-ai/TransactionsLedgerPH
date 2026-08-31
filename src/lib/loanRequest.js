@@ -2,7 +2,7 @@
 // No UI dependencies. Reuses the shared amortization engine so the request
 // preview matches what the admin sees in the Calculator / disclosure.
 
-import { autoDST, formatManilaDateTime } from './amortization'
+import { autoDST } from './amortization'
 
 export const TERMS = [3, 6, 12, 24, 36]
 
@@ -90,18 +90,14 @@ const STATUS_EMOJI = {
 // The title reflects the new status; the body is the admin's note (which already
 // auto-fills with the status default but is editable), falling back to the
 // standard status copy when the admin leaves the note blank.
-export function statusNotification({ status, note = '', reference = '', at = new Date() }) {
+export function statusNotification({ status, note = '', reference = '' }) {
   const label = STATUS_LABEL[status] ?? status
   const emoji = STATUS_EMOJI[status] ?? '📋'
-  const lead = (note || '').trim() || STATUS_NOTES[status] || `Your loan request is now ${label}.`
-  const meta = []
-  if (reference) meta.push(`Reference: ${reference}`)
-  const stamp = formatManilaDateTime(at)
-  if (stamp) meta.push(`Updated: ${stamp}`)
+  const body = (note || '').trim() || STATUS_NOTES[status] || `Your loan request is now ${label}.`
   return {
     category: 'general',
     title: `${emoji} Loan Request ${label}`,
-    body: meta.length ? `${lead}\n\n${meta.join('\n')}` : lead,
+    body: reference ? `${body}\n\nReference: ${reference}` : body,
   }
 }
 

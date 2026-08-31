@@ -9,6 +9,7 @@ import { PageHeader } from '../../components/AppShell'
 import Icon from '../../components/Icon'
 import RefreshButton from '../../components/RefreshButton'
 import { Button, Card, EmptyState } from '../../components/ui'
+import { formatManilaDateTime } from '../../lib/amortization'
 import {
   NOTIFICATION_CATEGORIES,
   categoryMeta,
@@ -180,6 +181,13 @@ function NotificationRow({ n, read, onMarkRead, onMarkUnread, onReply, disbursem
           <p className={`mt-1 whitespace-pre-wrap text-sm text-slate-600 ${open ? '' : 'line-clamp-2'}`}>
             {n.body}
           </p>
+          {/* Complete date + time in Philippine time, on every notification. */}
+          {n.createdAt && (
+            <p className="mt-1.5 flex items-center gap-1 text-xs text-slate-400">
+              <Icon name="clock" className="h-3 w-3 shrink-0" />
+              {formatManilaDateTime(n.createdAt)}
+            </p>
+          )}
         </button>
 
         {/* Read/unread toggle */}
