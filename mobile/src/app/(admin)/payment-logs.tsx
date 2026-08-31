@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { Alert, Modal, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from 'react-native'
+import { memo, useMemo, useState } from 'react'
+import { Alert, FlatList, Modal, Pressable, RefreshControl, ScrollView, Text, TextInput, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Check, ChevronDown, Pencil, Plus, Trash2, X } from 'lucide-react-native'
 import { useApp } from '../../context/AppContext'
@@ -17,7 +17,7 @@ import Button from '../../components/ui/Button'
 import FadeInView from '../../components/ui/FadeInView'
 import PressableScale from '../../components/ui/PressableScale'
 import EmptyState from '../../components/ui/EmptyState'
-import { Card, CardHeader } from '../../components/ui/Card'
+import { CardHeader } from '../../components/ui/Card'
 import { colors } from '../../theme'
 
 const STATUS_TONE: Record<string, { bg: string; text: string }> = {
@@ -36,12 +36,63 @@ function StatusPill({ status }: { status: string }) {
   )
 }
 
+// Memoized row: keeps typing in the search box (and opening the modal) from
+// repainting every logged payment. Rendered inside a virtualized FlatList.
+const PayLogRow = memo(function PayLogRow({
+  log,
+  name,
+  first,
+  onEdit,
+  onDelete,
+}: {
+  log: any
+  name: string
+  first: boolean
+  onEdit: (l: any) => void
+  onDelete: (l: any) => void
+}) {
+  return (
+    <View className={`border-x border-slate-200/70 bg-white px-4 py-3.5 ${first ? '' : 'border-t border-t-slate-100'}`}>
+      <View className="flex-row items-center justify-between gap-2">
+        <View className="min-w-0 flex-1">
+          <Text className="font-sans-semibold text-[15px] text-slate-900" numberOfLines={1}>{name}</Text>
+          <Text className="font-sans text-xs text-slate-500" numberOfLines={1}>
+            {formatDate(log.txnDate)} · {log.method ?? '—'}
+            {log.reference ? ` · ${log.reference}` : ''}
+          </Text>
+        </View>
+        <StatusPill status={log.allocStatus} />
+      </View>
+      <View className="mt-2 flex-row items-center justify-between">
+        <View className="flex-row gap-3">
+          <Text className="font-mono text-xs text-slate-600">Owed {formatPeso(log.amountOwed)}</Text>
+          <Text className="font-mono text-xs text-slate-600">Applied {formatPeso(log.fundsApplied)}</Text>
+          <Text className="font-mono-semibold text-xs text-slate-900">Rem {formatPeso(log.remainingBalance)}</Text>
+        </View>
+        <View className="flex-row gap-1">
+          <Pressable onPress={() => onEdit(log)} className="p-1.5" accessibilityLabel="Edit">
+            <Pencil size={15} color={colors.slate500} />
+          </Pressable>
+          <Pressable onPress={() => onDelete(log)} className="p-1.5" accessibilityLabel="Delete">
+            <Trash2 size={15} color={colors.slate500} />
+          </Pressable>
+        </View>
+      </View>
+    </View>
+  )
+})
+
 export default function AdminPaymentLogs() {
   const { users, transactions, paymentLogs, createPaymentLog, updatePaymentLog, deletePaymentLog, setTransactionStatus, refreshing, refreshData } =
     useApp()
   const borrowers = useMemo(() => users.filter((u: any) => u.role === 'user'), [users])
   const today = toISODate(new Date())
-  const nameOf = (id: string) => users.find((u: any) => u.id === id)?.name ?? id
+  // Map lookup instead of users.find() per row (was O(rows × users)).
+  const nameById = useMemo(
+    () => new Map<string, string>(users.map((u: any) => [u.id, u.name] as [string, string])),
+    [users],
+  )
+  const nameOf = (id: string): string => nameById.get(id) ?? id
 
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
@@ -182,88 +233,76 @@ export default function AdminPaymentLogs() {
     </View>
   )
 
+  const listHeader = (
+    <View className="gap-4 pb-0">
+      <FadeInView className="px-1">
+        <Text className="font-sans-bold text-2xl text-slate-900">Payment Logs</Text>
+        <Text className="mt-0.5 font-sans text-sm text-slate-500">
+          Record payments received from borrowers. Separate from the amortization schedule.
+        </Text>
+      </FadeInView>
+
+      <PressableScale onPress={openForm} className="flex-row items-center justify-center gap-2 rounded-2xl bg-gold-500 px-4 py-3">
+        <Plus size={18} color="#ffffff" />
+        <Text className="font-sans-semibold text-sm text-white">Record Payment</Text>
+      </PressableScale>
+
+      {/* Totals */}
+      <FadeInView delay={60} className="flex-row gap-2">
+        {[
+          ['Owed', totals.amountOwed],
+          ['Applied', totals.fundsApplied],
+          ['Remaining', totals.remaining],
+        ].map(([label, v]) => (
+          <View key={label as string} className="flex-1 rounded-2xl bg-white p-3">
+            <Text className="font-sans-medium text-[11px] text-slate-500">{label}</Text>
+            <Text className="mt-0.5 font-mono-semibold text-sm text-slate-900" numberOfLines={1} adjustsFontSizeToFit>
+              {formatPeso(v as number)}
+            </Text>
+          </View>
+        ))}
+      </FadeInView>
+
+      <View className="overflow-hidden rounded-t-2xl border border-b-0 border-slate-200/70 bg-white">
+        <CardHeader title="Recorded payments" subtitle={`${rows.length} payment${rows.length === 1 ? '' : 's'} logged`} />
+        <View className="px-4 pb-2 pt-2">
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search…"
+            placeholderTextColor={colors.slate400}
+            className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-sans text-sm text-slate-900"
+          />
+        </View>
+      </View>
+    </View>
+  )
+
   return (
     <SafeAreaView className="flex-1 bg-[#f3f6fb]" edges={['top']}>
-      <ScrollView
-        contentContainerClassName="gap-4 p-4 pb-8"
+      <FlatList
+        data={rows}
+        keyExtractor={(l: any) => l.id}
+        renderItem={({ item, index }) => (
+          <PayLogRow log={item} name={nameOf(item.userId)} first={index === 0} onEdit={openEdit} onDelete={confirmDelete} />
+        )}
+        initialNumToRender={12}
+        windowSize={9}
+        removeClippedSubviews
+        contentContainerClassName="p-4 pb-8"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refreshData} tintColor={colors.navy600} />}
-      >
-        <FadeInView className="px-1">
-          <Text className="font-sans-bold text-2xl text-slate-900">Payment Logs</Text>
-          <Text className="mt-0.5 font-sans text-sm text-slate-500">
-            Record payments received from borrowers. Separate from the amortization schedule.
-          </Text>
-        </FadeInView>
-
-        <PressableScale onPress={openForm} className="flex-row items-center justify-center gap-2 rounded-2xl bg-gold-500 px-4 py-3">
-          <Plus size={18} color="#ffffff" />
-          <Text className="font-sans-semibold text-sm text-white">Record Payment</Text>
-        </PressableScale>
-
-        {/* Totals */}
-        <FadeInView delay={60} className="flex-row gap-2">
-          {[
-            ['Owed', totals.amountOwed],
-            ['Applied', totals.fundsApplied],
-            ['Remaining', totals.remaining],
-          ].map(([label, v]) => (
-            <View key={label as string} className="flex-1 rounded-2xl bg-white p-3">
-              <Text className="font-sans-medium text-[11px] text-slate-500">{label}</Text>
-              <Text className="mt-0.5 font-mono-semibold text-sm text-slate-900" numberOfLines={1} adjustsFontSizeToFit>
-                {formatPeso(v as number)}
-              </Text>
-            </View>
-          ))}
-        </FadeInView>
-
-        <FadeInView delay={100}>
-          <Card>
-            <CardHeader title="Recorded payments" subtitle={`${rows.length} payment${rows.length === 1 ? '' : 's'} logged`} />
-            <View className="px-4 pb-2">
-              <TextInput
-                value={query}
-                onChangeText={setQuery}
-                placeholder="Search…"
-                placeholderTextColor={colors.slate400}
-                className="rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-sans text-sm text-slate-900"
-              />
-            </View>
-            {rows.length === 0 ? (
-              <EmptyState title="No payment logs" body="Use Record Payment to acknowledge a payment received." />
-            ) : (
-              rows.map((l: any, idx: number) => (
-                <View key={l.id} className={`px-4 py-3.5 ${idx > 0 ? 'border-t border-slate-100' : ''}`}>
-                  <View className="flex-row items-center justify-between gap-2">
-                    <View className="min-w-0 flex-1">
-                      <Text className="font-sans-semibold text-[15px] text-slate-900" numberOfLines={1}>{nameOf(l.userId)}</Text>
-                      <Text className="font-sans text-xs text-slate-500" numberOfLines={1}>
-                        {formatDate(l.txnDate)} · {l.method ?? '—'}
-                        {l.reference ? ` · ${l.reference}` : ''}
-                      </Text>
-                    </View>
-                    <StatusPill status={l.allocStatus} />
-                  </View>
-                  <View className="mt-2 flex-row items-center justify-between">
-                    <View className="flex-row gap-3">
-                      <Text className="font-mono text-xs text-slate-600">Owed {formatPeso(l.amountOwed)}</Text>
-                      <Text className="font-mono text-xs text-slate-600">Applied {formatPeso(l.fundsApplied)}</Text>
-                      <Text className="font-mono-semibold text-xs text-slate-900">Rem {formatPeso(l.remainingBalance)}</Text>
-                    </View>
-                    <View className="flex-row gap-1">
-                      <Pressable onPress={() => openEdit(l)} className="p-1.5" accessibilityLabel="Edit">
-                        <Pencil size={15} color={colors.slate500} />
-                      </Pressable>
-                      <Pressable onPress={() => confirmDelete(l)} className="p-1.5" accessibilityLabel="Delete">
-                        <Trash2 size={15} color={colors.slate500} />
-                      </Pressable>
-                    </View>
-                  </View>
-                </View>
-              ))
-            )}
-          </Card>
-        </FadeInView>
-      </ScrollView>
+        ListHeaderComponent={listHeader}
+        ListFooterComponent={
+          rows.length === 0 ? null : (
+            <View className="h-3 rounded-b-2xl border border-t-0 border-slate-200/70 bg-white" />
+          )
+        }
+        ListEmptyComponent={
+          <View className="overflow-hidden rounded-b-2xl border border-t-0 border-slate-200/70 bg-white">
+            <EmptyState title="No payment logs" body="Use Record Payment to acknowledge a payment received." />
+          </View>
+        }
+      />
 
       {/* Record / edit modal */}
       <Modal visible={open} transparent animationType="slide" onRequestClose={() => setOpen(false)}>

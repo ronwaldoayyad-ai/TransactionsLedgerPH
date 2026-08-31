@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AppProvider, useApp } from './context/AppContext'
 import { MessagesProvider } from './context/MessagesContext'
@@ -6,36 +7,54 @@ import { LoanRequestsProvider } from './context/LoanRequestsContext'
 import { InvoicesProvider } from './context/InvoicesContext'
 import { NotificationsProvider } from './context/NotificationsContext'
 import AppShell from './components/AppShell'
+// Login is the unauthenticated landing page — keep it eager so first paint
+// isn't gated on a second chunk fetch. Every other page is code-split so the
+// initial bundle carries only the shell, router, and contexts.
 import Login from './pages/Login'
-import SetPassword from './pages/SetPassword'
-import UserDashboard from './pages/user/UserDashboard'
-import LoanDetail from './pages/user/LoanDetail'
-import ConsolidatedLoans from './pages/user/ConsolidatedLoans'
-import StraightTransactions from './pages/user/StraightTransactions'
-import Payments from './pages/user/Payments'
-import UserPaymentLogs from './pages/user/PaymentLogs'
-import AdminDashboard from './pages/admin/AdminDashboard'
-import Transactions from './pages/admin/Transactions'
-import Calculator from './pages/admin/Calculator'
-import Queue from './pages/admin/Queue'
-import Users from './pages/admin/Users'
-import Logs from './pages/admin/Logs'
-import PaymentLogs from './pages/admin/PaymentLogs'
-import Arbitrage from './pages/admin/Arbitrage'
-import LoanTracker from './pages/admin/LoanTracker'
-import PaymentDue from './pages/admin/PaymentDue'
-import Wallet from './pages/admin/Wallet'
-import AdminMessages from './pages/admin/Messages'
-import UserMessages from './pages/user/Messages'
-import Announcements from './pages/admin/Announcements'
-import AnnouncementDetail from './pages/user/AnnouncementDetail'
-import LoanRequest from './pages/user/LoanRequest'
-import LoanRequests from './pages/admin/LoanRequests'
-import Invoices from './pages/admin/Invoices'
-import UserInvoices from './pages/user/Invoices'
-import AdminNotifications from './pages/admin/Notifications'
-import UserNotifications from './pages/user/Notifications'
-import PrivacyPolicy from './pages/PrivacyPolicy'
+
+const SetPassword = lazy(() => import('./pages/SetPassword'))
+const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'))
+
+const UserDashboard = lazy(() => import('./pages/user/UserDashboard'))
+const LoanDetail = lazy(() => import('./pages/user/LoanDetail'))
+const ConsolidatedLoans = lazy(() => import('./pages/user/ConsolidatedLoans'))
+const StraightTransactions = lazy(() => import('./pages/user/StraightTransactions'))
+const Payments = lazy(() => import('./pages/user/Payments'))
+const UserPaymentLogs = lazy(() => import('./pages/user/PaymentLogs'))
+const UserMessages = lazy(() => import('./pages/user/Messages'))
+const AnnouncementDetail = lazy(() => import('./pages/user/AnnouncementDetail'))
+const LoanRequest = lazy(() => import('./pages/user/LoanRequest'))
+const UserInvoices = lazy(() => import('./pages/user/Invoices'))
+const UserNotifications = lazy(() => import('./pages/user/Notifications'))
+
+const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'))
+const Transactions = lazy(() => import('./pages/admin/Transactions'))
+const Calculator = lazy(() => import('./pages/admin/Calculator'))
+const Queue = lazy(() => import('./pages/admin/Queue'))
+const Users = lazy(() => import('./pages/admin/Users'))
+const Logs = lazy(() => import('./pages/admin/Logs'))
+const PaymentLogs = lazy(() => import('./pages/admin/PaymentLogs'))
+const Arbitrage = lazy(() => import('./pages/admin/Arbitrage'))
+const LoanTracker = lazy(() => import('./pages/admin/LoanTracker'))
+const PaymentDue = lazy(() => import('./pages/admin/PaymentDue'))
+const Wallet = lazy(() => import('./pages/admin/Wallet'))
+const AdminMessages = lazy(() => import('./pages/admin/Messages'))
+const Announcements = lazy(() => import('./pages/admin/Announcements'))
+const LoanRequests = lazy(() => import('./pages/admin/LoanRequests'))
+const Invoices = lazy(() => import('./pages/admin/Invoices'))
+const AdminNotifications = lazy(() => import('./pages/admin/Notifications'))
+
+// Lightweight route-transition fallback. Deliberately minimal (not the full
+// LoanLedger splash) so switching between lazy pages doesn't flash a 5s
+// branded animation on every navigation.
+function RouteFallback() {
+  return (
+    <div className="flex min-h-[60vh] items-center justify-center" role="status" aria-live="polite">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-200 border-t-slate-500" />
+      <span className="sr-only">Loading…</span>
+    </div>
+  )
+}
 
 // Two-tier RBAC route guard. Admin routes are unreachable for general users
 // and vice versa; unauthenticated visitors land on the invite-only login.
@@ -66,6 +85,7 @@ export default function App() {
       <InvoicesProvider>
       <NotificationsProvider>
       <BrowserRouter>
+        <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/set-password" element={<SetPassword />} />
@@ -103,6 +123,7 @@ export default function App() {
 
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
+        </Suspense>
       </BrowserRouter>
       </NotificationsProvider>
       </InvoicesProvider>

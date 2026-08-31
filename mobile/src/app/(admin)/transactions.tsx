@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { Alert, Modal, Platform, Pressable, RefreshControl, ScrollView, Share, Switch, Text, TextInput, View } from 'react-native'
+import { memo, useMemo, useState } from 'react'
+import { Alert, FlatList, Modal, Platform, Pressable, RefreshControl, ScrollView, Share, Switch, Text, TextInput, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import * as FileSystem from 'expo-file-system/legacy'
 import * as DocumentPicker from 'expo-document-picker'
@@ -13,7 +13,6 @@ import Button from '../../components/ui/Button'
 import FadeInView from '../../components/ui/FadeInView'
 import PressableScale from '../../components/ui/PressableScale'
 import EmptyState from '../../components/ui/EmptyState'
-import { Card, CardHeader } from '../../components/ui/Card'
 import { colors } from '../../theme'
 
 const STATUS_OPTS = ['paid', 'unpaid', 'past_due', 'refunded', 'cancelled']
@@ -28,7 +27,13 @@ export default function AdminTransactions() {
   const { users, transactions, setTransactionStatus, archiveTransactions, importTransactions, refreshing, refreshData } = useApp()
   const borrowers = useMemo(() => users.filter((u: any) => u.role === 'user'), [users])
   const today = toISODate(new Date())
-  const nameOf = (id: string) => users.find((u: any) => u.id === id)?.name ?? id
+  // O(1) name lookup. Previously each rendered row ran users.find(), turning the
+  // list into O(rows × users) work on every render — a Map makes it O(rows).
+  const nameById = useMemo(
+    () => new Map<string, string>(users.map((u: any) => [u.id, u.name] as [string, string])),
+    [users],
+  )
+  const nameOf = (id: string): string => nameById.get(id) ?? id
 
   const [query, setQuery] = useState('')
   const [borrowerFilter, setBorrowerFilter] = useState('all')
@@ -149,89 +154,89 @@ export default function AdminTransactions() {
 
   const activeFilterCount = [borrowerFilter, statusFilter, typeFilter].filter((f) => f !== 'all').length
 
+  // Cap the rendered window; the footer nudges the admin to narrow filters past
+  // 200. FlatList only mounts the on-screen slice, so scrolling stays smooth
+  // even at the cap (the old ScrollView mounted all 200 rows up front).
+  const visibleRows = useMemo(() => rows.slice(0, 200), [rows])
+
+  const listHeader = (
+    <View className="gap-4 pb-4">
+      <FadeInView className="px-1">
+        <Text className="font-sans-bold text-2xl text-slate-900">Overall Transactions</Text>
+        <Text className="mt-0.5 font-sans text-sm text-slate-500">
+          Every installment across all borrowers. Status set here syncs to borrower views.
+        </Text>
+      </FadeInView>
+
+      <FadeInView delay={40} className="flex-row gap-2">
+        <PressableScale onPress={exportCSV} className="flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3">
+          <Download size={16} color={colors.navy700} />
+          <Text className="font-sans-medium text-sm text-navy-700">Export CSV</Text>
+        </PressableScale>
+        <PressableScale onPress={importCSV} className="flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3">
+          <Upload size={16} color={colors.navy700} />
+          <Text className="font-sans-medium text-sm text-navy-700">{importing ? 'Importing…' : 'Import CSV'}</Text>
+        </PressableScale>
+      </FadeInView>
+
+      <View className="overflow-hidden rounded-t-2xl border border-b-0 border-slate-200/70 bg-white">
+        <View className="flex-row items-center gap-2 px-4 pt-4">
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search borrower or item…"
+            placeholderTextColor={colors.slate400}
+            className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-sans text-sm text-slate-900"
+          />
+          <Pressable onPress={() => setFiltersOpen(true)} className="rounded-xl border border-slate-200 bg-white p-2.5" accessibilityLabel="Filters">
+            <SlidersHorizontal size={18} color={activeFilterCount ? colors.navy700 : colors.slate400} />
+          </Pressable>
+        </View>
+        <View className="flex-row items-center justify-between px-4 py-2.5">
+          <Text className="font-sans text-xs text-slate-500">{rows.length} record{rows.length === 1 ? '' : 's'}</Text>
+          <View className="flex-row items-center gap-2">
+            <Text className="font-sans text-xs text-slate-500">Hide settled</Text>
+            <Switch value={hideSettled} onValueChange={setHideSettled} trackColor={{ true: colors.navy800, false: '#cbd5e1' }} thumbColor="#ffffff" />
+          </View>
+        </View>
+      </View>
+    </View>
+  )
+
+  const listFooter =
+    rows.length === 0 ? null : (
+      <View className="overflow-hidden rounded-b-2xl border border-t-0 border-slate-200/70 bg-white">
+        <View className="flex-row items-center justify-between border-t border-slate-200 bg-navy-50/70 px-4 py-3">
+          <Text className="font-sans-semibold text-xs text-navy-900">TOTAL ({rows.length})</Text>
+          <Text className="font-mono-semibold text-sm text-navy-900">{formatPeso(total)}</Text>
+        </View>
+        {rows.length > 200 ? (
+          <Text className="px-4 py-2 text-center font-sans text-xs text-slate-400">Showing first 200 — narrow the filters to see more.</Text>
+        ) : null}
+      </View>
+    )
+
   return (
     <SafeAreaView className="flex-1 bg-[#f3f6fb]" edges={['top']}>
-      <ScrollView
-        contentContainerClassName="gap-4 p-4 pb-8"
+      <FlatList
+        data={visibleRows}
+        keyExtractor={(t: any) => t.id}
+        renderItem={({ item, index }) => (
+          <AdminTxnRow txn={item} name={nameOf(item.userId)} today={today} first={index === 0} onPress={setActionTxn} />
+        )}
+        initialNumToRender={15}
+        windowSize={9}
+        removeClippedSubviews
+        contentContainerClassName="p-4 pb-8"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refreshData} tintColor={colors.navy600} />}
-      >
-        <FadeInView className="px-1">
-          <Text className="font-sans-bold text-2xl text-slate-900">Overall Transactions</Text>
-          <Text className="mt-0.5 font-sans text-sm text-slate-500">
-            Every installment across all borrowers. Status set here syncs to borrower views.
-          </Text>
-        </FadeInView>
-
-        <FadeInView delay={40} className="flex-row gap-2">
-          <PressableScale onPress={exportCSV} className="flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3">
-            <Download size={16} color={colors.navy700} />
-            <Text className="font-sans-medium text-sm text-navy-700">Export CSV</Text>
-          </PressableScale>
-          <PressableScale onPress={importCSV} className="flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3">
-            <Upload size={16} color={colors.navy700} />
-            <Text className="font-sans-medium text-sm text-navy-700">{importing ? 'Importing…' : 'Import CSV'}</Text>
-          </PressableScale>
-        </FadeInView>
-
-        <FadeInView delay={80}>
-          <Card>
-            <View className="flex-row items-center gap-2 px-4 pt-4">
-              <TextInput
-                value={query}
-                onChangeText={setQuery}
-                placeholder="Search borrower or item…"
-                placeholderTextColor={colors.slate400}
-                className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5 font-sans text-sm text-slate-900"
-              />
-              <Pressable onPress={() => setFiltersOpen(true)} className="rounded-xl border border-slate-200 bg-white p-2.5" accessibilityLabel="Filters">
-                <SlidersHorizontal size={18} color={activeFilterCount ? colors.navy700 : colors.slate400} />
-              </Pressable>
-            </View>
-            <View className="flex-row items-center justify-between px-4 py-2.5">
-              <Text className="font-sans text-xs text-slate-500">{rows.length} record{rows.length === 1 ? '' : 's'}</Text>
-              <View className="flex-row items-center gap-2">
-                <Text className="font-sans text-xs text-slate-500">Hide settled</Text>
-                <Switch value={hideSettled} onValueChange={setHideSettled} trackColor={{ true: colors.navy800, false: '#cbd5e1' }} thumbColor="#ffffff" />
-              </View>
-            </View>
-
-            {rows.length === 0 ? (
-              <EmptyState title="No transactions match" body="Adjust the filters or search." />
-            ) : (
-              <>
-                {rows.slice(0, 200).map((t: any, idx: number) => {
-                  const eff = effectiveStatus(t, today)
-                  return (
-                    <Pressable
-                      key={t.id}
-                      onPress={() => setActionTxn(t)}
-                      className={`flex-row items-center gap-3 px-4 py-3 active:bg-slate-50 ${idx > 0 ? 'border-t border-slate-100' : ''} ${eff === 'past_due' ? 'bg-red-50/50' : ''}`}
-                    >
-                      <View className="min-w-0 flex-1">
-                        <Text className="font-sans-semibold text-sm text-slate-900" numberOfLines={1}>{nameOf(t.userId)}</Text>
-                        <Text className="font-sans text-xs text-slate-500" numberOfLines={1}>
-                          {t.description} · Due {formatDate(t.dueDate)}
-                        </Text>
-                      </View>
-                      <View className="items-end gap-1">
-                        <Text className="font-mono-semibold text-sm text-slate-900">{formatPeso(t.amount)}</Text>
-                        <Badge status={eff} label={STATUS_LABELS[eff]} />
-                      </View>
-                    </Pressable>
-                  )
-                })}
-                <View className="flex-row items-center justify-between border-t border-slate-200 bg-navy-50/70 px-4 py-3">
-                  <Text className="font-sans-semibold text-xs text-navy-900">TOTAL ({rows.length})</Text>
-                  <Text className="font-mono-semibold text-sm text-navy-900">{formatPeso(total)}</Text>
-                </View>
-                {rows.length > 200 ? (
-                  <Text className="px-4 py-2 text-center font-sans text-xs text-slate-400">Showing first 200 — narrow the filters to see more.</Text>
-                ) : null}
-              </>
-            )}
-          </Card>
-        </FadeInView>
-      </ScrollView>
+        ListHeaderComponent={listHeader}
+        ListFooterComponent={listFooter}
+        ListEmptyComponent={
+          <View className="overflow-hidden rounded-b-2xl border border-t-0 border-slate-200/70 bg-white">
+            <EmptyState title="No transactions match" body="Adjust the filters or search." />
+          </View>
+        }
+      />
 
       {/* Filters sheet */}
       <Modal visible={filtersOpen} transparent animationType="slide" onRequestClose={() => setFiltersOpen(false)}>
@@ -286,6 +291,42 @@ export default function AdminTransactions() {
     </SafeAreaView>
   )
 }
+
+// Memoized so that state changes on the screen (search text, filter sheet,
+// selected action txn) don't re-render every visible row — only rows whose
+// props actually change repaint. Pairs with FlatList virtualization.
+const AdminTxnRow = memo(function AdminTxnRow({
+  txn,
+  name,
+  today,
+  first,
+  onPress,
+}: {
+  txn: any
+  name: string
+  today: string
+  first: boolean
+  onPress: (t: any) => void
+}) {
+  const eff = effectiveStatus(txn, today)
+  return (
+    <Pressable
+      onPress={() => onPress(txn)}
+      className={`flex-row items-center gap-3 border-x border-slate-200/70 bg-white px-4 py-3 active:bg-slate-50 ${first ? '' : 'border-t border-t-slate-100'} ${eff === 'past_due' ? 'bg-red-50/50' : ''}`}
+    >
+      <View className="min-w-0 flex-1">
+        <Text className="font-sans-semibold text-sm text-slate-900" numberOfLines={1}>{name}</Text>
+        <Text className="font-sans text-xs text-slate-500" numberOfLines={1}>
+          {txn.description} · Due {formatDate(txn.dueDate)}
+        </Text>
+      </View>
+      <View className="items-end gap-1">
+        <Text className="font-mono-semibold text-sm text-slate-900">{formatPeso(txn.amount)}</Text>
+        <Badge status={eff} label={STATUS_LABELS[eff]} />
+      </View>
+    </Pressable>
+  )
+})
 
 function FilterGroup({ title, options, selected, onSelect }: any) {
   return (
