@@ -17,6 +17,7 @@ import {
   formatBytes,
   buildReplyQuote,
 } from '../../lib/notifications'
+import { QUICK_REACTIONS } from '../../components/messaging/emoji'
 
 // Compact relative time ("3d ago"), falling back to a date for older items.
 function relTime(iso) {
@@ -100,7 +101,7 @@ function FilterChip({ value, label, count, active, onSelect }) {
   )
 }
 
-function NotificationRow({ n, read, onMarkRead, onMarkUnread, onReply, disbursement, onAccept }) {
+function NotificationRow({ n, read, onMarkRead, onMarkUnread, onReply, onReact, disbursement, onAccept }) {
   const [open, setOpen] = useState(false)
   const [reply, setReply] = useState('')
   const [sending, setSending] = useState(false)
@@ -108,6 +109,8 @@ function NotificationRow({ n, read, onMarkRead, onMarkUnread, onReply, disbursem
   const [confirming, setConfirming] = useState(false)
   const [accepting, setAccepting] = useState(false)
   const [acceptErr, setAcceptErr] = useState('')
+  const [reacted, setReacted] = useState(null) // emoji the borrower picked
+  const [reacting, setReacting] = useState(false)
   const replyRef = useRef(null)
   const attachRef = useRef(null)
   const hasAttachments = (n.attachments?.length ?? 0) > 0
@@ -154,6 +157,18 @@ function NotificationRow({ n, read, onMarkRead, onMarkUnread, onReply, disbursem
     setReply('')
     setSent(true)
     if (!read) onMarkRead(n.id)
+  }
+
+  // React to the lender's notification — notifies the admin (raises their badge).
+  const react = async (emoji) => {
+    if (reacting) return
+    setReacting(true)
+    const res = await onReact(n, emoji)
+    setReacting(false)
+    if (!res?.error) {
+      setReacted(emoji)
+      if (!read) onMarkRead(n.id)
+    }
   }
 
   return (
@@ -260,6 +275,27 @@ function NotificationRow({ n, read, onMarkRead, onMarkUnread, onReply, disbursem
             </button>
           ))}
       </div>
+
+      {/* Quick reactions — sending one notifies your lender (raises their badge). */}
+      <div className="mt-2 flex flex-wrap items-center gap-1.5 pl-6">
+        {QUICK_REACTIONS.map((emoji) => (
+          <button
+            key={emoji}
+            type="button"
+            onClick={() => react(emoji)}
+            disabled={reacting}
+            aria-label={`React ${emoji}`}
+            className={`cursor-pointer rounded-full border px-2 py-0.5 text-base leading-none transition-colors disabled:opacity-60 ${
+              reacted === emoji ? 'border-navy-300 bg-navy-50' : 'border-slate-200 bg-white hover:bg-slate-50'
+            }`}
+          >
+            {emoji}
+          </button>
+        ))}
+        {reacted && (
+          <span className="text-xs font-medium text-emerald-700">Sent {reacted} to your lender</span>
+        )}
+      </div>
       {acceptErr && <p className="mt-1.5 pl-6 text-xs font-medium text-red-600">{acceptErr}</p>}
 
       {open && (
@@ -317,7 +353,7 @@ function NotificationRow({ n, read, onMarkRead, onMarkUnread, onReply, disbursem
 export default function UserNotifications() {
   const { session } = useApp()
   const meId = session.user.id
-  const { notifications, isRead, markRead, markUnread, unreadCount } = useNotifications()
+  const { notifications, isRead, markRead, markUnread, unreadCount, notifyAdmins } = useNotifications()
   const { disbursements } = useDisbursements()
   const acceptDisbursement = useAcceptDisbursement()
   const { sendMessage } = useMessages()
@@ -350,9 +386,24 @@ export default function UserNotifications() {
     return notifications.filter((n) => n.category === filter)
   }, [notifications, filter, isRead])
 
+  // Reply posts a quoted copy into the Messages thread AND raises a notification
+  // to the admin so they see it in their Inbox (with a badge), not just Messages.
   const onReply = async (n, text) => {
     await sendMessage(meId, buildReplyQuote(n) + text)
+    await notifyAdmins({
+      category: n.category,
+      title: n.title ? `Reply: ${n.title}` : 'Reply from borrower',
+      body: `${buildReplyQuote(n)}${text}`,
+    })
   }
+
+  // React notifies the admin (raises their unread badge in the Inbox).
+  const onReact = (n, emoji) =>
+    notifyAdmins({
+      category: n.category,
+      title: `Reacted ${emoji}`,
+      body: `${emoji} — reacted to your notification${n.title ? ` “${n.title}”` : ''}.`,
+    })
 
   return (
     <>
@@ -403,6 +454,7 @@ export default function UserNotifications() {
                 onMarkRead={markRead}
                 onMarkUnread={markUnread}
                 onReply={onReply}
+                onReact={onReact}
                 disbursement={linkedDisbursement(n)}
                 onAccept={onAccept}
               />

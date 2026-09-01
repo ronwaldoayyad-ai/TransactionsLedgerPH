@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { useApp } from './AppContext'
 import { supabase } from '../supabaseClient'
 import { NOTIFICATION_TEMPLATES } from '../lib/notificationTemplates'
+import { adminUser } from '../data/mock'
 
 // Data layer for the Notification Center. Dual-mode like the rest of the app:
 // live sessions read/write the `notifications` + `notification_reads` tables and
@@ -332,6 +333,52 @@ export function NotificationsProvider({ children }) {
     [isLive, fetchAll],
   )
 
+  // Borrower -> admin: raise a notification to every admin (e.g. when a borrower
+  // reacts to or replies to a notification). Live mode routes through the
+  // SECURITY DEFINER notify_admins() RPC because a borrower cannot insert an
+  // admin-targeted notification directly; demo mode writes the in-memory store.
+  // The row keeps createdBy = the borrower so it lands in the admin Inbox and
+  // the admin can reply straight back.
+  const notifyAdmins = useCallback(
+    async ({ category = 'general', title = '', body }) => {
+      if (!body || !body.trim()) return { error: 'Message is required.' }
+      if (isLive) {
+        const { error } = await supabase.rpc('notify_admins', {
+          p_category: category,
+          p_title: title,
+          p_body: body,
+        })
+        if (error) {
+          console.error('[notifications] notify_admins failed:', error.message)
+          return { error: error.message }
+        }
+        await fetchAll()
+      } else {
+        // The demo `users` list holds only borrowers (the admin is a separate
+        // mock), so fall back to the demo admin id when none are present.
+        const adminIds = users.filter((u) => u.role === 'admin').map((u) => u.id)
+        if (adminIds.length === 0) adminIds.push(adminUser.id)
+        demoNotifications = [
+          {
+            id: demoId(),
+            category,
+            title,
+            body,
+            audience: 'targeted',
+            targetUserIds: adminIds,
+            attachments: [],
+            createdBy: meId,
+            createdAt: new Date().toISOString(),
+          },
+          ...demoNotifications,
+        ]
+        setDemoVersion((v) => v + 1)
+      }
+      return {}
+    },
+    [isLive, fetchAll, users, meId],
+  )
+
   const updateNotification = useCallback(
     async (id, { category, title = '', body, audience = 'all', targetUserIds = [], attachments = [] }) => {
       const ids = audience === 'targeted' ? targetUserIds : []
@@ -472,6 +519,7 @@ export function NotificationsProvider({ children }) {
       readCountFor,
       recipientCountFor,
       createNotification,
+      notifyAdmins,
       updateNotification,
       deleteNotification,
       templates,
@@ -481,7 +529,7 @@ export function NotificationsProvider({ children }) {
     }),
     [
       notifications, inboxNotifications, loading, isAdmin, isRead, unreadCount, markRead, markUnread,
-      readCountFor, recipientCountFor, createNotification, updateNotification, deleteNotification,
+      readCountFor, recipientCountFor, createNotification, notifyAdmins, updateNotification, deleteNotification,
       templates, createTemplate, updateTemplate, deleteTemplate,
     ],
   )
