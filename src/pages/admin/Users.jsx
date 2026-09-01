@@ -117,7 +117,90 @@ export default function Users() {
 
       <Card>
         <CardHeader title="Borrower Accounts" subtitle={`${borrowers.length} accounts`} />
-        <div className="overflow-x-auto">
+        {/* Mobile: stacked cards so every field wraps into view (no horizontal
+            scroll). Mirrors the desktop table's data + actions. */}
+        <ul className="divide-y divide-slate-100 md:hidden">
+          {pag.pageItems.map((u) => {
+            const c = countsFor(u.id)
+            return (
+              <li key={u.id} className="px-4 py-4">
+                <div className="flex items-start gap-3">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-navy-100 text-sm font-semibold text-navy-800">
+                    {u.name.charAt(0)}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-slate-900">{u.name}</p>
+                        <p className="truncate text-xs text-slate-500">{u.id}</p>
+                      </div>
+                      <Badge status={u.status} />
+                    </div>
+                    <p className="mt-1.5 truncate text-sm text-slate-700">{u.email}</p>
+                    <p className="truncate text-xs text-slate-500">{u.phone}</p>
+                    <dl className="mt-2 grid grid-cols-3 gap-2 text-center">
+                      <div className="rounded-lg bg-slate-50 px-2 py-1.5">
+                        <dt className="text-[10px] uppercase tracking-wide text-slate-400">Active</dt>
+                        <dd className="font-mono text-sm font-medium text-slate-900">{c.activeInstallments}</dd>
+                      </div>
+                      <div className="rounded-lg bg-slate-50 px-2 py-1.5">
+                        <dt className="text-[10px] uppercase tracking-wide text-slate-400">Paid</dt>
+                        <dd className="font-mono text-sm font-medium text-emerald-700">{c.fullyPaidInstallments}</dd>
+                      </div>
+                      <div className="rounded-lg bg-slate-50 px-2 py-1.5">
+                        <dt className="text-[10px] uppercase tracking-wide text-slate-400">Straight</dt>
+                        <dd className="font-mono text-sm font-medium text-slate-900">{c.straightCount}</dd>
+                      </div>
+                    </dl>
+                    <p className="mt-2 text-xs text-slate-500">
+                      Last login:{' '}
+                      {u.lastLogin ? formatDate(u.lastLogin) : <span className="text-slate-400">Never</span>}
+                    </p>
+                    <div className="mt-2.5 flex flex-wrap gap-2">
+                      <button
+                        onClick={() => handleViewAs(u)}
+                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-amber-50 hover:text-amber-700"
+                      >
+                        <Icon name="eye" className="h-3.5 w-3.5" />
+                        View as
+                      </button>
+                      {u.status === 'invited' && (
+                        <button
+                          onClick={() => {
+                            resendInvite(u)
+                            flash(`Invitation re-sent to ${u.email}.`)
+                          }}
+                          className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-sky-50 hover:text-sky-700"
+                        >
+                          <Icon name="mail" className="h-3.5 w-3.5" />
+                          Resend
+                        </button>
+                      )}
+                      <button
+                        onClick={() => openEdit(u)}
+                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-navy-50 hover:text-navy-800"
+                      >
+                        <Icon name="pencil" className="h-3.5 w-3.5" />
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => {
+                          setTarget(u)
+                          setModal('delete')
+                        }}
+                        className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-red-200 bg-white px-2.5 py-1 text-xs font-medium text-red-600 transition-colors hover:bg-red-50"
+                      >
+                        <Icon name="trash" className="h-3.5 w-3.5" />
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </li>
+            )
+          })}
+        </ul>
+        <div className="hidden overflow-x-auto md:block">
           <table className="w-full min-w-[900px] text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">

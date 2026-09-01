@@ -10,9 +10,11 @@ import {
   fileToAttachment,
   formatBytes,
   isImageAttachment,
+  buildReplyQuote,
   ATTACHMENT_ACCEPT,
   MAX_ATTACHMENTS,
 } from '../../lib/notifications'
+import { QUICK_REACTIONS } from '../../components/messaging/emoji'
 import TemplatesModal from '../../components/notifications/TemplatesModal'
 
 const fmt = (iso) =>
@@ -25,6 +27,125 @@ function CategoryChip({ category }) {
       <Icon name={m.icon} className="h-3 w-3" />
       {m.label}
     </span>
+  )
+}
+
+// A single received-inbox item with inline reply + quick reactions. Both a reply
+// and a reaction deliver a new targeted notification back to the borrower, which
+// raises their unread badge (unreadCount) automatically.
+function InboxRow({ n, borrowerName, read, onToggleRead, onReply, onReact }) {
+  const [open, setOpen] = useState(false)
+  const [text, setText] = useState('')
+  const [sending, setSending] = useState(false)
+  const [replied, setReplied] = useState(false)
+  const [reacted, setReacted] = useState(null) // emoji the admin picked
+  const [reacting, setReacting] = useState(false)
+  const canReply = Boolean(n.createdBy)
+
+  const send = async () => {
+    const body = text.trim()
+    if (!body) return
+    setSending(true)
+    const res = await onReply(n, body)
+    setSending(false)
+    if (res?.error) return
+    setText('')
+    setOpen(false)
+    setReplied(true)
+  }
+
+  const react = async (emoji) => {
+    if (reacting) return
+    setReacting(true)
+    const res = await onReact(n, emoji)
+    setReacting(false)
+    if (!res?.error) setReacted(emoji)
+  }
+
+  return (
+    <li className={`px-5 py-3.5 ${read ? '' : 'bg-navy-50/40'}`}>
+      <div className="flex items-start gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <CategoryChip category={n.category} />
+            {!read && <span className="h-2 w-2 rounded-full bg-navy-600" aria-label="Unread" />}
+            {n.title && <span className="text-sm font-semibold text-slate-900">{n.title}</span>}
+          </div>
+          <p className="mt-1 text-sm text-slate-600">{n.body}</p>
+          <p className="mt-1 text-xs text-slate-500">
+            {borrowerName ? `From ${borrowerName} · ` : ''}
+            {fmt(n.createdAt)}
+          </p>
+
+          {/* Quick reactions — each sends a notification to the borrower. */}
+          {canReply && (
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              {QUICK_REACTIONS.map((emoji) => (
+                <button
+                  key={emoji}
+                  type="button"
+                  onClick={() => react(emoji)}
+                  disabled={reacting}
+                  aria-label={`React ${emoji} to ${borrowerName || 'borrower'}`}
+                  className={`cursor-pointer rounded-full border px-2 py-0.5 text-sm transition-colors disabled:opacity-60 ${
+                    reacted === emoji
+                      ? 'border-navy-300 bg-navy-50'
+                      : 'border-slate-200 bg-white hover:bg-slate-50'
+                  }`}
+                >
+                  {emoji}
+                </button>
+              ))}
+              {reacted && (
+                <span className="text-xs font-medium text-emerald-700">Sent {reacted}</span>
+              )}
+            </div>
+          )}
+
+          {/* Inline reply composer. */}
+          {canReply && open && (
+            <div className="mt-2.5">
+              <textarea
+                rows={2}
+                autoFocus
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                placeholder={`Reply to ${borrowerName || 'the borrower'}…`}
+                aria-label="Reply to borrower"
+                className={inputClass}
+              />
+              <div className="mt-2 flex items-center justify-end gap-2">
+                <Button variant="secondary" className="!min-h-9 !px-3" onClick={() => { setOpen(false); setText('') }}>
+                  Cancel
+                </Button>
+                <Button variant="gold" className="!min-h-9 !px-3" onClick={send} disabled={!text.trim() || sending}>
+                  <Icon name="send" className="h-4 w-4" />
+                  {sending ? 'Sending…' : 'Send reply'}
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="flex shrink-0 flex-col items-end gap-2">
+          <button
+            onClick={() => onToggleRead(n, read)}
+            className="cursor-pointer rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50"
+          >
+            {read ? 'Mark unread' : 'Mark read'}
+          </button>
+          {canReply && !open && (
+            <button
+              onClick={() => { setOpen(true); setReplied(false) }}
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-navy-200 bg-white px-2.5 py-1 text-xs font-medium text-navy-800 transition-colors hover:bg-navy-50"
+            >
+              <Icon name="send" className="h-3.5 w-3.5" />
+              {replied ? 'Replied' : 'Reply'}
+            </button>
+          )}
+        </div>
+      </div>
+    </li>
   )
 }
 
@@ -41,6 +162,32 @@ export default function AdminNotifications() {
   const borrowers = useMemo(() => users.filter((u) => u.role === 'user'), [users])
   const options = useMemo(() => borrowers.map((b) => ({ value: b.id, label: b.name })), [borrowers])
   const nameOf = (id) => users.find((u) => u.id === id)?.name ?? id
+
+  // Inbox actions: replying or reacting delivers a new targeted notification to
+  // the borrower who sent the item (n.createdBy), which raises their unread badge.
+  const replyToBorrower = (n, text) =>
+    n.createdBy
+      ? createNotification({
+          category: n.category || 'general',
+          title: n.title ? `Re: ${n.title}` : 'Reply from your lender',
+          body: `${buildReplyQuote(n)}${text}`,
+          audience: 'targeted',
+          targetUserIds: [n.createdBy],
+        })
+      : Promise.resolve({ error: 'No borrower to reply to.' })
+
+  const reactToBorrower = (n, emoji) =>
+    n.createdBy
+      ? createNotification({
+          category: 'general',
+          title: `Your lender reacted ${emoji}`,
+          body: `${emoji} — in response to your message${n.title ? ` “${n.title}”` : ''}.`,
+          audience: 'targeted',
+          targetUserIds: [n.createdBy],
+        })
+      : Promise.resolve({ error: 'No borrower to notify.' })
+
+  const toggleInboxRead = (n, read) => (read ? markUnread(n.id) : markRead(n.id))
 
   // Received items (e.g. borrower disbursement acknowledgments) get their own
   // Inbox; the Sent list below shows only notifications this admin authored.
@@ -356,31 +503,17 @@ export default function AdminNotifications() {
             }`}
           />
           <ul className="divide-y divide-slate-100">
-            {inboxNotifications.map((n) => {
-              const read = isRead(n.id)
-              return (
-                <li
-                  key={n.id}
-                  className={`flex items-start gap-3 px-5 py-3.5 ${read ? '' : 'bg-navy-50/40'}`}
-                >
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <CategoryChip category={n.category} />
-                      {!read && <span className="h-2 w-2 rounded-full bg-navy-600" aria-label="Unread" />}
-                      {n.title && <span className="text-sm font-semibold text-slate-900">{n.title}</span>}
-                    </div>
-                    <p className="mt-1 text-sm text-slate-600">{n.body}</p>
-                    <p className="mt-1 text-xs text-slate-500">{fmt(n.createdAt)}</p>
-                  </div>
-                  <button
-                    onClick={() => (read ? markUnread(n.id) : markRead(n.id))}
-                    className="shrink-0 cursor-pointer rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50"
-                  >
-                    {read ? 'Mark unread' : 'Mark read'}
-                  </button>
-                </li>
-              )
-            })}
+            {inboxNotifications.map((n) => (
+              <InboxRow
+                key={n.id}
+                n={n}
+                borrowerName={n.createdBy ? nameOf(n.createdBy) : ''}
+                read={isRead(n.id)}
+                onToggleRead={toggleInboxRead}
+                onReply={replyToBorrower}
+                onReact={reactToBorrower}
+              />
+            ))}
           </ul>
         </Card>
       )}

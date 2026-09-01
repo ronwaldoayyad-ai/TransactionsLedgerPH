@@ -222,7 +222,62 @@ export default function LoanRequests() {
           <EmptyState icon="file" title="No loan requests yet" body="Borrower requests will appear here for review." />
         ) : (
           <>
-            <div className="overflow-x-auto">
+            {/* Mobile: stacked cards so every field wraps into view (no
+                horizontal scroll). Mirrors the desktop table's data + actions. */}
+            <ul className="divide-y divide-slate-100 md:hidden">
+              {pag.pageItems.map((r) => (
+                <li
+                  key={r.id}
+                  className={`px-4 py-3.5 ${selected.has(r.id) ? 'bg-navy-50/40' : ''}`}
+                >
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={selected.has(r.id)}
+                      onChange={() => toggleOne(r.id)}
+                      aria-label={`Select ${r.reference}`}
+                      className="mt-1 h-4 w-4 shrink-0 rounded border-slate-300 text-navy-800 focus:ring-navy-800"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="truncate font-medium text-slate-900">{nameOf(r.userId)}</p>
+                        <StatusBadge status={r.status} />
+                      </div>
+                      <p className="mt-0.5 font-mono text-xs text-slate-500">{r.reference}</p>
+                      <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm">
+                        <span className="font-mono font-semibold text-slate-900">{formatPeso(r.amount)}</span>
+                        <span className="text-slate-500">{r.termMonths} months</span>
+                      </div>
+                      <div className="mt-2.5 flex flex-wrap gap-2">
+                        <button
+                          onClick={() => setHistoryOf(r)}
+                          className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50"
+                        >
+                          <Icon name="file" className="h-3.5 w-3.5" />
+                          View
+                        </button>
+                        <button
+                          onClick={() => setUpdating(r)}
+                          className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-gold-500 px-2.5 py-1 text-xs font-semibold text-white transition-colors hover:bg-gold-600"
+                        >
+                          <Icon name="pencil" className="h-3.5 w-3.5" />
+                          Update Status
+                        </button>
+                        <button
+                          onClick={() => setConfirming([r.id])}
+                          aria-label="Delete request"
+                          className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-red-200 bg-white px-2.5 py-1 text-xs font-medium text-red-600 transition-colors hover:bg-red-50"
+                        >
+                          <Icon name="trash" className="h-3.5 w-3.5" />
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <div className="hidden overflow-x-auto md:block">
               <table className="w-full min-w-[760px] text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useApp } from '../../context/AppContext'
 import { PageHeader } from '../../components/AppShell'
 import Icon from '../../components/Icon'
-import { Badge, Button, Card, CardHeader, EmptyState, Modal, inputClass } from '../../components/ui'
+import { Badge, Button, Card, CardHeader, EmptyState, Modal, MultiSelect, inputClass } from '../../components/ui'
 import Pagination from '../../components/Pagination'
 import { usePagination } from '../../hooks/usePagination'
 import { downloadCSV, formatDate, formatPeso, toISODate } from '../../lib/amortization'
@@ -28,7 +28,7 @@ export default function Logs() {
   } = useApp()
   const [tab, setTab] = useState('analytics') // analytics | audit | archives
   const [query, setQuery] = useState('')
-  const [action, setAction] = useState('all')
+  const [actionSel, setActionSel] = useState(() => new Set()) // empty = all actions
   const [selected, setSelected] = useState(() => new Set()) // ids in the active tab
   const [confirmPurge, setConfirmPurge] = useState(false)
   const [purging, setPurging] = useState(false)
@@ -70,7 +70,7 @@ export default function Logs() {
   const actions = [...new Set(auditLog.map((e) => e.action))]
   const list = auditLog.filter(
     (e) =>
-      (action === 'all' || e.action === action) &&
+      (actionSel.size === 0 || actionSel.has(e.action)) &&
       (query === '' ||
         `${e.actor} ${e.detail}`.toLowerCase().includes(query.toLowerCase())),
   )
@@ -159,7 +159,51 @@ export default function Logs() {
               body="Records deleted from Overall Transactions will appear here."
             />
           ) : (
-            <div className="overflow-x-auto">
+            <>
+            {/* Mobile: stacked cards so every field wraps into view. */}
+            <ul className="divide-y divide-slate-100 md:hidden">
+              {archivedTransactions.map((t) => (
+                <li
+                  key={t.id}
+                  className={`px-4 py-3.5 ${selected.has(t.id) ? 'bg-red-50/50' : ''}`}
+                >
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="checkbox"
+                      checked={selected.has(t.id)}
+                      onChange={() => toggleOne(t.id)}
+                      aria-label={`Select archived ${t.description}`}
+                      className="mt-1 h-4 w-4 shrink-0 cursor-pointer accent-[#1e3a8a]"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="truncate font-medium text-slate-900">{nameOf(t.userId)}</p>
+                        <Badge status={t.status}>{STATUS_LABELS[t.status]}</Badge>
+                      </div>
+                      <p className="mt-0.5 text-sm text-slate-700">
+                        {t.description}
+                        <span className="ml-1.5 font-mono text-xs text-slate-400">{t.loanId}</span>
+                      </p>
+                      <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-sm">
+                        <span className="font-mono font-semibold text-slate-900">{formatPeso(t.amount)}</span>
+                        <span className="text-slate-500">Due {formatDate(t.dueDate)}</span>
+                      </div>
+                      <p className="mt-0.5 text-xs text-slate-500">Archived {formatDate(t.archivedAt)}</p>
+                      <div className="mt-2.5">
+                        <Button
+                          variant="secondary"
+                          className="!min-h-8 !px-2.5 !text-xs"
+                          onClick={() => restoreTransactions([t.id])}
+                        >
+                          Restore
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <div className="hidden overflow-x-auto md:block">
               <table className="w-full min-w-[860px] text-sm">
                 <thead>
                   <tr className="border-b border-slate-200 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -228,6 +272,7 @@ export default function Logs() {
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </Card>
       ) : (
@@ -248,29 +293,52 @@ export default function Logs() {
                 placeholder="Search actor or detail…"
                 className={`${inputClass} !w-56`}
               />
-              <label htmlFor="log-action" className="sr-only">
-                Filter by action type
-              </label>
-              <select
-                id="log-action"
-                value={action}
-                onChange={(e) => setAction(e.target.value)}
-                className={`${inputClass} !w-48`}
-              >
-                <option value="all">All actions</option>
-                {actions.map((a) => (
-                  <option key={a} value={a}>
-                    {a.replaceAll('_', ' ')}
-                  </option>
-                ))}
-              </select>
+              <MultiSelect
+                label="Action"
+                options={actions.map((a) => ({ value: a, label: a.replaceAll('_', ' ') }))}
+                selected={actionSel}
+                onChange={setActionSel}
+                className="w-48"
+              />
             </div>
           }
         />
         {list.length === 0 ? (
           <EmptyState icon="scroll" title="No matching entries" body="Adjust your search or filter." />
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          {/* Mobile: stacked cards so every field wraps into view. */}
+          <ul className="divide-y divide-slate-100 md:hidden">
+            {auditPag.pageItems.map((e) => (
+              <li
+                key={e.id}
+                className={`px-4 py-3.5 ${selected.has(e.id) ? 'bg-red-50/50' : ''}`}
+              >
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={selected.has(e.id)}
+                    onChange={() => toggleOne(e.id)}
+                    aria-label={`Select audit entry ${e.id}`}
+                    className="mt-1 h-4 w-4 shrink-0 cursor-pointer accent-[#1e3a8a]"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span
+                        className={`inline-block rounded-md px-2 py-1 font-mono text-[11px] font-medium ${actionStyles[e.action] ?? 'bg-slate-100 text-slate-600'}`}
+                      >
+                        {e.action}
+                      </span>
+                      <span className="text-xs text-slate-600">{e.actor}</span>
+                    </div>
+                    <p className="mt-1.5 text-sm text-slate-700">{e.detail}</p>
+                    <p className="mt-1 font-mono text-xs text-slate-400">{e.at}</p>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[640px] text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -321,6 +389,7 @@ export default function Logs() {
               </tbody>
             </table>
           </div>
+          </>
         )}
         {list.length > 0 && (
           <Pagination

@@ -121,9 +121,6 @@ export default function Transactions() {
   // Mobile filter sheet is single-select per group, mapped onto the shared
   // multi-select Sets: one selection => a one-item Set, "All" => empty Set.
   // (A Set carrying a desktop multi-selection collapses to "All" here.)
-  const singleVal = (set) => (set.size === 1 ? [...set][0] : 'all')
-  const selectSingle = (setter) => (value) =>
-    setter(value === 'all' ? new Set() : new Set([value]))
   const activeFilterCount =
     borrowerSel.size + statusSel.size + typeSel.size +
     txnDateSel.size + dueDateSel.size + datePaidSel.size
@@ -846,7 +843,7 @@ export default function Transactions() {
         )}
       </Modal>
 
-      {/* Mobile filter bottom sheet (single-select per group). */}
+      {/* Mobile filter bottom sheet (multi-select per group; empty = All). */}
       {filtersOpen && (
         <div
           className="fixed inset-0 z-50 flex items-end md:hidden"
@@ -863,34 +860,30 @@ export default function Transactions() {
           <div className="relative flex max-h-[85vh] w-full flex-col rounded-t-3xl bg-white p-5">
             <h2 className="mb-3 text-lg font-bold text-slate-900">Filters</h2>
             <div className="-mx-1 flex-1 overflow-y-auto px-1">
-              <SheetGroup
+              <SheetMultiGroup
                 title="Borrower"
-                options={[
-                  { value: 'all', label: 'All borrowers' },
-                  ...borrowers.map((b) => ({ value: b.id, label: b.name })),
-                ]}
-                value={singleVal(borrowerSel)}
-                onSelect={selectSingle(setBorrowerSel)}
+                options={borrowers.map((b) => ({ value: b.id, label: b.name }))}
+                selected={borrowerSel}
+                onChange={setBorrowerSel}
               />
-              <SheetGroup
+              <SheetMultiGroup
                 title="Status"
-                options={[
-                  { value: 'all', label: 'All statuses' },
-                  ...Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label })),
-                ]}
-                value={singleVal(statusSel)}
-                onSelect={selectSingle(setStatusSel)}
+                options={Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }))}
+                selected={statusSel}
+                onChange={setStatusSel}
               />
-              <SheetGroup
+              <SheetMultiGroup
                 title="Type"
                 options={[
-                  { value: 'all', label: 'All types' },
                   { value: 'Installment', label: 'Installment' },
                   { value: 'Straight', label: 'Straight' },
                 ]}
-                value={singleVal(typeSel)}
-                onSelect={selectSingle(setTypeSel)}
+                selected={typeSel}
+                onChange={setTypeSel}
               />
+              <SheetMultiGroup title="Txn Date" options={dateOptions.txn} selected={txnDateSel} onChange={setTxnDateSel} />
+              <SheetMultiGroup title="Due Date" options={dateOptions.due} selected={dueDateSel} onChange={setDueDateSel} />
+              <SheetMultiGroup title="Date Paid" options={dateOptions.paid} selected={datePaidSel} onChange={setDatePaidSel} />
             </div>
             <Button className="mt-4 w-full" onClick={() => setFiltersOpen(false)}>
               Apply
@@ -955,21 +948,39 @@ export default function Transactions() {
   )
 }
 
-// Single-select filter group for the mobile filter sheet — a labeled list of
-// pill options with a check on the active one (ports the mobile app's
-// FilterGroup).
-function SheetGroup({ title, options, value, onSelect }) {
+// Multi-select filter group for the mobile filter sheet — a labeled list of
+// pill options that each toggle on/off. Empty selection means "All" (matches
+// the desktop MultiSelect semantics). A per-group "Clear" resets it.
+function SheetMultiGroup({ title, options, selected, onChange }) {
+  const toggle = (value) => {
+    const next = new Set(selected)
+    if (next.has(value)) next.delete(value)
+    else next.add(value)
+    onChange(next)
+  }
+  if (options.length === 0) return null
   return (
     <div className="mb-4">
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">{title}</p>
+      <div className="mb-2 flex items-center justify-between">
+        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{title}</p>
+        {selected.size > 0 && (
+          <button
+            type="button"
+            onClick={() => onChange(new Set())}
+            className="cursor-pointer text-[11px] font-medium text-navy-700 hover:underline"
+          >
+            Clear ({selected.size})
+          </button>
+        )}
+      </div>
       <div className="space-y-1.5">
         {options.map((o) => {
-          const active = value === o.value
+          const active = selected.has(o.value)
           return (
             <button
               key={o.value}
               type="button"
-              onClick={() => onSelect(o.value)}
+              onClick={() => toggle(o.value)}
               className={`flex w-full items-center justify-between rounded-xl border px-3 py-2.5 text-left transition-colors ${
                 active ? 'border-navy-600 bg-navy-50' : 'border-slate-200 bg-white hover:bg-slate-50'
               }`}

@@ -52,8 +52,8 @@ export default function Invoices() {
 
   // --- List filters / search / sort (the "Generated Invoices" table).
   const [listQuery, setListQuery] = useState('')
-  const [listBorrower, setListBorrower] = useState('all')
-  const [listStatus, setListStatus] = useState('all')
+  const [listBorrowerSel, setListBorrowerSel] = useState(() => new Set()) // empty = all
+  const [listStatusSel, setListStatusSel] = useState(() => new Set()) // empty = all
   const [listSortKey, setListSortKey] = useState('invoiceDate') // borrower | dueDate | status | invoiceDate
   const [listSortDir, setListSortDir] = useState('desc')
   const toggleListSort = (k) => {
@@ -69,8 +69,8 @@ export default function Invoices() {
     const dir = listSortDir === 'asc' ? 1 : -1
     return invoices
       .filter((inv) => {
-        if (listBorrower !== 'all' && inv.userId !== listBorrower) return false
-        if (listStatus !== 'all' && inv.status !== listStatus) return false
+        if (listBorrowerSel.size > 0 && !listBorrowerSel.has(inv.userId)) return false
+        if (listStatusSel.size > 0 && !listStatusSel.has(inv.status)) return false
         if (q) {
           const hay = `${inv.billedToName || nameOf(inv.userId)} ${inv.invoiceNumber}`.toLowerCase()
           if (!hay.includes(q)) return false
@@ -87,7 +87,7 @@ export default function Invoices() {
         return (cmp || String(a.invoiceNumber).localeCompare(String(b.invoiceNumber))) * dir
       })
     // eslint-disable-next-line react-hooks/exhaustive-deps -- nameOf derives from users
-  }, [invoices, listQuery, listBorrower, listStatus, listSortKey, listSortDir, users])
+  }, [invoices, listQuery, listBorrowerSel, listStatusSel, listSortKey, listSortDir, users])
 
   const dueOptions = useMemo(
     () => (userId ? borrowerDueDates(transactions, userId).map((d) => ({ value: d, label: formatDate(d) })) : []),
@@ -278,32 +278,20 @@ export default function Invoices() {
                 aria-label="Search invoices"
                 className={`${inputClass} sm:max-w-[16rem]`}
               />
-              <select
-                value={listBorrower}
-                onChange={(e) => setListBorrower(e.target.value)}
-                aria-label="Filter by borrower"
-                className={`${inputClass} sm:w-auto`}
-              >
-                <option value="all">All borrowers</option>
-                {borrowers.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={listStatus}
-                onChange={(e) => setListStatus(e.target.value)}
-                aria-label="Filter by status"
-                className={`${inputClass} sm:w-auto`}
-              >
-                <option value="all">All statuses</option>
-                {Object.entries(INVOICE_STATUS_META).map(([value, meta]) => (
-                  <option key={value} value={value}>
-                    {meta.label}
-                  </option>
-                ))}
-              </select>
+              <MultiSelect
+                label="Borrower"
+                options={borrowers.map((b) => ({ value: b.id, label: b.name }))}
+                selected={listBorrowerSel}
+                onChange={setListBorrowerSel}
+                className="sm:w-44"
+              />
+              <MultiSelect
+                label="Status"
+                options={Object.entries(INVOICE_STATUS_META).map(([value, meta]) => ({ value, label: meta.label }))}
+                selected={listStatusSel}
+                onChange={setListStatusSel}
+                className="sm:w-40"
+              />
               <div className="flex items-center gap-1.5">
                 <span className="text-xs font-medium text-slate-500">Sort</span>
                 <div className="flex rounded-lg border border-slate-300 p-0.5">

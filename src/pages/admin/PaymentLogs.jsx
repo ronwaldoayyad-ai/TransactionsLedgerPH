@@ -45,7 +45,7 @@ export default function PaymentLogs() {
   const today = toISODate(new Date())
   const nameOf = (userId) => users.find((u) => u.id === userId)?.name ?? userId
 
-  const [filterBorrower, setFilterBorrower] = useState('all')
+  const [borrowerSel, setBorrowerSel] = useState(() => new Set()) // empty = all borrowers
   const [statusSel, setStatusSel] = useState(() => new Set()) // empty = all statuses
   const [query, setQuery] = useState('')
   const [open, setOpen] = useState(false)
@@ -175,7 +175,7 @@ export default function PaymentLogs() {
     // Only acknowledgement rows — there are no "carried forward" entries.
     const list = paymentLogs.filter((l) => {
       if (l.kind !== 'payment') return false
-      if (filterBorrower !== 'all' && l.userId !== filterBorrower) return false
+      if (borrowerSel.size > 0 && !borrowerSel.has(l.userId)) return false
       if (statusSel.size > 0 && !statusSel.has(l.allocStatus)) return false
       if (q) {
         const name = users.find((u) => u.id === l.userId)?.name ?? l.userId
@@ -189,7 +189,7 @@ export default function PaymentLogs() {
       return true
     })
     return [...list].sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')))
-  }, [paymentLogs, filterBorrower, statusSel, query, users])
+  }, [paymentLogs, borrowerSel, statusSel, query, users])
 
   const pag = usePagination(rows, 10)
 
@@ -243,19 +243,13 @@ export default function PaymentLogs() {
                 onChange={setStatusSel}
                 className="w-40"
               />
-              <select
-                aria-label="Filter by borrower"
-                className={`${inputClass} max-w-48`}
-                value={filterBorrower}
-                onChange={(e) => setFilterBorrower(e.target.value)}
-              >
-                <option value="all">All borrowers</option>
-                {borrowers.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
+              <MultiSelect
+                label="Borrower"
+                options={borrowers.map((b) => ({ value: b.id, label: b.name }))}
+                selected={borrowerSel}
+                onChange={setBorrowerSel}
+                className="w-48"
+              />
             </div>
           }
         />
