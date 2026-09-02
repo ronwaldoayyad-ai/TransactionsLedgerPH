@@ -24,7 +24,7 @@ const csvEscape = (v: any) => {
 }
 
 export default function AdminTransactions() {
-  const { users, transactions, setTransactionStatus, archiveTransactions, importTransactions, refreshing, refreshData } = useApp()
+  const { users, transactions, setTransactionStatus, updateTransaction, archiveTransactions, importTransactions, refreshing, refreshData } = useApp()
   const borrowers = useMemo(() => users.filter((u: any) => u.role === 'user'), [users])
   const today = toISODate(new Date())
   // O(1) name lookup. Previously each rendered row ran users.find(), turning the
@@ -276,6 +276,19 @@ export default function AdminTransactions() {
             <Text className="px-2 py-2 font-sans-bold text-base text-slate-900" numberOfLines={1}>
               {actionTxn ? `${nameOf(actionTxn.userId)} · ${formatPeso(actionTxn.amount)}` : ''}
             </Text>
+            {actionTxn && (
+              <View className="mb-3 px-2">
+                <Text className="mb-1 font-sans-medium text-xs uppercase text-slate-400">Item description</Text>
+                <DescriptionEditor
+                  key={actionTxn.id}
+                  txn={actionTxn}
+                  onSave={(desc) => {
+                    updateTransaction(actionTxn.id, { description: desc })
+                    setActionTxn((prev: any) => (prev ? { ...prev, description: desc } : prev))
+                  }}
+                />
+              </View>
+            )}
             <Text className="mb-2 px-2 font-sans-medium text-xs uppercase text-slate-400">Set status</Text>
             {STATUS_OPTS.map((s) => (
               <Pressable key={s} onPress={() => setStatus(s)} className="rounded-xl px-4 py-3 active:bg-slate-50">
@@ -289,6 +302,34 @@ export default function AdminTransactions() {
         </Pressable>
       </Modal>
     </SafeAreaView>
+  )
+}
+
+// Inline-editable Item Description for the action sheet. Commits on blur or the
+// keyboard "done" key; empty input reverts. Local draft state keeps the shared
+// ledger from updating on every keystroke.
+function DescriptionEditor({ txn, onSave }: { txn: any; onSave: (desc: string) => void }) {
+  const [value, setValue] = useState<string>(txn.description ?? '')
+  const [lastId, setLastId] = useState(txn.id)
+  if (txn.id !== lastId) {
+    setLastId(txn.id)
+    setValue(txn.description ?? '')
+  }
+  const commit = () => {
+    const next = value.trim()
+    if (next && next !== txn.description) onSave(next)
+    else if (!next) setValue(txn.description ?? '')
+  }
+  return (
+    <TextInput
+      value={value}
+      onChangeText={setValue}
+      onBlur={commit}
+      onSubmitEditing={commit}
+      returnKeyType="done"
+      placeholder="Item description"
+      className="rounded-xl border border-slate-300 bg-white px-3 py-2.5 font-sans text-[15px] text-slate-900"
+    />
   )
 }
 
