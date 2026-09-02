@@ -49,6 +49,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
     title: 'Communication',
     items: [
       { label: 'Messages', icon: Mail, href: '/(admin)/messages' },
+      { label: 'Notifications', icon: Bell, href: '/(admin)/notifications' },
       { label: 'Announcements', icon: Bell, href: '/(admin)/announcements' },
     ],
   },

@@ -83,6 +83,7 @@ export default function AdminLayout() {
       <Tabs.Screen name="users" options={{ href: null }} />
       <Tabs.Screen name="logs" options={{ href: null }} />
       <Tabs.Screen name="analytics" options={{ href: null }} />
+      <Tabs.Screen name="notifications" options={{ href: null }} />
       <Tabs.Screen name="profile" options={{ href: null }} />
     </Tabs>
   )
