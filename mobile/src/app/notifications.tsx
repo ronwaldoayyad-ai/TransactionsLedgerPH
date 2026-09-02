@@ -8,6 +8,8 @@ import { useMessages } from '../context/MessagesContext'
 import { formatDate } from '../lib/amortization'
 import { NOTIFICATION_CATEGORIES, categoryMeta, isImageAttachment, buildReplyQuote, relTime } from '../lib/notifications'
 import { QUICK_REACTIONS } from '../lib/emoji'
+import { usePagination } from '../hooks/usePagination'
+import Pager from '../components/ui/Pager'
 import EmptyState from '../components/ui/EmptyState'
 import FadeInView from '../components/ui/FadeInView'
 import { Card } from '../components/ui/Card'
@@ -197,6 +199,7 @@ export default function BorrowerNotifications() {
     if (filter === 'unread') return notifications.filter((n: any) => !isRead(n.id))
     return notifications.filter((n: any) => n.category === filter)
   }, [notifications, filter, isRead])
+  const pag = usePagination(visible, 8)
 
   const onReply = async (n: any, text: string) => {
     await sendMessage(buildReplyQuote(n) + text)
@@ -251,18 +254,21 @@ export default function BorrowerNotifications() {
             {visible.length === 0 ? (
               <EmptyState title={filter === 'all' ? 'No notifications yet' : 'Nothing here'} body="Notifications from your lender will appear here." />
             ) : (
-              visible.map((n: any, idx: number) => (
-                <NotifRow
-                  key={n.id}
-                  n={n}
-                  first={idx === 0}
-                  read={isRead(n.id)}
-                  onMarkRead={markRead}
-                  onMarkUnread={markUnread}
-                  onReply={onReply}
-                  onReact={onReact}
-                />
-              ))
+              <>
+                {pag.pageItems.map((n: any, idx: number) => (
+                  <NotifRow
+                    key={n.id}
+                    n={n}
+                    first={idx === 0}
+                    read={isRead(n.id)}
+                    onMarkRead={markRead}
+                    onMarkUnread={markUnread}
+                    onReply={onReply}
+                    onReact={onReact}
+                  />
+                ))}
+                <Pager page={pag.page} pageCount={pag.pageCount} total={pag.total} start={pag.start} end={pag.end} onPage={pag.setPage} label="notifications" />
+              </>
             )}
           </Card>
         </FadeInView>

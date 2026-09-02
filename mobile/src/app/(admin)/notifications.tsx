@@ -5,6 +5,8 @@ import { AlertCircle, Check, FileText, Inbox, Send, Trash2, Users, Wallet } from
 import { useApp } from '../../context/AppContext'
 import { useNotifications } from '../../context/NotificationsContext'
 import { NOTIFICATION_CATEGORIES, categoryMeta, relTime } from '../../lib/notifications'
+import { usePagination } from '../../hooks/usePagination'
+import Pager from '../../components/ui/Pager'
 import FadeInView from '../../components/ui/FadeInView'
 import EmptyState from '../../components/ui/EmptyState'
 import { Card, CardHeader } from '../../components/ui/Card'
@@ -50,6 +52,8 @@ export default function AdminNotifications() {
 
   const inboxIds = useMemo(() => new Set(inboxNotifications.map((n: any) => n.id)), [inboxNotifications])
   const sent = useMemo(() => notifications.filter((n: any) => !inboxIds.has(n.id)), [notifications, inboxIds])
+  const inboxPag = usePagination(inboxNotifications, 8)
+  const sentPag = usePagination(sent, 8)
 
   // Compose state
   const [category, setCategory] = useState('general')
@@ -151,7 +155,8 @@ export default function AdminNotifications() {
               {inboxNotifications.length === 0 ? (
                 <EmptyState title="No replies yet" body="Borrower reactions and replies will appear here." />
               ) : (
-                inboxNotifications.map((n: any, idx: number) => {
+                <>
+                {inboxPag.pageItems.map((n: any, idx: number) => {
                   const read = isRead(n.id)
                   return (
                     <Pressable
@@ -172,7 +177,9 @@ export default function AdminNotifications() {
                       </Pressable>
                     </Pressable>
                   )
-                })
+                })}
+                <Pager page={inboxPag.page} pageCount={inboxPag.pageCount} total={inboxPag.total} start={inboxPag.start} end={inboxPag.end} onPage={inboxPag.setPage} label="messages" />
+                </>
               )}
             </Card>
           </FadeInView>
@@ -185,7 +192,8 @@ export default function AdminNotifications() {
               {sent.length === 0 ? (
                 <EmptyState title="Nothing sent yet" body="Notifications you send to borrowers will appear here." />
               ) : (
-                sent.map((n: any, idx: number) => (
+                <>
+                {sentPag.pageItems.map((n: any, idx: number) => (
                   <View key={n.id} className={`px-4 py-3.5 ${idx > 0 ? 'border-t border-slate-100' : ''}`}>
                     <View className="flex-row flex-wrap items-center gap-2">
                       <CategoryChip category={n.category} />
@@ -202,7 +210,9 @@ export default function AdminNotifications() {
                       </Pressable>
                     </View>
                   </View>
-                ))
+                ))}
+                <Pager page={sentPag.page} pageCount={sentPag.pageCount} total={sentPag.total} start={sentPag.start} end={sentPag.end} onPage={sentPag.setPage} label="notifications" />
+                </>
               )}
             </Card>
           </FadeInView>

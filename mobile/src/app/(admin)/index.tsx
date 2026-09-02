@@ -23,6 +23,8 @@ import FadeInView from '../../components/ui/FadeInView'
 import Skeleton from '../../components/ui/Skeleton'
 import EmptyState from '../../components/ui/EmptyState'
 import Donut from '../../components/ui/Donut'
+import Pager from '../../components/ui/Pager'
+import { usePagination } from '../../hooks/usePagination'
 import { Card, CardHeader } from '../../components/ui/Card'
 import { colors } from '../../theme'
 
@@ -256,6 +258,8 @@ export default function AdminOverview() {
   }, [transactions, today, grandHideSettled, grandTouched, effectiveGrandDue, excludedBorrowers, users])
 
   const pendingProofs = payments.filter((p: any) => p.status === 'pending')
+  const dueDatePag = usePagination(byDueDate, 5)
+  const grandPag = usePagination(grandRows, 8)
   const iconSize = 18
 
   const tiles = [
@@ -401,7 +405,8 @@ export default function AdminOverview() {
             {byDueDate.length === 0 ? (
               <EmptyState title="Nothing outstanding" />
             ) : (
-              byDueDate.map(({ dueDate, count, amount }, idx) => (
+              <>
+              {dueDatePag.pageItems.map(({ dueDate, count, amount }: any, idx: number) => (
                 <View
                   key={dueDate}
                   className={`flex-row items-center justify-between px-5 py-3 ${idx > 0 ? 'border-t border-slate-100' : ''}`}
@@ -415,7 +420,9 @@ export default function AdminOverview() {
                   </View>
                   <Text className="font-mono-medium text-sm text-slate-900">{formatPeso(amount)}</Text>
                 </View>
-              ))
+              ))}
+              <Pager page={dueDatePag.page} pageCount={dueDatePag.pageCount} total={dueDatePag.total} start={dueDatePag.start} end={dueDatePag.end} onPage={dueDatePag.setPage} label="dates" />
+              </>
             )}
           </Card>
         </FadeInView>
@@ -511,7 +518,7 @@ export default function AdminOverview() {
               <EmptyState title="No collections match" body="Nothing matches the selected date and exclusion list." />
             ) : (
               <>
-                {grandRows.map((t: any, idx: number) => {
+                {grandPag.pageItems.map((t: any, idx: number) => {
                   const effective = effectiveStatus(t, today)
                   return (
                     <View
@@ -535,6 +542,7 @@ export default function AdminOverview() {
                     </View>
                   )
                 })}
+                <Pager page={grandPag.page} pageCount={grandPag.pageCount} total={grandPag.total} start={grandPag.start} end={grandPag.end} onPage={grandPag.setPage} label="records" />
                 <View className="flex-row items-center justify-between border-t border-slate-200 bg-navy-50/70 px-5 py-3">
                   <Text className="font-sans-semibold text-xs text-navy-900">
                     TOTAL ({grandRows.length} item{grandRows.length === 1 ? '' : 's'} ·{' '}

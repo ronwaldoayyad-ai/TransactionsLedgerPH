@@ -5,6 +5,8 @@ import { Stack } from 'expo-router'
 import { Check, X } from 'lucide-react-native'
 import { useDisbursements } from '../context/DisbursementsContext'
 import { formatDate, formatPeso } from '../lib/amortization'
+import { usePagination } from '../hooks/usePagination'
+import Pager from '../components/ui/Pager'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import FadeInView from '../components/ui/FadeInView'
@@ -40,6 +42,8 @@ export default function BorrowerDisbursements() {
       ),
     [disbursements],
   )
+
+  const pag = usePagination(visible, 8)
 
   const onRefresh = async () => {
     setRefreshing(true)
@@ -86,7 +90,8 @@ export default function BorrowerDisbursements() {
                 body="When your administrator issues a loan disbursement document, it will appear here to review and accept."
               />
             ) : (
-              visible.map((d: any, idx: number) => (
+              <>
+              {pag.pageItems.map((d: any, idx: number) => (
                 <Pressable
                   key={d.id}
                   onPress={() => setPreview(d)}
@@ -110,7 +115,9 @@ export default function BorrowerDisbursements() {
                   </View>
                   <Text className="mt-1.5 font-mono-semibold text-[15px] text-slate-900">{formatPeso(d.netProceeds)}</Text>
                 </Pressable>
-              ))
+              ))}
+              <Pager page={pag.page} pageCount={pag.pageCount} total={pag.total} start={pag.start} end={pag.end} onPage={pag.setPage} label="disbursements" />
+              </>
             )}
           </Card>
         </FadeInView>
