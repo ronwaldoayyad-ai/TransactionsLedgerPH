@@ -685,61 +685,6 @@ export default function AdminDashboard() {
         </Card>
       </div>
 
-      {/* Verification Queue — mirrors the full Verification Queue tab */}
-      <Card className="mt-6">
-        <CardHeader
-          title="Verification Queue"
-          subtitle="Review uploaded proofs of payment — same controls as the Verification Queue tab"
-          action={
-            <Link
-              to="/admin/queue"
-              className="cursor-pointer text-sm font-medium text-navy-700 transition-colors duration-200 hover:text-navy-900"
-            >
-              Open queue
-            </Link>
-          }
-        />
-        <PaymentList
-          payments={payments}
-          canReview
-          showBorrower
-          pageSize={5}
-          emptyBody="No payment proofs match this filter."
-        />
-      </Card>
-
-      <Card className="mt-6">
-        <CardHeader
-          title="Recent Activity"
-          subtitle="Audit trail (latest entries)"
-          action={
-            <Link
-              to="/admin/logs"
-              className="cursor-pointer text-sm font-medium text-navy-700 transition-colors duration-200 hover:text-navy-900"
-            >
-              Full log
-            </Link>
-          }
-        />
-        <ul className="divide-y divide-slate-100">
-          {activityPag.pageItems.map((entry) => (
-            <li key={entry.id} className="flex items-start gap-3 px-5 py-3">
-              <span className="mt-0.5 rounded-lg bg-slate-100 p-1.5 text-slate-500">
-                <Icon name="scroll" className="h-3.5 w-3.5" />
-              </span>
-              <div className="min-w-0">
-                <p className="text-sm text-slate-700">{entry.detail}</p>
-                <p className="text-xs text-slate-400">
-                  {entry.actor} · {entry.at} ·{' '}
-                  <span className="font-mono text-[11px] uppercase">{entry.action}</span>
-                </p>
-              </div>
-            </li>
-          ))}
-        </ul>
-        {auditLog.length > 0 && pager(activityPag, 'entries')}
-      </Card>
-
       {/* Grand view — past due + next unpaid date by default */}
       <Card className="mt-6">
         <CardHeader
@@ -986,6 +931,61 @@ export default function AdminDashboard() {
           </>
         )}
         {grandRows.length > 0 && pager(grandPag, 'records', [15, 25, 50, 100])}
+      </Card>
+
+      {/* Verification Queue — mirrors the full Verification Queue tab */}
+      <Card className="mt-6">
+        <CardHeader
+          title="Verification Queue"
+          subtitle="Review uploaded proofs of payment — same controls as the Verification Queue tab"
+          action={
+            <Link
+              to="/admin/queue"
+              className="cursor-pointer text-sm font-medium text-navy-700 transition-colors duration-200 hover:text-navy-900"
+            >
+              Open queue
+            </Link>
+          }
+        />
+        <PaymentList
+          payments={payments}
+          canReview
+          showBorrower
+          pageSize={5}
+          emptyBody="No payment proofs match this filter."
+        />
+      </Card>
+
+      <Card className="mt-6">
+        <CardHeader
+          title="Recent Activity"
+          subtitle="Audit trail (latest entries)"
+          action={
+            <Link
+              to="/admin/logs"
+              className="cursor-pointer text-sm font-medium text-navy-700 transition-colors duration-200 hover:text-navy-900"
+            >
+              Full log
+            </Link>
+          }
+        />
+        <ul className="divide-y divide-slate-100">
+          {activityPag.pageItems.map((entry) => (
+            <li key={entry.id} className="flex items-start gap-3 px-5 py-3">
+              <span className="mt-0.5 rounded-lg bg-slate-100 p-1.5 text-slate-500">
+                <Icon name="scroll" className="h-3.5 w-3.5" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-sm text-slate-700">{entry.detail}</p>
+                <p className="text-xs text-slate-400">
+                  {entry.actor} · {entry.at} ·{' '}
+                  <span className="font-mono text-[11px] uppercase">{entry.action}</span>
+                </p>
+              </div>
+            </li>
+          ))}
+        </ul>
+        {auditLog.length > 0 && pager(activityPag, 'entries')}
       </Card>
     </>
   )
