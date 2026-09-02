@@ -47,6 +47,74 @@ function ChartTooltip({ active, payload }) {
   )
 }
 
+// Distinct palette for borrower slices; a borrower keeps one colour across the
+// three Grand-View pies via a shared id→colour map.
+const BORROWER_COLORS = [
+  '#1e3a8a', '#ca8a04', '#10b981', '#ef4444', '#0ea5e9',
+  '#8b5cf6', '#14b8a6', '#f97316', '#ec4899', '#64748b',
+]
+
+// Compact date for the quick-jump pills, e.g. "May 15".
+const shortDate = (iso) => {
+  const [y, m, d] = iso.split('-')
+  return new Date(Number(y), Number(m) - 1, Number(d)).toLocaleDateString('en-PH', {
+    month: 'short',
+    day: 'numeric',
+  })
+}
+
+// One Grand-View pie tile: donut of amounts by borrower + a short legend.
+function BorrowerPie({ title, caption, data, colorMap }) {
+  const total = data.reduce((s, d) => s + d.value, 0)
+  return (
+    <div className="flex flex-col rounded-lg border border-slate-200 bg-white p-3">
+      <div className="flex items-baseline justify-between gap-2">
+        <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
+        <span className="shrink-0 font-mono text-xs font-semibold text-slate-700">{formatPeso(total)}</span>
+      </div>
+      <p className="mb-1 mt-0.5 truncate text-[11px] text-slate-500">{caption}</p>
+      {data.length === 0 ? (
+        <div className="flex h-40 items-center justify-center text-xs text-slate-400">No items</div>
+      ) : (
+        <>
+          <div className="h-40">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={data}
+                  dataKey="value"
+                  nameKey="name"
+                  innerRadius="50%"
+                  outerRadius="80%"
+                  paddingAngle={data.length > 1 ? 2 : 0}
+                  isAnimationActive={false}
+                >
+                  {data.map((e) => (
+                    <Cell key={e.userId} fill={colorMap[e.userId] ?? '#94a3b8'} />
+                  ))}
+                </Pie>
+                <Tooltip content={<ChartTooltip />} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <ul className="mt-1 space-y-1">
+            {data.slice(0, 4).map((e) => (
+              <li key={e.userId} className="flex items-center justify-between gap-2 text-[11px]">
+                <span className="flex min-w-0 items-center gap-1.5">
+                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: colorMap[e.userId] ?? '#94a3b8' }} />
+                  <span className="truncate text-slate-600">{e.name}</span>
+                </span>
+                <span className="shrink-0 font-mono text-slate-800">{formatPeso(e.value)}</span>
+              </li>
+            ))}
+            {data.length > 4 && <li className="text-[11px] text-slate-400">+{data.length - 4} more borrowers</li>}
+          </ul>
+        </>
+      )}
+    </div>
+  )
+}
+
 export default function AdminDashboard() {
   const { users, loans, payments, transactions, auditLog } = useApp()
   const today = toISODate(new Date())
@@ -209,19 +277,62 @@ export default function AdminDashboard() {
 
   // Grand View. By DEFAULT (no filter touched) it shows only what needs
   // attention: every Past Due item plus the Unpaid items on the next (earliest)
-  // upcoming due date — not every future unpaid, to keep the grid uncluttered.
-  // Setting a Due Date range or a status filter switches to explicit filtering.
-  const [grandFrom, setGrandFrom] = useState('')
-  const [grandTo, setGrandTo] = useState('')
+  // upcoming due date. Picking a single due date or a status switches to
+  // explicit filtering. The exclusion list is shared with Receivables by Due
+  // Date, so a non-payer excluded there drops out of these charts too.
+  const [grandDueSel, setGrandDueSel] = useState('all')
   const [grandStatusSel, setGrandStatusSel] = useState(() => new Set())
-  const [grandBorrowerSel, setGrandBorrowerSel] = useState(() => new Set())
   // Default ON: hide fully paid/refunded/cancelled. Label flips to "Show all".
   const [grandHideSettled, setGrandHideSettled] = useState(true)
-  const grandTouched = grandFrom !== '' || grandTo !== '' || grandStatusSel.size > 0
+  // Clamp the chosen date if the exclusion list dropped it from the options.
+  const effectiveGrandDue =
+    grandDueSel !== 'all' && !dueDateOptions.includes(grandDueSel) ? 'all' : grandDueSel
+  const grandTouched = effectiveGrandDue !== 'all' || grandStatusSel.size > 0
   const grandBorrowers = useMemo(
     () => users.filter((u) => u.role === 'user').map((u) => ({ value: u.id, label: u.name })),
     [users],
   )
+
+  // Anchor for the three pies: the chosen date, else the nearest upcoming due
+  // date, else the most recent past-due date.
+  const grandAnchor = useMemo(() => {
+    if (effectiveGrandDue !== 'all') return effectiveGrandDue
+    const upcoming = dueDateOptions.find((d) => d >= today)
+    if (upcoming) return upcoming
+    return dueDateOptions.length ? dueDateOptions[dueDateOptions.length - 1] : null
+  }, [effectiveGrandDue, dueDateOptions, today])
+  const grandNextDate = useMemo(
+    () => (grandAnchor ? dueDateOptions.find((d) => d > grandAnchor) ?? null : null),
+    [grandAnchor, dueDateOptions],
+  )
+  // Past (before anchor) / Current (anchor) / Next (following date) amounts
+  // grouped by borrower — exclusion already applied via dueDateReceivables.
+  const grandPies = useMemo(() => {
+    const groupByBorrower = (txns) => {
+      const g = {}
+      txns.forEach((t) => {
+        g[t.userId] = (g[t.userId] ?? 0) + t.amount
+      })
+      return Object.entries(g)
+        .map(([userId, amount]) => ({ userId, name: nameOf(userId), value: Math.round(amount * 100) / 100 }))
+        .sort((a, b) => b.value - a.value)
+    }
+    const pastDue = groupByBorrower(dueDateReceivables.filter((t) => grandAnchor && t.dueDate < grandAnchor))
+    const currentDue = groupByBorrower(dueDateReceivables.filter((t) => t.dueDate === grandAnchor))
+    const nextDue = groupByBorrower(dueDateReceivables.filter((t) => grandNextDate && t.dueDate === grandNextDate))
+    const ids = [...new Set([...pastDue, ...currentDue, ...nextDue].map((d) => d.userId))]
+    const colorMap = {}
+    ids.forEach((id, i) => {
+      colorMap[id] = BORROWER_COLORS[i % BORROWER_COLORS.length]
+    })
+    return { pastDue, currentDue, nextDue, colorMap }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- nameOf derives from users
+  }, [dueDateReceivables, grandAnchor, grandNextDate, users])
+
+  // Quick-jump pills: the 5 most recent past due dates + the next 5 upcoming,
+  // dynamic against the exclusion list (they derive from dueDateOptions).
+  const grandPastPills = useMemo(() => dueDateOptions.filter((d) => d < today).slice(-5), [dueDateOptions, today])
+  const grandUpcomingPills = useMemo(() => dueDateOptions.filter((d) => d >= today).slice(0, 5), [dueDateOptions, today])
   const grandRows = useMemo(() => {
     const sortRows = (rows) =>
       [...rows].sort(
@@ -243,23 +354,22 @@ export default function AdminDashboard() {
       base = [...pastDue, ...nextUnpaid]
     } else {
       base = transactions.filter((t) => {
-        if (grandFrom && t.dueDate < grandFrom) return false
-        if (grandTo && t.dueDate > grandTo) return false
+        if (effectiveGrandDue !== 'all' && t.dueDate !== effectiveGrandDue) return false
         if (grandStatusSel.size > 0 && !grandStatusSel.has(effectiveStatus(t, today))) return false
         return true
       })
     }
-    // Borrower filter + hide-settled apply on top of whichever base set.
+    // Exclusion list + hide-settled apply on top of whichever base set.
     return sortRows(
       base.filter((t) => {
-        if (grandBorrowerSel.size > 0 && !grandBorrowerSel.has(t.userId)) return false
+        if (excludedBorrowers.has(t.userId)) return false
         if (grandHideSettled && ['paid', 'refunded', 'cancelled'].includes(effectiveStatus(t, today)))
           return false
         return true
       }),
     )
     // eslint-disable-next-line react-hooks/exhaustive-deps -- nameOf derives from users
-  }, [transactions, grandFrom, grandTo, grandStatusSel, grandBorrowerSel, grandHideSettled, grandTouched, today, users],
+  }, [transactions, effectiveGrandDue, grandStatusSel, grandHideSettled, grandTouched, excludedBorrowers, today, users],
   )
 
   // Pagination for the due-date list and the lower sections.
@@ -634,74 +744,166 @@ export default function AdminDashboard() {
       <Card className="mt-6">
         <CardHeader
           title="Grand View — Scheduled Collections"
-          subtitle="By default: all past-due items plus the next unpaid due date. Filter by due-date range or status to see more."
+          subtitle="Past / current / next dues by borrower, plus the collections list. Pick a single due date, or exclude non-payers."
           action={
-            <div className="flex flex-wrap items-center gap-2">
-              <label className="mr-1 flex cursor-pointer items-center gap-2 text-sm text-slate-600">
-                <Switch
-                  checked={grandHideSettled}
-                  onChange={setGrandHideSettled}
-                  label={grandHideSettled ? 'Show all transactions' : 'Hide paid, refunded, and cancelled transactions'}
-                />
-                {grandHideSettled ? 'Show all transactions' : 'Hide paid/refunded/cancelled'}
-              </label>
-              <span className="text-xs font-medium text-slate-500">Borrower</span>
-              <MultiSelect
-                label="Borrower"
-                options={grandBorrowers}
-                selected={grandBorrowerSel}
-                onChange={setGrandBorrowerSel}
-                className="w-44"
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
+              <Switch
+                checked={grandHideSettled}
+                onChange={setGrandHideSettled}
+                label={grandHideSettled ? 'Show all transactions' : 'Hide paid, refunded, and cancelled transactions'}
               />
-              <label htmlFor="grand-from" className="text-xs font-medium text-slate-500">
-                Due Date
-              </label>
-              <input
-                id="grand-from"
-                type="date"
-                value={grandFrom}
-                onChange={(e) => setGrandFrom(e.target.value)}
-                aria-label="Due date from"
-                className={`${inputClass} !w-40`}
-              />
-              <span className="text-xs text-slate-400">to</span>
-              <input
-                id="grand-to"
-                type="date"
-                value={grandTo}
-                onChange={(e) => setGrandTo(e.target.value)}
-                aria-label="Due date to"
-                className={`${inputClass} !w-40`}
-              />
-              <span className="text-xs font-medium text-slate-500">Status</span>
-              <MultiSelect
-                label="Status"
-                options={Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }))}
-                selected={grandStatusSel}
-                onChange={setGrandStatusSel}
-                className="w-36"
-              />
-              {(grandFrom || grandTo || grandStatusSel.size > 0 || grandBorrowerSel.size > 0) && (
-                <button
-                  onClick={() => {
-                    setGrandFrom('')
-                    setGrandTo('')
-                    setGrandStatusSel(new Set())
-                    setGrandBorrowerSel(new Set())
-                  }}
-                  className="cursor-pointer text-xs font-medium text-navy-700 transition-colors duration-200 hover:text-navy-900"
-                >
-                  Clear
-                </button>
-              )}
-            </div>
+              {grandHideSettled ? 'Show all transactions' : 'Hide paid/refunded/cancelled'}
+            </label>
           }
         />
+
+        {/* Control bar: single due date + status + exclusion list. */}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-slate-100 px-5 py-3">
+          <span className="text-xs font-medium text-slate-500">Due Date</span>
+          <select
+            aria-label="Grand View due date"
+            value={effectiveGrandDue}
+            onChange={(e) => setGrandDueSel(e.target.value)}
+            className={`${inputClass} !w-auto max-w-[11rem] text-sm`}
+          >
+            <option value="all">Auto (next due date)</option>
+            {dueDateOptions.map((d) => (
+              <option key={d} value={d}>
+                {formatDate(d)}
+                {d < today ? ' · overdue' : ''}
+              </option>
+            ))}
+          </select>
+          <span className="text-xs font-medium text-slate-500">Status</span>
+          <MultiSelect
+            label="Status"
+            options={Object.entries(STATUS_LABELS).map(([value, label]) => ({ value, label }))}
+            selected={grandStatusSel}
+            onChange={setGrandStatusSel}
+            className="w-36"
+          />
+          <span className="ml-auto text-xs font-medium text-slate-500">Exclude (non-payment):</span>
+          <select
+            aria-label="Exclude a borrower due to non-payment"
+            value=""
+            onChange={(e) => addExcluded(e.target.value)}
+            className={`${inputClass} !w-auto max-w-[10rem] text-sm`}
+          >
+            <option value="" disabled>
+              Add borrower…
+            </option>
+            {grandBorrowers
+              .filter((b) => !excludedBorrowers.has(b.value))
+              .map((b) => (
+                <option key={b.value} value={b.value}>
+                  {b.label}
+                </option>
+              ))}
+          </select>
+          {(effectiveGrandDue !== 'all' || grandStatusSel.size > 0) && (
+            <button
+              onClick={() => {
+                setGrandDueSel('all')
+                setGrandStatusSel(new Set())
+              }}
+              className="cursor-pointer text-xs font-medium text-navy-700 transition-colors duration-200 hover:text-navy-900"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+
+        {/* Excluded-borrower chips (shared with Receivables by Due Date). */}
+        {excludedBorrowers.size > 0 && (
+          <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 px-5 py-2">
+            <span className="text-xs text-slate-400">Excluded:</span>
+            {[...excludedBorrowers].map((id) => (
+              <span
+                key={id}
+                className="inline-flex max-w-full items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700"
+              >
+                <span className="truncate">{nameOf(id)}</span>
+                <button
+                  onClick={() => removeExcluded(id)}
+                  aria-label={`Remove ${nameOf(id)} from exclusion list`}
+                  className="shrink-0 cursor-pointer text-sm leading-none text-red-400 hover:text-red-700"
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Quick-jump pills: last 5 past due dates + next 5 upcoming (dynamic). */}
+        {(grandPastPills.length > 0 || grandUpcomingPills.length > 0) && (
+          <div className="flex flex-wrap items-center gap-1.5 border-b border-slate-100 px-5 py-3">
+            <span className="text-xs font-medium text-slate-500">Jump to:</span>
+            <button
+              onClick={() => setGrandDueSel('all')}
+              className={`cursor-pointer rounded-full border px-2.5 py-1 text-xs font-medium transition-colors duration-150 ${
+                effectiveGrandDue === 'all'
+                  ? 'border-navy-700 bg-navy-800 text-white'
+                  : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              Auto
+            </button>
+            {grandPastPills.map((d) => (
+              <button
+                key={d}
+                onClick={() => setGrandDueSel(d)}
+                className={`cursor-pointer rounded-full border px-2.5 py-1 text-xs font-medium transition-colors duration-150 ${
+                  effectiveGrandDue === d
+                    ? 'border-navy-700 bg-navy-800 text-white'
+                    : 'border-red-200 bg-red-50 text-red-700 hover:bg-red-100'
+                }`}
+              >
+                {shortDate(d)}
+              </button>
+            ))}
+            {grandUpcomingPills.map((d) => (
+              <button
+                key={d}
+                onClick={() => setGrandDueSel(d)}
+                className={`cursor-pointer rounded-full border px-2.5 py-1 text-xs font-medium transition-colors duration-150 ${
+                  effectiveGrandDue === d
+                    ? 'border-navy-700 bg-navy-800 text-white'
+                    : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                {shortDate(d)}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Three pies: Past / Current / Next dues by borrower — wrap on mobile. */}
+        <div className="grid grid-cols-1 gap-3 border-b border-slate-100 px-5 py-4 md:grid-cols-3">
+          <BorrowerPie
+            title="Past Dues"
+            caption={grandAnchor ? `Overdue before ${formatDate(grandAnchor)}` : 'No due dates'}
+            data={grandPies.pastDue}
+            colorMap={grandPies.colorMap}
+          />
+          <BorrowerPie
+            title="Current Payment Dues"
+            caption={grandAnchor ? `Due ${formatDate(grandAnchor)}` : 'No due dates'}
+            data={grandPies.currentDue}
+            colorMap={grandPies.colorMap}
+          />
+          <BorrowerPie
+            title="Next Payment Dues"
+            caption={grandNextDate ? `Due ${formatDate(grandNextDate)}` : 'No later due date'}
+            data={grandPies.nextDue}
+            colorMap={grandPies.colorMap}
+          />
+        </div>
         {grandRows.length === 0 ? (
           <EmptyState
             icon="clock"
             title="No collections match"
-            body="No transactions fall within the selected due-date range and status."
+            body="No transactions match the selected due date, status, and exclusion list."
           />
         ) : (
           <>
