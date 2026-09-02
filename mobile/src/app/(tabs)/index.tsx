@@ -3,6 +3,7 @@ import { RefreshControl, ScrollView, Switch, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useRouter } from 'expo-router'
 import {
+  Bell,
   Check,
   ChevronRight,
   FileText,
@@ -206,13 +207,20 @@ export default function Dashboard() {
           </PressableScale>
         </FadeInView>
 
-        <FadeInView delay={35}>
+        <FadeInView delay={35} className="flex-row gap-3">
           <PressableScale
             onPress={() => router.push('/disbursements')}
-            className="flex-row items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3"
+            className="flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3"
           >
             <FileText size={18} color={colors.navy700} />
-            <Text className="font-sans-medium text-sm text-navy-700">My Disbursements</Text>
+            <Text className="font-sans-medium text-sm text-navy-700">Disbursements</Text>
+          </PressableScale>
+          <PressableScale
+            onPress={() => router.push('/notifications')}
+            className="flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3"
+          >
+            <Bell size={18} color={colors.navy700} />
+            <Text className="font-sans-medium text-sm text-navy-700">Notifications</Text>
           </PressableScale>
         </FadeInView>
 

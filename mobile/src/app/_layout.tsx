@@ -24,6 +24,7 @@ import { AnnouncementsProvider } from '../context/AnnouncementsContext'
 import { LoanRequestsProvider } from '../context/LoanRequestsContext'
 import { InvoicesProvider } from '../context/InvoicesContext'
 import { DisbursementsProvider } from '../context/DisbursementsContext'
+import { NotificationsProvider } from '../context/NotificationsContext'
 import AnnouncementOverlays from '../components/announcements/AnnouncementOverlays'
 import { colors } from '../theme'
 
@@ -56,6 +57,7 @@ export default function RootLayout() {
             <LoanRequestsProvider>
               <InvoicesProvider>
               <DisbursementsProvider>
+              <NotificationsProvider>
               <StatusBar style="dark" />
               <Stack
                 screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.screenBg } }}
@@ -69,6 +71,7 @@ export default function RootLayout() {
                 <Stack.Screen name="(admin)" />
               </Stack>
               <AnnouncementOverlays />
+              </NotificationsProvider>
               </DisbursementsProvider>
               </InvoicesProvider>
             </LoanRequestsProvider>
