@@ -1,5 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import {
+  Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis,
+} from 'recharts'
 import { useApp } from '../../context/AppContext'
 import { PageHeader } from '../../components/AppShell'
 import { Badge, Button, Card, CardHeader, EmptyState, MultiSelect, StatCard, Switch, inputClass } from '../../components/ui'
@@ -12,6 +15,37 @@ import { formatDate, formatPeso, toISODate } from '../../lib/amortization'
 import { STATUS_LABELS, effectiveStatus, isReceivable } from '../../lib/transactions'
 
 const sum = (txns) => txns.reduce((s, t) => s + t.amount, 0)
+
+// Shared with the Analytics view so status colours read consistently.
+const STATUS_COLORS = {
+  paid: '#10b981',
+  unpaid: '#f59e0b',
+  past_due: '#ef4444',
+  refunded: '#0ea5e9',
+  cancelled: '#94a3b8',
+}
+
+// localStorage key for the admin's per-browser "exclude due to non-payment" list.
+const DUE_EXCLUDE_KEY = 'll_admin_duedate_excluded'
+
+// Keep long borrower names from blowing out the bar-chart axis on mobile.
+const truncate = (s) => (s.length > 14 ? `${s.slice(0, 13)}…` : s)
+
+// Compact tooltip matching the Analytics charts.
+function ChartTooltip({ active, payload }) {
+  if (!active || !payload?.length) return null
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs shadow-md">
+      {payload.map((entry) => (
+        <p key={entry.name} className="flex items-center gap-1.5 text-slate-600">
+          <span className="h-2 w-2 rounded-full" style={{ background: entry.color ?? entry.payload?.fill }} />
+          {entry.name}:{' '}
+          <span className="font-mono font-medium text-slate-900">{formatPeso(entry.value)}</span>
+        </p>
+      ))}
+    </div>
+  )
+}
 
 export default function AdminDashboard() {
   const { users, loans, payments, transactions, auditLog } = useApp()
@@ -51,10 +85,28 @@ export default function AdminDashboard() {
 
   const nameOf = (userId) => users.find((u) => u.id === userId)?.name ?? userId
 
+  // --- Receivables by Status: borrower filter pills feeding a donut chart. ---
+  const [statusBorrowerSel, setStatusBorrowerSel] = useState(() => new Set())
+  const toggleStatusBorrower = (id) =>
+    setStatusBorrowerSel((prev) => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  // Borrowers that actually appear in the ledger, for the filter pills.
+  const statusBorrowerOptions = useMemo(() => {
+    const ids = new Set(transactions.map((t) => t.userId))
+    return users
+      .filter((u) => ids.has(u.id))
+      .map((u) => ({ id: u.id, name: u.name }))
+      .sort((a, b) => a.name.localeCompare(b.name))
+  }, [transactions, users])
+
   // Receivables grouped three ways: status, borrower, due date.
   const byStatus = useMemo(() => {
     const groups = {}
     transactions.forEach((t) => {
+      if (statusBorrowerSel.size > 0 && !statusBorrowerSel.has(t.userId)) return
       const s = effectiveStatus(t, today)
       groups[s] = groups[s] ?? { count: 0, amount: 0 }
       groups[s].count += 1
@@ -62,8 +114,17 @@ export default function AdminDashboard() {
     })
     return Object.keys(STATUS_LABELS)
       .filter((s) => groups[s])
-      .map((s) => ({ status: s, ...groups[s] }))
-  }, [transactions, today])
+      .map((s) => ({ status: s, name: STATUS_LABELS[s], ...groups[s] }))
+  }, [transactions, today, statusBorrowerSel])
+
+  // Footer total tracks the pills: only the selected borrowers' receivables.
+  const statusReceivablesTotal = useMemo(
+    () =>
+      receivables
+        .filter((t) => statusBorrowerSel.size === 0 || statusBorrowerSel.has(t.userId))
+        .reduce((s, t) => s + t.amount, 0),
+    [receivables, statusBorrowerSel],
+  )
 
   const byBorrower = useMemo(() => {
     const groups = {}
@@ -77,17 +138,74 @@ export default function AdminDashboard() {
       .sort((a, b) => b.amount - a.amount)
   }, [receivables])
 
+  // Top-10 slice for the horizontal bar chart (largest open balances first).
+  const borrowerChart = useMemo(
+    () =>
+      byBorrower.slice(0, 10).map((b) => ({
+        userId: b.userId,
+        name: nameOf(b.userId),
+        amount: Math.round(b.amount * 100) / 100,
+        count: b.count,
+      })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- nameOf derives from users
+    [byBorrower, users],
+  )
+
+  // --- Receivables by Due Date: exclusion list + dynamic due-date filter. ---
+  // Excluded borrowers (persisted per browser) are dropped from this tile so
+  // non-payers don't skew the expected-collections picture.
+  const [excludedBorrowers, setExcludedBorrowers] = useState(() => {
+    try {
+      const raw = localStorage.getItem(DUE_EXCLUDE_KEY)
+      return new Set(raw ? JSON.parse(raw) : [])
+    } catch {
+      return new Set()
+    }
+  })
+  useEffect(() => {
+    try {
+      localStorage.setItem(DUE_EXCLUDE_KEY, JSON.stringify([...excludedBorrowers]))
+    } catch {
+      /* storage unavailable — exclusion is still live for this session */
+    }
+  }, [excludedBorrowers])
+  const addExcluded = (id) => id && setExcludedBorrowers((prev) => new Set(prev).add(id))
+  const removeExcluded = (id) =>
+    setExcludedBorrowers((prev) => {
+      const next = new Set(prev)
+      next.delete(id)
+      return next
+    })
+
+  const [dueDateSel, setDueDateSel] = useState('all')
+  // Receivables after applying the exclusion list — the basis for this tile.
+  const dueDateReceivables = useMemo(
+    () => receivables.filter((t) => !excludedBorrowers.has(t.userId)),
+    [receivables, excludedBorrowers],
+  )
+  // Dynamic date options: only due dates that still have unpaid/past-due items.
+  const dueDateOptions = useMemo(
+    () => [...new Set(dueDateReceivables.map((t) => t.dueDate))].sort((a, b) => a.localeCompare(b)),
+    [dueDateReceivables],
+  )
+  // If the chosen date no longer applies (e.g. after excluding a borrower),
+  // fall back to "all" without a state write.
+  const effectiveDueSel =
+    dueDateSel !== 'all' && !dueDateOptions.includes(dueDateSel) ? 'all' : dueDateSel
+
   const byDueDate = useMemo(() => {
     const groups = {}
-    receivables.forEach((t) => {
-      groups[t.dueDate] = groups[t.dueDate] ?? { count: 0, amount: 0 }
-      groups[t.dueDate].count += 1
-      groups[t.dueDate].amount += t.amount
-    })
+    dueDateReceivables
+      .filter((t) => effectiveDueSel === 'all' || t.dueDate === effectiveDueSel)
+      .forEach((t) => {
+        groups[t.dueDate] = groups[t.dueDate] ?? { count: 0, amount: 0 }
+        groups[t.dueDate].count += 1
+        groups[t.dueDate].amount += t.amount
+      })
     return Object.entries(groups)
       .map(([dueDate, g]) => ({ dueDate, ...g }))
       .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
-  }, [receivables])
+  }, [dueDateReceivables, effectiveDueSel])
 
   // Grand View. By DEFAULT (no filter touched) it shows only what needs
   // attention: every Past Due item plus the Unpaid items on the next (earliest)
@@ -144,9 +262,7 @@ export default function AdminDashboard() {
   }, [transactions, grandFrom, grandTo, grandStatusSel, grandBorrowerSel, grandHideSettled, grandTouched, today, users],
   )
 
-  // Pagination for each dashboard section.
-  const statusPag = usePagination(byStatus, 5)
-  const borrowerPag = usePagination(byBorrower, 5)
+  // Pagination for the due-date list and the lower sections.
   const dueDatePag = usePagination(byDueDate, 5)
   const activityPag = usePagination(auditLog, 5)
   const grandPag = usePagination(grandRows, 15)
@@ -234,56 +350,209 @@ export default function AdminDashboard() {
       {/* Receivables breakdown */}
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
         <Card>
-          <CardHeader title="Receivables by Status" subtitle="All ledger amounts grouped by status" />
-          <ul className="divide-y divide-slate-100">
-            {statusPag.pageItems.map(({ status, count, amount }) => (
-              <li key={status} className="flex items-center justify-between px-5 py-3">
-                <span className="flex items-center gap-2">
-                  <Badge status={status}>{STATUS_LABELS[status]}</Badge>
-                  <span className="text-xs text-slate-500">{count}×</span>
-                </span>
-                <span className="font-mono text-sm font-medium text-slate-900">{formatPeso(amount)}</span>
-              </li>
-            ))}
-          </ul>
-          {byStatus.length > 0 && pager(statusPag, 'statuses')}
+          <CardHeader title="Receivables by Status" subtitle="Ledger amounts grouped by status" />
+          {/* Borrower filter pills — wrap freely on narrow screens. */}
+          <div className="flex flex-wrap gap-1.5 px-5 pt-4">
+            <button
+              onClick={() => setStatusBorrowerSel(new Set())}
+              className={`cursor-pointer rounded-full border px-2.5 py-1 text-xs font-medium transition-colors duration-150 ${
+                statusBorrowerSel.size === 0
+                  ? 'border-navy-700 bg-navy-800 text-white'
+                  : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              All
+            </button>
+            {statusBorrowerOptions.map((b) => {
+              const on = statusBorrowerSel.has(b.id)
+              return (
+                <button
+                  key={b.id}
+                  onClick={() => toggleStatusBorrower(b.id)}
+                  aria-pressed={on}
+                  className={`max-w-full cursor-pointer truncate rounded-full border px-2.5 py-1 text-xs font-medium transition-colors duration-150 ${
+                    on
+                      ? 'border-navy-700 bg-navy-800 text-white'
+                      : 'border-slate-300 bg-white text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  {b.name}
+                </button>
+              )
+            })}
+          </div>
+          {byStatus.length === 0 ? (
+            <EmptyState icon="check" title="No transactions" />
+          ) : (
+            <>
+              <div className="h-52 px-3 pt-3">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={byStatus}
+                      dataKey="amount"
+                      nameKey="name"
+                      innerRadius="55%"
+                      outerRadius="80%"
+                      paddingAngle={3}
+                      animationDuration={700}
+                      animationEasing="ease-out"
+                    >
+                      {byStatus.map((entry) => (
+                        <Cell key={entry.status} fill={STATUS_COLORS[entry.status] ?? '#94a3b8'} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<ChartTooltip />} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              {/* Legend doubles as the numeric breakdown. */}
+              <ul className="mt-1 divide-y divide-slate-100">
+                {byStatus.map(({ status, count, amount }) => (
+                  <li key={status} className="flex items-center justify-between px-5 py-2.5">
+                    <span className="flex min-w-0 items-center gap-2">
+                      <span
+                        className="h-2.5 w-2.5 shrink-0 rounded-full"
+                        style={{ background: STATUS_COLORS[status] ?? '#94a3b8' }}
+                      />
+                      <span className="truncate text-sm font-medium text-slate-700">{STATUS_LABELS[status]}</span>
+                      <span className="shrink-0 text-xs text-slate-400">{count}×</span>
+                    </span>
+                    <span className="ml-2 shrink-0 font-mono text-sm font-medium text-slate-900">{formatPeso(amount)}</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
           <div className="flex items-center justify-between border-t border-slate-200 bg-navy-50/70 px-5 py-3">
             <span className="text-sm font-semibold text-navy-900">Total Receivables</span>
-            <span className="font-mono text-sm font-bold text-navy-900">{formatPeso(outstanding)}</span>
+            <span className="font-mono text-sm font-bold text-navy-900">{formatPeso(statusReceivablesTotal)}</span>
           </div>
         </Card>
 
         <Card>
-          <CardHeader title="Receivables by Borrower" subtitle="Open balances per account" />
+          <CardHeader
+            title="Receivables by Borrower"
+            subtitle={
+              byBorrower.length > 10
+                ? `Top 10 of ${byBorrower.length} accounts by open balance`
+                : 'Open balances per account'
+            }
+          />
           {byBorrower.length === 0 ? (
             <EmptyState icon="check" title="Nothing outstanding" />
           ) : (
-            <>
-              <ul className="divide-y divide-slate-100">
-                {borrowerPag.pageItems.map(({ userId, count, amount }) => (
-                  <li key={userId} className="flex items-center justify-between px-5 py-3">
-                    <span className="flex items-center gap-2.5">
-                      <span className="flex h-7 w-7 items-center justify-center rounded-full bg-navy-100 text-xs font-semibold text-navy-800">
-                        {nameOf(userId).charAt(0)}
-                      </span>
-                      <span>
-                        <span className="block text-sm font-medium text-slate-900">{nameOf(userId)}</span>
-                        <span className="text-xs text-slate-500">{count} installments</span>
-                      </span>
-                    </span>
-                    <span className="font-mono text-sm font-medium text-slate-900">{formatPeso(amount)}</span>
-                  </li>
-                ))}
-              </ul>
-              {pager(borrowerPag, 'borrowers')}
-            </>
+            <div
+              className="w-full px-2 py-4"
+              style={{ height: `${Math.max(180, borrowerChart.length * 46)}px` }}
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={borrowerChart} layout="vertical" margin={{ top: 4, right: 16, left: 4, bottom: 4 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
+                  <XAxis
+                    type="number"
+                    tickFormatter={(v) => `₱${(v / 1000).toFixed(0)}k`}
+                    tick={{ fontSize: 11, fill: '#64748b' }}
+                    axisLine={false}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    type="category"
+                    dataKey="name"
+                    tick={{ fontSize: 11, fill: '#0f172a' }}
+                    axisLine={false}
+                    tickLine={false}
+                    width={92}
+                    tickFormatter={truncate}
+                  />
+                  <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(30,58,138,0.05)' }} />
+                  <Bar
+                    dataKey="amount"
+                    name="Outstanding"
+                    fill="#ca8a04"
+                    radius={[0, 6, 6, 0]}
+                    animationDuration={700}
+                    animationEasing="ease-out"
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           )}
         </Card>
 
         <Card>
-          <CardHeader title="Receivables by Due Date" subtitle="Expected collections per date" />
+          <CardHeader
+            title="Receivables by Due Date"
+            subtitle="Expected collections per date"
+            action={
+              <select
+                aria-label="Filter by due date"
+                value={effectiveDueSel}
+                onChange={(e) => setDueDateSel(e.target.value)}
+                className={`${inputClass} !w-auto max-w-[11rem] text-sm`}
+              >
+                <option value="all">All due dates</option>
+                {dueDateOptions.map((d) => (
+                  <option key={d} value={d}>
+                    {formatDate(d)}
+                    {d < today ? ' · overdue' : ''}
+                  </option>
+                ))}
+              </select>
+            }
+          />
+          {/* Exclusion controls — non-payers dropped from this tile's default view. */}
+          <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 px-5 py-3">
+            <span className="text-xs font-medium text-slate-500">Exclude (non-payment):</span>
+            <select
+              aria-label="Exclude a borrower due to non-payment"
+              value=""
+              onChange={(e) => addExcluded(e.target.value)}
+              className={`${inputClass} !w-auto max-w-[10rem] text-sm`}
+            >
+              <option value="" disabled>
+                Add borrower…
+              </option>
+              {grandBorrowers
+                .filter((b) => !excludedBorrowers.has(b.value))
+                .map((b) => (
+                  <option key={b.value} value={b.value}>
+                    {b.label}
+                  </option>
+                ))}
+            </select>
+            {excludedBorrowers.size === 0 ? (
+              <span className="text-xs text-slate-400">None excluded</span>
+            ) : (
+              [...excludedBorrowers].map((id) => (
+                <span
+                  key={id}
+                  className="inline-flex max-w-full items-center gap-1 rounded-full border border-red-200 bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700"
+                >
+                  <span className="truncate">{nameOf(id)}</span>
+                  <button
+                    onClick={() => removeExcluded(id)}
+                    aria-label={`Remove ${nameOf(id)} from exclusion list`}
+                    className="shrink-0 cursor-pointer text-sm leading-none text-red-400 hover:text-red-700"
+                  >
+                    ×
+                  </button>
+                </span>
+              ))
+            )}
+          </div>
           {byDueDate.length === 0 ? (
-            <EmptyState icon="check" title="Nothing outstanding" />
+            <EmptyState
+              icon="check"
+              title="Nothing outstanding"
+              body={
+                dueDateSel !== 'all'
+                  ? 'No unpaid or past-due items on this date.'
+                  : excludedBorrowers.size > 0
+                    ? 'All remaining receivables belong to excluded borrowers.'
+                    : undefined
+              }
+            />
           ) : (
             <>
               <ul className="divide-y divide-slate-100">
