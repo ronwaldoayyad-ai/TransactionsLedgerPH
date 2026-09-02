@@ -23,6 +23,9 @@ const LOAN_HEADERS = [
 const dateCellClass =
   'min-h-8 w-[7.2rem] cursor-pointer rounded-md border border-slate-200 bg-transparent px-1.5 py-1 text-[11px] text-slate-700 transition-colors duration-200 hover:border-slate-400 focus:border-navy-600 focus:outline-2 focus:outline-navy-600/20'
 
+const descCellClass =
+  'min-h-8 w-[11rem] cursor-text truncate rounded-md border border-slate-200 bg-transparent px-1.5 py-1 text-xs text-slate-700 transition-colors duration-200 hover:border-slate-400 focus:border-navy-600 focus:outline-2 focus:outline-navy-600/20'
+
 // Overall Transactions ledger: every amortization installment across all
 // borrowers, filterable, with editable dates and single/bulk status updates.
 // Status written here is the same store the borrower views read from.
@@ -680,11 +683,11 @@ export default function Transactions() {
                           className={dateCellClass}
                         />
                       </td>
-                      <td
-                        className="max-w-[11rem] truncate px-2.5 py-2.5 text-slate-700"
-                        title={`${t.description} · ${t.loanId}`}
-                      >
-                        {t.description}
+                      <td className="px-2.5 py-2.5">
+                        <DescriptionCell
+                          txn={t}
+                          onSave={(desc) => updateTransaction(t.id, { description: desc })}
+                        />
                       </td>
                       <td className="px-2.5 py-2.5 text-right font-mono text-slate-900">
                         {formatPeso(t.amount)}
@@ -911,8 +914,23 @@ export default function Transactions() {
               {nameOf(actionTxn.userId)} · {formatPeso(actionTxn.amount)}
             </p>
             <p className="mb-2 truncate px-2 text-xs text-slate-500">
-              {actionTxn.description} · Due {formatDate(actionTxn.dueDate)}
+              Due {formatDate(actionTxn.dueDate)}
             </p>
+            <div className="mb-3 px-2">
+              <label htmlFor="edit-desc" className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-400">
+                Item description
+              </label>
+              <DescriptionCell
+                key={actionTxn.id}
+                txn={actionTxn}
+                inputId="edit-desc"
+                onSave={(desc) => {
+                  updateTransaction(actionTxn.id, { description: desc })
+                  setActionTxn((prev) => (prev ? { ...prev, description: desc } : prev))
+                }}
+                className="min-h-10 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-navy-600 focus:outline-2 focus:outline-navy-600/20"
+              />
+            </div>
             <p className="mb-1 px-2 text-xs font-medium uppercase tracking-wide text-slate-400">
               Set status
             </p>
@@ -945,6 +963,51 @@ export default function Transactions() {
         </div>
       )}
     </>
+  )
+}
+
+// Inline-editable Item Description cell. Commits on blur or Enter, reverts on
+// Escape, and re-syncs if the underlying record changes elsewhere. Editing is
+// held in local state so the shared ledger only updates once, on commit —
+// avoiding per-keystroke re-filtering/re-sorting of the whole grid.
+function DescriptionCell({ txn, onSave, className, inputId }) {
+  const [value, setValue] = useState(txn.description)
+  const [editing, setEditing] = useState(false)
+  // Re-sync to an external change (another edit to this row) while not editing,
+  // using the render-time "reset state on prop change" pattern (no effect).
+  const [lastDesc, setLastDesc] = useState(txn.description)
+  if (txn.description !== lastDesc) {
+    setLastDesc(txn.description)
+    if (!editing) setValue(txn.description)
+  }
+  const commit = () => {
+    setEditing(false)
+    const next = value.trim()
+    if (next && next !== txn.description) onSave(next)
+    else if (!next) setValue(txn.description) // reject empty description
+  }
+  return (
+    <input
+      id={inputId}
+      type="text"
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+      onFocus={() => setEditing(true)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault()
+          e.currentTarget.blur()
+        } else if (e.key === 'Escape') {
+          setValue(txn.description)
+          setEditing(false)
+          e.currentTarget.blur()
+        }
+      }}
+      title={`${txn.description}${txn.loanId ? ` · ${txn.loanId}` : ''}`}
+      aria-label={`Item description for ${txn.description}`}
+      className={className ?? descCellClass}
+    />
   )
 }
 
