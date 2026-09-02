@@ -206,6 +206,16 @@ export default function Dashboard() {
           </PressableScale>
         </FadeInView>
 
+        <FadeInView delay={35}>
+          <PressableScale
+            onPress={() => router.push('/disbursements')}
+            className="flex-row items-center justify-center gap-2 rounded-2xl bg-white px-4 py-3"
+          >
+            <FileText size={18} color={colors.navy700} />
+            <Text className="font-sans-medium text-sm text-navy-700">My Disbursements</Text>
+          </PressableScale>
+        </FadeInView>
+
         {/* Loan Request entry — only for borrowers the admin has enabled. */}
         {canRequest ? (
           <FadeInView delay={40}>
