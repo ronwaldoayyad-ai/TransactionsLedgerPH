@@ -26,13 +26,58 @@ const dateCellClass =
 const descCellClass =
   'min-h-8 w-[11rem] cursor-text truncate rounded-md border border-slate-200 bg-transparent px-1.5 py-1 text-xs text-slate-700 transition-colors duration-200 hover:border-slate-400 focus:border-navy-600 focus:outline-2 focus:outline-navy-600/20'
 
+// --- Find & Replace (Item Description) helpers ---------------------------
+const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+// Case transforms applied to each matched substring (or, when Find is empty,
+// the whole description). Proper Case capitalizes after word separators but
+// leaves apostrophes alone ("henry's" → "Henry's"); Sentence case capitalizes
+// the first letter and any letter after sentence-ending punctuation.
+const CASE_TRANSFORMS = {
+  upper: (s) => s.toUpperCase(),
+  lower: (s) => s.toLowerCase(),
+  proper: (s) =>
+    s.toLowerCase().replace(/(^|[\s\-/&(,.])([a-z])/g, (_, sep, ch) => sep + ch.toUpperCase()),
+  sentence: (s) => {
+    const lower = s.toLowerCase()
+    return lower.replace(/(^\s*|[.!?]\s+)([a-z])/g, (_, sep, ch) => sep + ch.toUpperCase())
+  },
+}
+
+const REPLACE_MODES = [
+  { value: 'text', label: 'Replace with text' },
+  { value: 'upper', label: 'UPPERCASE' },
+  { value: 'lower', label: 'lowercase' },
+  { value: 'proper', label: 'Proper Case' },
+  { value: 'sentence', label: 'Sentence case' },
+]
+
+// Compute the new description for one row, or null when nothing would change.
+// With a Find term, the replacement/transform applies to each match; with an
+// empty Find, a case transform applies to the entire description.
+function computeReplacement(desc, { find, replace, mode, matchCase }) {
+  if (!find) {
+    if (mode === 'text') return null // nothing to find, nothing to replace
+    const next = CASE_TRANSFORMS[mode](desc)
+    return next !== desc ? next : null
+  }
+  let re
+  try {
+    re = new RegExp(escapeRegExp(find), matchCase ? 'g' : 'gi')
+  } catch {
+    return null
+  }
+  const next = desc.replace(re, (m) => (mode === 'text' ? replace : CASE_TRANSFORMS[mode](m)))
+  return next !== desc ? next : null
+}
+
 // Overall Transactions ledger: every amortization installment across all
 // borrowers, filterable, with editable dates and single/bulk status updates.
 // Status written here is the same store the borrower views read from.
 export default function Transactions() {
   const {
     users, transactions, setTransactionStatus, updateTransaction, archiveTransactions,
-    importTransactions, importLoans,
+    replaceTransactionDescriptions, importTransactions, importLoans,
   } = useApp()
   const borrowers = users.filter((u) => u.role === 'user')
   const today = toISODate(new Date())
@@ -63,6 +108,15 @@ export default function Transactions() {
   const [importPreview, setImportPreview] = useState(null) // { rows, errors }
   const [importing, setImporting] = useState(false)
   const [importNotice, setImportNotice] = useState('')
+  // Find & Replace (Item Description). `frDeselected` holds ids the admin
+  // unchecked in the preview, so "select all" is the default (empty set).
+  const [frOpen, setFrOpen] = useState(false)
+  const [frFind, setFrFind] = useState('')
+  const [frReplace, setFrReplace] = useState('')
+  const [frMode, setFrMode] = useState('text') // text | upper | lower | proper | sentence
+  const [frMatchCase, setFrMatchCase] = useState(false)
+  const [frScope, setFrScope] = useState('all') // all | filtered
+  const [frDeselected, setFrDeselected] = useState(() => new Set())
 
   const nameOf = (userId) => users.find((u) => u.id === userId)?.name ?? userId
 
@@ -370,6 +424,61 @@ export default function Transactions() {
     return counts
   }, [filtered, today])
 
+  // --- Find & Replace: live preview over the chosen scope ------------------
+  const openFindReplace = () => {
+    setFrFind('')
+    setFrReplace('')
+    setFrMode('text')
+    setFrMatchCase(false)
+    setFrScope('all')
+    setFrDeselected(new Set())
+    setFrOpen(true)
+  }
+
+  // Rows whose Item Description would change under the current terms.
+  const frMatches = useMemo(() => {
+    if (!frOpen) return []
+    const source = frScope === 'filtered' ? filtered : transactions
+    const out = []
+    for (const t of source) {
+      const after = computeReplacement(t.description, {
+        find: frFind.trim(),
+        replace: frReplace,
+        mode: frMode,
+        matchCase: frMatchCase,
+      })
+      if (after != null) out.push({ id: t.id, userId: t.userId, before: t.description, after })
+    }
+    return out
+  }, [frOpen, frFind, frReplace, frMode, frMatchCase, frScope, filtered, transactions])
+
+  // A replacement that would blank the description is not applicable (the
+  // ledger requires a non-empty item description).
+  const frSelectable = frMatches.filter((m) => m.after.trim())
+  const frApplicable = frSelectable.filter((m) => !frDeselected.has(m.id))
+  const frEmptyCount = frMatches.length - frSelectable.length
+  const frAllChecked = frSelectable.length > 0 && frApplicable.length === frSelectable.length
+
+  const toggleFrOne = (id) =>
+    setFrDeselected((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+
+  const toggleFrAll = () =>
+    setFrDeselected(() => (frAllChecked ? new Set(frSelectable.map((m) => m.id)) : new Set()))
+
+  const applyFindReplace = () => {
+    const n = replaceTransactionDescriptions(
+      frApplicable.map((m) => ({ id: m.id, description: m.after })),
+    )
+    setFrOpen(false)
+    setImportNotice(`Find & Replace updated ${n} item description${n === 1 ? '' : 's'}.`)
+    setTimeout(() => setImportNotice(''), 6000)
+  }
+
   return (
     <>
       <PageHeader
@@ -389,6 +498,14 @@ export default function Transactions() {
                 e.target.value = ''
               }}
             />
+            <Button
+              variant="secondary"
+              onClick={openFindReplace}
+              title="Find and replace text in item descriptions"
+            >
+              <Icon name="pencil" className="h-4 w-4" />
+              Find & Replace
+            </Button>
             <Button variant="secondary" onClick={downloadTemplate} title="Download a sample CSV with the expected columns">
               <Icon name="file" className="h-4 w-4" />
               Template
@@ -844,6 +961,154 @@ export default function Transactions() {
             )}
           </div>
         )}
+      </Modal>
+
+      {/* Find & Replace (Item Descriptions) */}
+      <Modal
+        open={frOpen}
+        title="Find & Replace — Item Descriptions"
+        onClose={() => setFrOpen(false)}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setFrOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={applyFindReplace} disabled={frApplicable.length === 0}>
+              <Icon name="check" className="h-4 w-4" />
+              {frApplicable.length > 0 ? `Replace ${frApplicable.length}` : 'Replace'}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label htmlFor="fr-find" className="mb-1 block text-xs font-medium text-slate-500">
+                Find text
+              </label>
+              <input
+                id="fr-find"
+                type="text"
+                value={frFind}
+                onChange={(e) => setFrFind(e.target.value)}
+                placeholder="e.g. gcash"
+                className={inputClass}
+                autoFocus
+              />
+            </div>
+            <div>
+              <label htmlFor="fr-mode" className="mb-1 block text-xs font-medium text-slate-500">
+                Action
+              </label>
+              <select
+                id="fr-mode"
+                value={frMode}
+                onChange={(e) => setFrMode(e.target.value)}
+                className={inputClass}
+              >
+                {REPLACE_MODES.map((m) => (
+                  <option key={m.value} value={m.value}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {frMode === 'text' ? (
+            <div>
+              <label htmlFor="fr-replace" className="mb-1 block text-xs font-medium text-slate-500">
+                Replace with
+              </label>
+              <input
+                id="fr-replace"
+                type="text"
+                value={frReplace}
+                onChange={(e) => setFrReplace(e.target.value)}
+                placeholder="Corrected text"
+                className={inputClass}
+              />
+            </div>
+          ) : (
+            <p className="rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
+              {frFind.trim()
+                ? `Each match of “${frFind.trim()}” will be re-cased. Leave Find empty to re-case the whole description.`
+                : 'Find is empty — the whole item description will be re-cased.'}
+            </p>
+          )}
+
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+            <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-600">
+              <Switch checked={frMatchCase} onChange={setFrMatchCase} label="Match case" />
+              Match case
+            </label>
+            <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-600">
+              <Switch
+                checked={frScope === 'filtered'}
+                onChange={(v) => setFrScope(v ? 'filtered' : 'all')}
+                label="Limit to current filter"
+              />
+              Only current filter ({filtered.length})
+            </label>
+          </div>
+
+          {frMatches.length === 0 ? (
+            <p className="rounded-lg bg-slate-50 px-3 py-2.5 text-sm text-slate-500">
+              {frMode === 'text' && !frFind.trim()
+                ? 'Enter text to find in the Item Description column. Borrowers, amounts, dates, and status are never changed.'
+                : 'No item descriptions would change with these terms.'}
+            </p>
+          ) : (
+            <div>
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-sm font-medium text-navy-900">
+                  {frMatches.length} match{frMatches.length === 1 ? '' : 'es'}
+                  {frEmptyCount > 0 && ` · ${frEmptyCount} skipped (would be empty)`}
+                </p>
+                <button
+                  type="button"
+                  onClick={toggleFrAll}
+                  className="cursor-pointer text-xs font-medium text-navy-700 hover:underline"
+                >
+                  {frAllChecked ? 'Deselect all' : 'Select all'}
+                </button>
+              </div>
+              <ul className="max-h-56 space-y-1 overflow-y-auto rounded-lg border border-slate-200 p-2">
+                {frMatches.map((m) => {
+                  const empty = !m.after.trim()
+                  const checked = !empty && !frDeselected.has(m.id)
+                  return (
+                    <li key={m.id} className="flex items-start gap-2 rounded-md px-1.5 py-1">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        disabled={empty}
+                        onChange={() => toggleFrOne(m.id)}
+                        aria-label={`Apply replacement to ${m.before}`}
+                        className="mt-1 h-4 w-4 cursor-pointer accent-[#1e3a8a] disabled:cursor-not-allowed disabled:opacity-50"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[11px] text-slate-400">{nameOf(m.userId)}</p>
+                        <p className="break-words text-xs text-slate-500 line-through">{m.before}</p>
+                        <p
+                          className={`break-words text-xs font-medium ${
+                            empty ? 'text-red-600' : 'text-emerald-700'
+                          }`}
+                        >
+                          {empty ? '(empty — skipped)' : m.after}
+                        </p>
+                      </div>
+                    </li>
+                  )
+                })}
+              </ul>
+              <p className="mt-2 text-xs text-slate-500">
+                {frApplicable.length} of {frSelectable.length} selected will be updated. Check items to
+                apply one by one, or Select all for bulk.
+              </p>
+            </div>
+          )}
+        </div>
       </Modal>
 
       {/* Mobile filter bottom sheet (multi-select per group; empty = All). */}

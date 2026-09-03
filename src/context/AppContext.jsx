@@ -1093,6 +1093,41 @@ export function AppProvider({ children }) {
     [isLive, log, actor, transactions],
   )
 
+  // Bulk find-and-replace of Item Descriptions from the Overall Transactions
+  // ledger. `edits` is an array of { id, description } with the already-computed
+  // new text. Only the description changes — borrower, amount, dates, and status
+  // are untouched. One state update and one audit entry; live mode pushes each
+  // row's new description to Supabase in parallel. Returns the number applied.
+  const replaceTransactionDescriptions = useCallback(
+    (edits) => {
+      const map = new Map(
+        (edits ?? [])
+          .filter((e) => e && e.id && typeof e.description === 'string' && e.description.trim())
+          .map((e) => [e.id, e.description.trim()]),
+      )
+      if (map.size === 0) return 0
+      if (isLive) {
+        map.forEach((description, id) => {
+          supabase
+            .from('transactions')
+            .update({ description })
+            .eq('id', id)
+            .then(logDbError('description replace'))
+        })
+      }
+      setTransactions((prev) =>
+        prev.map((t) => (map.has(t.id) ? { ...t, description: map.get(t.id) } : t)),
+      )
+      log(
+        actor,
+        'TXN_UPDATED',
+        `Find & Replace updated ${map.size} item description${map.size === 1 ? '' : 's'}`,
+      )
+      return map.size
+    },
+    [isLive, log, actor],
+  )
+
   // Edit a loan's disclosure-statement fields (admin only, via view-as). The
   // disclosure aggregates (totalDeductions, netProceeds) are recomputed from
   // the edited inputs; the amortization schedule rows are NOT regenerated —
@@ -1550,6 +1585,7 @@ export function AppProvider({ children }) {
       unassignLoan,
       setTransactionStatus,
       updateTransaction,
+      replaceTransactionDescriptions,
       updateLoan,
       archivedTransactions,
       archiveTransactions,
@@ -1570,7 +1606,8 @@ export function AppProvider({ children }) {
       transactions, archivedTransactions, auditLog,
       signInWithPassword, signInDemo, signOut, completePasswordSetup, inviteUser, updateUser,
       deleteUser, resendInvite, submitPayment, reviewPayment, deletePayment, assignLoan, unassignLoan,
-      setTransactionStatus, updateTransaction, updateLoan, archiveTransactions, restoreTransactions,
+      setTransactionStatus, updateTransaction, replaceTransactionDescriptions, updateLoan,
+      archiveTransactions, restoreTransactions,
       purgeArchivedTransactions, purgeAuditEntries, importTransactions,
     ],
   )
