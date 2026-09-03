@@ -5,7 +5,7 @@ import Icon from '../../components/Icon'
 import RefreshButton from '../../components/RefreshButton'
 import { Button, Card, CardHeader, CurrencyInput, EmptyState, Field, Modal, inputClass } from '../../components/ui'
 import { usePersistedState } from '../../hooks/usePersistedState'
-import { formatDate, formatPeso, toISODate } from '../../lib/amortization'
+import { formatDate, formatPeso, parseISODate, toISODate } from '../../lib/amortization'
 import {
   BANKS,
   computeLoan,
@@ -87,10 +87,28 @@ function Row({ label, value, strong }) {
   )
 }
 
+// Percent of the loan schedule that has elapsed, based on the first payment
+// date and the derived last payment date. 0% before the first payment, 100%
+// at (or after) the last payment. Rounded to whole percent for display.
+function loanProgress(loan, todayISO) {
+  if (!loan.firstPaymentDate || !loan.durationMonths) return 0
+  const last = lastPaymentDate(loan.firstPaymentDate, loan.durationMonths)
+  if (!last) return 0
+  if (todayISO >= last) return 100
+  if (todayISO < loan.firstPaymentDate) return 0
+  const first = parseISODate(loan.firstPaymentDate).getTime()
+  const end = parseISODate(last).getTime()
+  const t = parseISODate(todayISO).getTime()
+  const span = end - first
+  if (span <= 0) return 100
+  return Math.round(((t - first) / span) * 100)
+}
+
 function LoanCard({ loan, today, collapsed, onToggleCollapse, onDelete }) {
   const c = computeLoan(loan)
   const last = lastPaymentDate(loan.firstPaymentDate, loan.durationMonths)
   const outstanding = !isFullyPaid(loan, today)
+  const progress = loanProgress(loan, today)
   return (
     <Card className="p-5">
       <div className="flex items-center gap-2">
@@ -145,6 +163,39 @@ function LoanCard({ loan, today, collapsed, onToggleCollapse, onDelete }) {
             <span className="rounded-md bg-white px-3 py-1 font-mono text-base font-bold text-slate-900 shadow-sm">
               {formatPeso(c.monthly)}
             </span>
+          </div>
+
+          {/* Loan progress: gradient bar with a percentage read-out. Time-based
+              (first payment → last payment). Fully-paid loans switch to the
+              emerald/teal palette to signal completion. */}
+          <div className="mt-3">
+            <div className="mb-1.5 flex items-center justify-between text-xs">
+              <span className="font-medium text-slate-500">Loan Progress</span>
+              <span
+                className={`font-mono font-semibold ${
+                  outstanding ? 'text-indigo-700' : 'text-emerald-700'
+                }`}
+              >
+                {progress}%
+              </span>
+            </div>
+            <div
+              className="h-2.5 w-full overflow-hidden rounded-full bg-slate-100 shadow-inner ring-1 ring-slate-200/60"
+              role="progressbar"
+              aria-valuenow={progress}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label={`Loan ${progress}% complete`}
+            >
+              <div
+                className={`h-full rounded-full bg-gradient-to-r shadow-[0_0_8px_-1px_currentColor] transition-[width] duration-500 ease-out ${
+                  outstanding
+                    ? 'from-blue-500 via-indigo-500 to-purple-500 text-indigo-400/60'
+                    : 'from-emerald-400 via-emerald-500 to-teal-500 text-emerald-400/60'
+                }`}
+                style={{ width: `${progress}%` }}
+              />
+            </div>
           </div>
         </>
       )}
