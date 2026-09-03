@@ -1,8 +1,12 @@
-import { Suspense, useState } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
+import { Suspense, useEffect, useState } from 'react'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
+import { useDisbursements } from '../context/DisbursementsContext'
+import { useInvoices } from '../context/InvoicesContext'
+import { useLoanRequests } from '../context/LoanRequestsContext'
 import { useMessages } from '../context/MessagesContext'
 import { useNotifications } from '../context/NotificationsContext'
+import { useSectionUnread } from '../hooks/useSectionUnread'
 import Icon from './Icon'
 import { PulseBadge } from './ui'
 import ProfileModal from './ProfileModal'
@@ -97,13 +101,70 @@ function UnreadBadge({ count, className = '' }) {
 }
 
 export default function AppShell({ children }) {
-  const { session, realSession, isViewingAs, stopViewAs, signOut, payments } = useApp()
+  const { session, realSession, isViewingAs, stopViewAs, signOut, payments, paymentLogs } = useApp()
   const { unreadTotal } = useMessages()
   const { unreadCount: notifUnread } = useNotifications()
+  const { invoices } = useInvoices()
+  const { disbursements } = useDisbursements()
+  const { myRequests } = useLoanRequests()
   const navigate = useNavigate()
+  const location = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
   const isAdmin = session.user.role === 'admin'
+  const meId = session.user.id
+
+  // ---- Borrower nav "unread" watermarks ----
+  // Each section shows a pulsing count of items whose relevant timestamp is
+  // newer than the borrower's last visit to that page. The badges reset when
+  // the borrower opens the corresponding route (see the useEffect below).
+  const myPayments = payments.filter((p) => p.userId === meId)
+  const myPaymentLogs = paymentLogs.filter((p) => p.userId === meId)
+  const myInvoices = invoices.filter((i) => i.userId === meId)
+  const myDisbursements = disbursements.filter((d) => d.userId === meId)
+  const paymentsUnread = useSectionUnread({
+    userId: meId,
+    section: 'payments',
+    items: myPayments,
+    // A payment counts as "new" when the admin acts on it (approve/reject/etc.).
+    getTimestamp: (p) => p.reviewedAt ?? null,
+  })
+  const invoicesUnread = useSectionUnread({
+    userId: meId,
+    section: 'invoices',
+    items: myInvoices,
+    getTimestamp: (i) => i.updatedAt ?? i.createdAt ?? null,
+  })
+  const paymentLogsUnread = useSectionUnread({
+    userId: meId,
+    section: 'payment-logs',
+    items: myPaymentLogs,
+    getTimestamp: (p) => p.createdAt ?? null,
+  })
+  const disbursementsUnread = useSectionUnread({
+    userId: meId,
+    section: 'disbursements',
+    items: myDisbursements,
+    getTimestamp: (d) => d.updatedAt ?? d.createdAt ?? null,
+  })
+  const loanRequestUnread = useSectionUnread({
+    userId: meId,
+    section: 'loan-request',
+    items: myRequests,
+    getTimestamp: (r) => r.updatedAt ?? r.createdAt ?? null,
+  })
+
+  // Auto-mark a section as seen when the borrower navigates to it. Keys must
+  // match the section strings passed to useSectionUnread above.
+  useEffect(() => {
+    const p = location.pathname
+    if (p.startsWith('/portal/payment-logs')) paymentLogsUnread.markSeen()
+    else if (p.startsWith('/portal/payments')) paymentsUnread.markSeen()
+    else if (p.startsWith('/portal/invoices')) invoicesUnread.markSeen()
+    else if (p.startsWith('/portal/disbursements')) disbursementsUnread.markSeen()
+    else if (p.startsWith('/portal/loan-request')) loanRequestUnread.markSeen()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname])
   // The footer mirrors the effective view, but profile editing always targets
   // the real signed-in account.
   const footerUser = realSession?.user ?? session.user
@@ -120,12 +181,21 @@ export default function AppShell({ children }) {
     navigate('/login')
   }
 
+  // Map each nav item to its unread count. Anything with a non-zero count gets
+  // a pulsing red badge with the number inside the circle (PulseBadge).
+  const unreadForItem = (to) => {
+    if (to.endsWith('/notifications')) return notifUnread
+    if (to.endsWith('/messages')) return unreadTotal
+    if (to === '/portal/payments') return paymentsUnread.unread
+    if (to === '/portal/invoices') return invoicesUnread.unread
+    if (to === '/portal/payment-logs') return paymentLogsUnread.unread
+    if (to === '/portal/disbursements') return disbursementsUnread.unread
+    if (to === '/portal/loan-request') return loanRequestUnread.unread
+    return 0
+  }
+
   const renderLink = (item) => {
-    const unread = item.to.endsWith('/notifications')
-      ? notifUnread
-      : item.to.endsWith('/messages')
-        ? unreadTotal
-        : 0
+    const unread = unreadForItem(item.to)
     const pending = item.icon === 'inbox' ? pendingCount : 0
     return (
       <NavLink
@@ -147,17 +217,13 @@ export default function AppShell({ children }) {
             : 'text-navy-200 hover:bg-white/5 hover:text-white after:scale-x-0')
         }
       >
-        {/* iOS-style unread badge anchored to the icon's top-right corner. The
-            notifications bell uses a pulsing variant with the count inside the
-            circle; other items (messages) use the static count pill. */}
+        {/* iOS-style pulsing unread badge anchored to the icon's top-right
+            corner — count sits inside the pulsing circle. Used for every nav
+            item with a non-zero unread count (messages, notifications, and
+            the borrower's status-change sections). */}
         <span className="relative shrink-0">
           <Icon name={item.icon} className="h-5 w-5" />
-          {unread > 0 &&
-            (item.to.endsWith('/notifications') ? (
-              <PulseBadge count={unread} />
-            ) : (
-              <UnreadBadge count={unread} />
-            ))}
+          {unread > 0 && <PulseBadge count={unread} />}
         </span>
         {item.label}
         {pending > 0 && (
