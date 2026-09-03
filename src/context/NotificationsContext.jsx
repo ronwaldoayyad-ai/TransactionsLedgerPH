@@ -187,11 +187,15 @@ export function NotificationsProvider({ children }) {
 
   // ---- Scoped notification list ----
   // Admin sees every notification; a borrower sees only those addressed to them.
-  // Live rows are already audience-filtered by RLS.
+  // Non-admins get an explicit client-side filter: in live mode RLS already
+  // narrows the base list to the signed-in user, but when the admin is
+  // "Viewing as" a borrower the Supabase session is still the admin's, so RLS
+  // returns everything and the client filter is what scopes it to that
+  // borrower. In demo mode the filter is the only scoping.
   const notifications = useMemo(() => {
     if (!meId) return []
     const base = isLive ? liveNotifications : demoNotifications
-    const scoped = isAdmin || isLive ? base : base.filter((n) => targetsMe(n, meId))
+    const scoped = isAdmin ? base : base.filter((n) => targetsMe(n, meId))
     return [...scoped].sort(byRecent)
     // demoVersion forces recompute after in-memory mutations.
     // eslint-disable-next-line react-hooks/exhaustive-deps
