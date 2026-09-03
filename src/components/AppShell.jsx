@@ -4,6 +4,7 @@ import { useApp } from '../context/AppContext'
 import { useMessages } from '../context/MessagesContext'
 import { useNotifications } from '../context/NotificationsContext'
 import Icon from './Icon'
+import { PulseDot } from './ui'
 import ProfileModal from './ProfileModal'
 import AnnouncementBanner from './announcements/AnnouncementBanner'
 import AnnouncementToasts from './announcements/AnnouncementToasts'
@@ -146,10 +147,14 @@ export default function AppShell({ children }) {
             : 'text-navy-200 hover:bg-white/5 hover:text-white after:scale-x-0')
         }
       >
-        {/* iOS-style unread badge: red pill on the icon's top-right corner. */}
-        <span className="relative shrink-0">
-          <Icon name={item.icon} className="h-5 w-5" />
-          {unread > 0 && <UnreadBadge count={unread} />}
+        {/* iOS-style unread badge: red pill on the icon's top-right corner,
+            plus a pulsing dot to the right of the bell for unread notifications. */}
+        <span className="relative flex shrink-0 items-center gap-1.5">
+          <span className="relative">
+            <Icon name={item.icon} className="h-5 w-5" />
+            {unread > 0 && <UnreadBadge count={unread} />}
+          </span>
+          {item.to.endsWith('/notifications') && notifUnread > 0 && <PulseDot />}
         </span>
         {item.label}
         {pending > 0 && (

@@ -126,6 +126,29 @@ body {
   animation-fill-mode: forwards;
 }
 
+/* Unread-notification dot: a solid red dot with a softly pulsing glow. Pair
+   it with Tailwind's animate-ping on a sibling ring for the expanding-ring
+   effect (see the PulseDot component). */
+@keyframes notif-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 7px 3px rgba(239, 68, 68, 0.55);
+  }
+}
+.notif-dot {
+  animation: notif-glow 1.6s ease-in-out infinite;
+}
+/* Respect reduced-motion: keep the dot (as a static indicator), drop motion. */
+@media (prefers-reduced-motion: reduce) {
+  .notif-dot,
+  .notif-dot-wrap .animate-ping {
+    animation: none;
+  }
+}
+
 /* Login splash / loading screen — shown for ~5s after a successful sign-in. */
 .splash-screen {
   position: fixed;

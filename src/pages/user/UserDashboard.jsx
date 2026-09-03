@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
 import { useNotifications } from '../../context/NotificationsContext'
 import { PageHeader } from '../../components/AppShell'
-import { Badge, Button, Card, CardHeader, EmptyState, StatCard, Switch } from '../../components/ui'
+import { Badge, Button, Card, CardHeader, EmptyState, PulseDot, StatCard, Switch } from '../../components/ui'
 import Icon from '../../components/Icon'
 import PaymentList from '../../components/PaymentList'
 import DuesOverview from '../../components/DuesOverview'
@@ -187,6 +187,7 @@ export default function UserDashboard() {
             <Link to="/portal/notifications" className="relative">
               <Button variant="secondary">
                 <Icon name="bell" className="h-4 w-4" />
+                {unreadCount > 0 && <PulseDot />}
                 Notifications
               </Button>
               {unreadCount > 0 && (

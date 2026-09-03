@@ -414,3 +414,19 @@ export function EmptyState({ icon = 'inbox', title, body }) {
     </div>
   )
 }
+
+// Pulsating red dot for "unread notifications". A solid red dot with a soft
+// pulsing glow, wrapped by an expanding-ring (Tailwind animate-ping). Callers
+// render it only when there is something unread, so it's hidden otherwise.
+// Decorative — the numeric count badge carries the accessible label.
+export function PulseDot({ className = '' }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={`notif-dot-wrap pointer-events-none relative inline-flex h-2.5 w-2.5 ${className}`}
+    >
+      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
+      <span className="notif-dot relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
+    </span>
+  )
+}
