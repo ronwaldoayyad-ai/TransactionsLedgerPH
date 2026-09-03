@@ -179,7 +179,7 @@ export default function DuesOverview({
                     key={c.id}
                     type="button"
                     onClick={() => setLoanId(c.id)}
-                    className={`cursor-pointer rounded-full px-3.5 py-1.5 text-xs font-medium transition-colors duration-200 ${
+                    className={`cursor-pointer rounded-full px-3.5 py-1.5 text-xs font-medium uppercase transition-colors duration-200 ${
                       on ? 'bg-navy-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                     }`}
                   >
