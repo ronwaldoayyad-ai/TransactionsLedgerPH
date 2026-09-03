@@ -64,8 +64,15 @@ const shortDate = (iso) => {
 }
 
 // One Grand-View pie tile: donut of amounts by borrower + a short legend.
+// The legend collapses to the top 4 by default; when there are more, the
+// "+N more borrowers" line becomes a button that expands to show all rows
+// (and collapses back). Tiles remember their own open/closed state.
 function BorrowerPie({ title, caption, data, colorMap }) {
   const total = data.reduce((s, d) => s + d.value, 0)
+  const [expanded, setExpanded] = useState(false)
+  const COLLAPSED_COUNT = 4
+  const hasMore = data.length > COLLAPSED_COUNT
+  const visible = expanded || !hasMore ? data : data.slice(0, COLLAPSED_COUNT)
   return (
     <div className="flex flex-col rounded-lg border border-slate-200 bg-white p-3">
       <div className="flex items-baseline justify-between gap-2">
@@ -98,7 +105,7 @@ function BorrowerPie({ title, caption, data, colorMap }) {
             </ResponsiveContainer>
           </div>
           <ul className="mt-1 space-y-1">
-            {data.slice(0, 4).map((e) => (
+            {visible.map((e) => (
               <li key={e.userId} className="flex items-center justify-between gap-2 text-[11px]">
                 <span className="flex min-w-0 items-center gap-1.5">
                   <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: colorMap[e.userId] ?? '#94a3b8' }} />
@@ -107,8 +114,21 @@ function BorrowerPie({ title, caption, data, colorMap }) {
                 <span className="shrink-0 font-mono text-slate-800">{formatPeso(e.value)}</span>
               </li>
             ))}
-            {data.length > 4 && <li className="text-[11px] text-slate-400">+{data.length - 4} more borrowers</li>}
           </ul>
+          {hasMore && (
+            <button
+              type="button"
+              onClick={() => setExpanded((v) => !v)}
+              aria-expanded={expanded}
+              className="mt-1 flex items-center gap-1 self-start rounded text-[11px] font-medium text-slate-500 hover:text-slate-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-navy-500"
+            >
+              <Icon
+                name="chevron"
+                className={`h-3 w-3 transition-transform ${expanded ? 'rotate-180' : ''}`}
+              />
+              {expanded ? 'Show less' : `+${data.length - COLLAPSED_COUNT} more borrowers`}
+            </button>
+          )}
         </>
       )}
     </div>
