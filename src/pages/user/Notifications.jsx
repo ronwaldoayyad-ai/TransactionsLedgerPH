@@ -173,8 +173,10 @@ function NotificationRow({ n, read, onMarkRead, onMarkUnread, onReply, onReact, 
 
   return (
     <li
-      className={`px-4 py-3.5 transition-colors sm:px-5 ${
-        read ? '' : 'border-l-4 border-navy-500 bg-navy-50/40'
+      className={`border-l-4 px-4 py-3.5 transition-colors duration-200 sm:px-5 ${
+        read
+          ? 'border-transparent bg-slate-50/60'
+          : 'border-navy-500 bg-navy-50'
       }`}
     >
       <div className="flex items-start gap-3">

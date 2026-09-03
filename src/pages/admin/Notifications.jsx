@@ -63,7 +63,13 @@ function InboxRow({ n, borrowerName, read, onToggleRead, onReply, onReact }) {
   }
 
   return (
-    <li className={`px-5 py-3.5 ${read ? '' : 'bg-navy-50/40'}`}>
+    <li
+      className={`border-l-4 px-5 py-3.5 transition-colors duration-200 ${
+        read
+          ? 'border-transparent bg-slate-50/60'
+          : 'border-navy-500 bg-navy-50'
+      }`}
+    >
       <div className="flex items-start gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
