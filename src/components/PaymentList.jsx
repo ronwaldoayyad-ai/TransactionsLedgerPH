@@ -212,7 +212,7 @@ export default function PaymentList({
               }
             return (
               <li key={p.id} className="px-5 py-4">
-                <div className="flex flex-wrap items-center gap-4">
+                <div className="flex items-start gap-4 sm:items-center">
                   <button
                     type="button"
                     onClick={() => hasProof(p) && openProof(p)}
@@ -229,7 +229,13 @@ export default function PaymentList({
                     </span>
                   </button>
 
-                  <div className="min-w-0 flex-1">
+                  {/* Text + actions stack on mobile, then share one row from
+                      sm up. Stacking sidesteps a Safari (WebKit) flex-wrap bug
+                      where a growing `flex-1 min-w-0` column collapses to 0
+                      width and its text overflows on top of the action
+                      buttons — Blink/Android wrapped it correctly instead. */}
+                  <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0 sm:flex-1">
                     <p className="font-medium text-slate-900">
                       {showBorrower && <span>{borrower?.name ?? p.userId} · </span>}
                       <span className="font-mono text-sm text-slate-700">{formatPeso(p.amount)}</span>
@@ -245,7 +251,7 @@ export default function PaymentList({
                     </p>
                   </div>
 
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
                     {hasProof(p) && (
                       <>
                         <Button
@@ -305,6 +311,7 @@ export default function PaymentList({
                           Re-open
                         </Button>
                       ))}
+                  </div>
                   </div>
                 </div>
                 {p.status === 'rejected' && p.note && (
