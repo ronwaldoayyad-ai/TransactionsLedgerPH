@@ -106,7 +106,7 @@ export default function AppShell({ children }) {
   const { unreadCount: notifUnread } = useNotifications()
   const { invoices } = useInvoices()
   const { disbursements } = useDisbursements()
-  const { myRequests } = useLoanRequests()
+  const { myRequests, requests: allLoanRequests } = useLoanRequests()
   const navigate = useNavigate()
   const location = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
@@ -175,6 +175,11 @@ export default function AppShell({ children }) {
   }
   const nav = isAdmin ? adminNav : userNav
   const pendingCount = payments.filter((p) => p.status === 'pending').length
+  // Admin workload badges: how many items are currently awaiting admin action.
+  // Unlike the borrower's "changed since last visit" watermarks, these persist
+  // until the admin actually processes the item (a pending request stays until
+  // it's approved/rejected/etc.).
+  const pendingLoanRequests = (allLoanRequests || []).filter((r) => r.status === 'pending').length
 
   const handleSignOut = () => {
     signOut()
@@ -191,12 +196,13 @@ export default function AppShell({ children }) {
     if (to === '/portal/payment-logs') return paymentLogsUnread.unread
     if (to === '/portal/disbursements') return disbursementsUnread.unread
     if (to === '/portal/loan-request') return loanRequestUnread.unread
+    if (to === '/admin/loan-requests') return pendingLoanRequests
+    if (to === '/admin/queue') return pendingCount
     return 0
   }
 
   const renderLink = (item) => {
     const unread = unreadForItem(item.to)
-    const pending = item.icon === 'inbox' ? pendingCount : 0
     return (
       <NavLink
         key={item.to}
@@ -226,11 +232,6 @@ export default function AppShell({ children }) {
           {unread > 0 && <PulseBadge count={unread} />}
         </span>
         {item.label}
-        {pending > 0 && (
-          <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-gold-500 px-1.5 text-xs font-semibold text-white">
-            {pending}
-          </span>
-        )}
       </NavLink>
     )
   }
