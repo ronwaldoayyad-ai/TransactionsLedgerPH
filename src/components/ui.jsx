@@ -415,18 +415,25 @@ export function EmptyState({ icon = 'inbox', title, body }) {
   )
 }
 
-// Pulsating red dot for "unread notifications". A solid red dot with a soft
-// pulsing glow, wrapped by an expanding-ring (Tailwind animate-ping). Callers
-// render it only when there is something unread, so it's hidden otherwise.
-// Decorative — the numeric count badge carries the accessible label.
-export function PulseDot({ className = '' }) {
+// Pulsating unread badge: a red count pill (the number sits inside the circle)
+// wrapped by an expanding ring (Tailwind animate-ping) and a soft pulsing glow.
+// Combines the old separate pulsing dot + count badge into one indicator.
+// Anchors to the top-right of its relatively-positioned parent. Callers render
+// it only when there is something unread, so it's hidden otherwise.
+// `ringClass` is the "punched-out" ring colour — match it to the surface behind
+// the badge (dark sidebar vs. white card).
+export function PulseBadge({ count, className = '', ringClass = 'ring-navy-950' }) {
   return (
     <span
-      aria-hidden="true"
-      className={`notif-dot-wrap pointer-events-none relative inline-flex h-2.5 w-2.5 ${className}`}
+      aria-label={`${count} unread`}
+      className={`notif-dot-wrap pointer-events-none absolute -right-2 -top-1.5 inline-flex h-[18px] min-w-[18px] ${className}`}
     >
       <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-500 opacity-75" />
-      <span className="notif-dot relative inline-flex h-2.5 w-2.5 rounded-full bg-red-500" />
+      <span
+        className={`notif-dot relative inline-flex h-full w-full items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white shadow-sm ring-2 ${ringClass}`}
+      >
+        {count > 99 ? '99+' : count}
+      </span>
     </span>
   )
 }
