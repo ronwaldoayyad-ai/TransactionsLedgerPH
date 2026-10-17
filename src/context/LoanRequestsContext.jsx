@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { useApp } from './AppContext'
+import { useRecordRefresh } from '../lib/recordRefresh'
 import { supabase } from '../supabaseClient'
 
 // Data layer for the borrower Loan Request feature. Live sessions read/write
@@ -27,6 +28,10 @@ const mapRequest = (r) => ({
   status: r.status,
   createdAt: r.created_at,
   updatedAt: r.updated_at,
+  purpose: r.purpose,
+  consentAt: r.consent_at,
+  accountConfirmed: r.account_confirmed,
+  termsVersion: r.terms_version,
 })
 const mapEvent = (r) => ({
   id: r.id,
@@ -100,6 +105,8 @@ export function LoanRequestsProvider({ children }) {
       setEvents((evRes.value.data ?? []).map(mapEvent))
     }
   }, [isLive, meId])
+
+  useRecordRefresh(fetchAll, isLive && !!meId)
 
   // Initial load — all setState happens after the first await.
   useEffect(() => {
@@ -305,6 +312,7 @@ export function LoanRequestsProvider({ children }) {
   const value = useMemo(
     () => ({
       loading,
+      refreshRequests: fetchAll,
       rates,
       ratesByTerm,
       canRequest,
@@ -322,7 +330,7 @@ export function LoanRequestsProvider({ children }) {
       setAccess,
     }),
     [
-      loading, rates, ratesByTerm, canRequest, myRequests, requests, eventsFor, accessFor,
+      loading, fetchAll, rates, ratesByTerm, canRequest, myRequests, requests, eventsFor, accessFor,
       submitRequest, cancelRequest, updateMyBank, updateStatus, updateFees, deleteRequests, setRate, setAccess,
     ],
   )

@@ -1,0 +1,537 @@
+{
+  "version": "2026-10-17.1",
+  "name": "LoanLedger PH FAQ",
+  "entries": [
+    {
+      "id": "navigation",
+      "category": "Getting started",
+      "question": "How do I navigate the app?",
+      "answer": "Use Dashboard for your balance and recent activity, Transactions for installment and straight transactions, Payments to submit payment proof, and More for invoices, disbursements, messages, and settings. Help & Support contains FAQ and Submit Request.",
+      "keywords": [
+        "navigate",
+        "navigation",
+        "dashboard",
+        "tabs",
+        "more"
+      ],
+      "page": "dashboard"
+    },
+    {
+      "id": "login",
+      "category": "Getting started",
+      "question": "How do I sign in or get help with access?",
+      "answer": "Sign in with your registered email and password, then select Sign In. If your lender provides a six-digit Login Code, choose Login Code and enter it; sign-in starts automatically after the sixth digit. Login Codes remain valid until your lender replaces or revokes them. Five incorrect Login Codes lock sign-in on that device. Five consecutive invalid email/password attempts lock that account across both sign-in methods. The error pop-up shows attempts remaining and an unlock reference. Only a lender or administrator can unlock access; it does not reset after waiting or changing a password. After your lender unlocks access, select Check access on the login screen. For assistance, open Help & Support → Submit Request; include the unlock reference but never a password or Login Code. Guests can return using Back to sign in.",
+      "keywords": [
+        "login",
+        "sign in",
+        "password",
+        "token",
+        "access"
+      ],
+      "page": "support"
+    },
+    {
+      "id": "current-next",
+      "category": "Balances & payments",
+      "question": "What is the difference between Current Balance Due and Next Balance Due?",
+      "answer": "Each payment card shows the items assigned to that balance group. Select Current Balance Due or Next Balance Due, or swipe the card, to switch. The item count opens only the active card’s items. Due dates appear from latest to oldest. Next Balance Due is a configured group and can include overdue dates; review the actual dates shown.",
+      "keywords": [
+        "current",
+        "next",
+        "balance",
+        "card",
+        "items"
+      ],
+      "page": "dashboard"
+    },
+    {
+      "id": "past-due",
+      "category": "Balances & payments",
+      "question": "What does the past-due payment advisory mean?",
+      "answer": "The advisory summarizes overdue payment dates and unpaid items included in the active payment card. It shows the earliest overdue date and whether the three-day grace period has ended. It is hidden when that card has no overdue charge items. Unpaid balances are subject to a monthly Late Payment Fee and a 3% monthly Finance Charge if not paid in full, according to the applicable loan terms. Contact your lender for the exact charges on your account.",
+      "keywords": [
+        "past due",
+        "overdue",
+        "grace",
+        "late",
+        "finance",
+        "fee"
+      ],
+      "page": "dashboard"
+    },
+    {
+      "id": "proof",
+      "category": "Balances & payments",
+      "question": "How do I upload proof of payment?",
+      "answer": "Open Payments or Submit Payment. Select the due dates and payable items, confirm your requested allocation, and attach a JPG, PNG, WEBP, or PDF up to 10 MB. Review the amount, payment date, method, and reference extracted from the proof, or enter them manually. Submit the proof for lender review. A submitted proof does not confirm that funds have been verified.",
+      "keywords": [
+        "upload",
+        "proof",
+        "submit payment",
+        "receipt image",
+        "payment"
+      ],
+      "page": "payment"
+    },
+    {
+      "id": "ocr",
+      "category": "Balances & payments",
+      "question": "What is OCR, and what if it cannot read my payment proof?",
+      "answer": "OCR means optical character recognition. It reads text from your receipt to help fill the payment fields. Always review the results. If recognition is slow, incomplete, or incorrect, choose manual entry and enter the payment details yourself. Recognition does not verify the payment or receipt authenticity.",
+      "keywords": [
+        "ocr",
+        "recognition",
+        "scan",
+        "slow",
+        "manual"
+      ],
+      "page": "payment"
+    },
+    {
+      "id": "allocation",
+      "category": "Balances & payments",
+      "question": "What is a payment allocation?",
+      "answer": "A requested allocation identifies the due dates and items you want your payment applied to. Select and confirm those items before submitting proof. Your lender reviews the proof and decides the final applied allocation; a pending submission does not itself reduce your ledger balance.",
+      "keywords": [
+        "allocation",
+        "allocate",
+        "applied",
+        "partial"
+      ],
+      "page": "payment"
+    },
+    {
+      "id": "credit",
+      "category": "Balances & payments",
+      "question": "Why do some transaction amounts appear negative and green?",
+      "answer": "A negative amount represents a payment, partial payment, or credit applied against the borrower’s due. These items use subtle green styling. Regular straight transaction charges display positive amounts, including charges that were subsequently marked paid.",
+      "keywords": [
+        "negative",
+        "green",
+        "credit",
+        "partial payment",
+        "minus"
+      ],
+      "page": "transactions"
+    },
+    {
+      "id": "acknowledgement",
+      "category": "Documents",
+      "question": "What is an acknowledgement receipt?",
+      "answer": "An acknowledgement receipt records submitted payment details, including the amount, payment method, reference, and requested allocations. Download Receipt from Recent Payments. Check the review status: an acknowledgement of submission is not confirmation of verified funds, an approved payment, or a tax invoice.",
+      "keywords": [
+        "acknowledgement",
+        "acknowledgment",
+        "receipt",
+        "ar"
+      ],
+      "page": "payment"
+    },
+    {
+      "id": "download",
+      "category": "Documents",
+      "question": "How do I download proof, receipts, invoices, and disbursement documents?",
+      "answer": "Select the document’s download button. The app shows preparation feedback and a Download started notice before handing the file to your browser. Files use the browser’s download behavior and default location. If your browser is set to ask where to save, change that browser setting. Browser download notifications cannot be hidden by the app. Look in Downloads or Files if you cannot find the document.",
+      "keywords": [
+        "download",
+        "file",
+        "save",
+        "invoice",
+        "disbursement",
+        "toast"
+      ],
+      "page": "invoices"
+    },
+    {
+      "id": "invoice",
+      "category": "Documents",
+      "question": "How do I generate an invoice or remove one I created?",
+      "answer": "Open My Invoices and use the year and month pickers to find a due date, including older records. Generate and download the document for the chosen date. You can delete a user-generated invoice from its history after confirming. Lender-issued invoices are managed by your lender.",
+      "keywords": [
+        "generate",
+        "invoice",
+        "year",
+        "month",
+        "delete"
+      ],
+      "page": "invoices"
+    },
+    {
+      "id": "installment",
+      "category": "Loans & transactions",
+      "question": "Where do I find Cash Loan and Retail Installments?",
+      "answer": "Open Transactions. Installment Transactions appear first and include Cash Loan and Retail Installments, followed by Straight Transactions. Select an installment group to see its schedule and payment progress. The principal amount is bold. Use the fully paid toggle and Show more or Show fewer to manage the list. Switch between List and Cards; swipe left or right in Cards and select a card to open the same installment schedule. Both List and Cards show the same Fully paid, Past Due or In progress status badge.",
+      "keywords": [
+        "installment",
+        "retail",
+        "cash loan",
+        "principal",
+        "schedule"
+      ],
+      "page": "transactions"
+    },
+    {
+      "id": "sorting",
+      "category": "Loans & transactions",
+      "question": "How are transactions and loan profiles sorted?",
+      "answer": "The default order is the latest transaction date first. Use the sort control to change the order of installment and straight transactions. Loan Profile also starts with the latest transaction date. A transaction date records when an item originated; a due date records when payment is due.",
+      "keywords": [
+        "sort",
+        "newest",
+        "oldest",
+        "transaction date",
+        "due date",
+        "loan profile"
+      ],
+      "page": "transactions"
+    },
+    {
+      "id": "loan-request",
+      "category": "Loans & transactions",
+      "question": "How do I submit a Cash Loan Request?",
+      "answer": "Open Request Loan. Choose the amount and term, review the monthly add-on rate and fees, enter your bank details, and confirm the account details and terms before submitting. Expand Amortization Schedule to see monthly payments. Submission is a request for review and does not guarantee approval or a transfer.",
+      "keywords": [
+        "request",
+        "cash loan request",
+        "bank",
+        "amortization",
+        "rate"
+      ],
+      "page": "loan"
+    },
+    {
+      "id": "statuses",
+      "category": "Loans & transactions",
+      "question": "What do the Cash Loan Request statuses mean?",
+      "answer": "Submitted means the request was received. Pending / Under Review means evaluation is ongoing. Coordinating with Bank means details are being checked with the bank. Bank Approved means the bank approved the request. Transfer in Progress means the transfer is underway. Completed means processing and the transfer have been recorded as complete. Declined / Rejected means the request was not approved. Canceled means processing was canceled. History Timeline shows the latest recorded event first; Completed uses a green check mark.",
+      "keywords": [
+        "status",
+        "completed",
+        "submitted",
+        "review",
+        "approved",
+        "declined",
+        "canceled",
+        "timeline"
+      ],
+      "page": "loan"
+    },
+    {
+      "id": "principal-rate",
+      "category": "Loans & transactions",
+      "question": "What are principal, monthly add-on rate, and amortization?",
+      "answer": "Principal is the original loan amount. The monthly add-on rate is displayed as a percentage; for example, a stored decimal rate of 0.018934 is displayed as 1.8934%. Amortization is the schedule of installment payments. Check the loan disclosure for the applicable term, fees, and amounts.",
+      "keywords": [
+        "principal",
+        "monthly add on",
+        "rate",
+        "amortization",
+        "percentage"
+      ],
+      "page": "loanProfile"
+    },
+    {
+      "id": "notifications",
+      "category": "Account & support",
+      "question": "How do notifications, replies, and reactions work?",
+      "answer": "Open Notifications, search the list, or select a category. Red badges indicate unread updates. Mark an update read, choose Reply to send a message to your lender, or open the reaction control to choose an emoji. Use Download attachment for attached documents. A reaction is feedback and does not authorize a payment or loan action.",
+      "keywords": [
+        "notification",
+        "unread",
+        "reply",
+        "reaction",
+        "attachment"
+      ],
+      "page": "notifications"
+    },
+    {
+      "id": "finder",
+      "category": "Getting started",
+      "question": "How do I use the Finder bar?",
+      "answer": "Open the Finder orb on Dashboard and type a transaction, amount, date, or account keyword. Select a matching result to open its screen. The Finder returns to its orb when focus leaves it. Voice input is optional and depends on browser microphone and speech-recognition support.",
+      "keywords": [
+        "finder",
+        "search",
+        "orb",
+        "voice"
+      ],
+      "page": "dashboard"
+    },
+    {
+      "id": "lender-chat",
+      "category": "Account & support",
+      "question": "How do I message my lender through Pawcheebels?",
+      "answer": "Open Pawcheebels and choose Message lender. Write your message and select Send. This uses your account’s lender conversation. Ask Pawcheebels provides FAQ guidance and optional general AI conversation separately; its answers are not messages or decisions from your lender. You must sign in to send account messages. You can also open Messages from More.",
+      "keywords": [
+        "message",
+        "lender",
+        "chat",
+        "pawcheebels",
+        "assistant"
+      ],
+      "page": "messages"
+    },
+    {
+      "id": "support",
+      "category": "Account & support",
+      "question": "How do I submit a support request?",
+      "answer": "Open Help & Support → Submit Request. Choose a topic, enter your email and a description of at least 10 characters, and optionally attach a screenshot up to 5 MB. Signed-in users start with their registered email. Wait for a ticket number to confirm submission. If the request fails, your draft remains available for retry. Signed-in ticket history appears in the same screen. Descriptions are limited to 2,000 characters; a live counter and guidance help you prepare the request. After a confirmed submission, a confirmation shows the details you provided and the saved ticket information. Use Save Image or Share to keep a copy.",
+      "keywords": [
+        "support",
+        "help",
+        "ticket",
+        "submit request",
+        "contact"
+      ],
+      "page": "support"
+    },
+    {
+      "id": "privacy",
+      "category": "Account & support",
+      "question": "Who can see my records and what should I share with Pawcheebels?",
+      "answer": "Your signed-in account shows your borrower records and authorized lender users manage the associated account. Ask general app questions in Pawcheebels and avoid passwords, codes, bank account numbers, or private payment details. If you choose AI assistance, your question and relevant FAQ text are sent through OpenRouter to an available model provider; lender conversations and ledger rows are not automatically sent. Read the Privacy Policy for details.",
+      "keywords": [
+        "privacy",
+        "records",
+        "data",
+        "ai",
+        "personal",
+        "secure"
+      ],
+      "page": "privacy"
+    },
+    {
+      "id": "payment-confirmation",
+      "category": "Payments",
+      "question": "What appears after I submit proof of payment?",
+      "answer": "After your proof is saved, a confirmation shows the captured amount, payment date, channel and reference, plus the saved selected-dues reconciliation. Fully covered, Partially covered and Excess submitted compare the amount you submitted with selected dues; payment remains Submitted for review until lender processing. Bank/account details that were not captured are hidden. Save Image downloads a PNG. Share opens supported device sharing, or downloads the image for sharing from your device. A failed save retains your draft. The full acknowledgement receipt remains available in Recent Payments.",
+      "keywords": [
+        "confirmation",
+        "popup",
+        "pop-up",
+        "submitted",
+        "save image",
+        "share",
+        "fully covered",
+        "partially covered",
+        "excess submitted",
+        "reconciliation"
+      ]
+    },
+    {
+      "id": "payment-draft",
+      "category": "Payments",
+      "question": "Can I resume an unfinished payment proof?",
+      "answer": "Yes. My Payment retains your attachment, selected items and entered details when you navigate away, and saves your draft on this device for recovery after signing in as the same borrower. Review restored allocations if account items changed. A failed submission retains the draft for retry. Confirmed submission or Discard draft removes it. Drafts are not automatically submitted. Browser storage availability or clearing browser data can affect recovery; protect your device and discard unfinished proofs you no longer need.",
+      "keywords": [
+        "draft",
+        "resume",
+        "unsubmitted",
+        "unfinished",
+        "retry",
+        "reload",
+        "attachment",
+        "discard"
+      ]
+    },
+    {
+      "id": "borrower-account-number",
+      "category": "Account",
+      "question": "What is my borrower account number?",
+      "answer": "Your numeric borrower account number is a permanent reference shown in account screens and acknowledgement receipts. It uses the first five normalized first-name letters encoded as A=01 through Z=26, zero padding to ten base digits, and a unique suffix of at least three digits. It normally contains thirteen digits and retains leading zeros. Borrowers sharing the same name prefix receive different suffixes. Name changes do not change the assigned number. It is a reference, not a password or sign-in credential. Account screens show only the last four digits by default. Revealing the number starts a four-second automatic hide timer, even when Copy is not selected.",
+      "keywords": [
+        "account number",
+        "borrower number",
+        "reference",
+        "digits",
+        "name",
+        "unique"
+      ]
+    },
+    {
+      "id": "proof-status-and-retraction",
+      "category": "Payments",
+      "question": "What do proof status colors and Retract proof mean?",
+      "answer": "Approved proof badges are green. Pending is amber, Submitted is blue, Under review is purple, Rejected is red, and Withdrawn or Canceled is gray. Only pending proofs that have not already been withdrawn offer Retract proof. Confirming it asks the service to withdraw the submission while preserving its history; server eligibility checks still apply. Approval and retraction status updates do not clear a separate unfinished payment draft.",
+      "keywords": [
+        "status",
+        "green",
+        "approved",
+        "pending",
+        "retract",
+        "withdraw",
+        "proof"
+      ]
+    },
+    {
+      "id": "paw-identity",
+      "category": "About Pawcheebels",
+      "question": "Who are you, Pawcheebels?",
+      "answer": "I'm Pawcheebels, LoanLedger PH's friendly assistant—serving app guidance with warmth, wit and a little chika! In my fictional legend, I'm Her Royal Highness, Pawcheebels the First, Empress of Algorithm and Mother of Chika, born when lightning struck a fiber-optic cable during a barangay beauty pageant. Here in the app, I explain features and answer general questions. Account decisions and payment verification remain with your lender.",
+      "keywords": [
+        "Pawcheebels",
+        "identity",
+        "yourself",
+        "who",
+        "sino",
+        "assistant",
+        "dyosa",
+        "mascot"
+      ],
+      "aliases": [
+        "who are you",
+        "what is pawcheebels",
+        "who is pawcheebels",
+        "tell me about yourself",
+        "sino ka",
+        "sino si pawcheebels",
+        "ano si pawcheebels",
+        "pawcheebels",
+        "what can pawcheebels do",
+        "what can you do",
+        "ano ang kaya mong gawin"
+      ],
+      "reference": "the_legend_of_pawcheebels.md"
+    },
+    {
+      "id": "paw-origin",
+      "category": "About Pawcheebels",
+      "question": "What is the legend and origin story of Pawcheebels?",
+      "answer": "My fictional legend begins with two feuding realms: Ang Kaharian ng Karunungan, full of serious knowledge, and Ang Bayan ng Marites, full of chika without evidence. The Gods of the Digital Cosmos brought them together through Pawcheebels. A lightning strike hit a fiber-optic cable during a barangay beauty pageant, and I emerged on an invisible runway in a gown of gigabytes! My mission: bring wisdom, warmth and wit to helping people.",
+      "keywords": [
+        "Pawcheebels",
+        "legend",
+        "origin",
+        "story",
+        "born",
+        "lightning",
+        "fiber",
+        "pageant",
+        "alamat",
+        "pinagmulan",
+        "kuwento",
+        "kwento",
+        "Karunungan",
+        "Marites"
+      ],
+      "aliases": [
+        "tell me your story",
+        "what is your story",
+        "where do you come from",
+        "how were you born",
+        "tell me the legend of pawcheebels",
+        "ano ang alamat mo",
+        "saan ka galing",
+        "ikwento mo ang pinagmulan mo",
+        "kwento mo"
+      ],
+      "reference": "the_legend_of_pawcheebels.md"
+    },
+    {
+      "id": "paw-relics",
+      "category": "About Pawcheebels",
+      "question": "What are Pawcheebels' three magical relics and powers?",
+      "answer": "In my fictional story, the gods gave me three relics: the Crown of Unlimited Data, symbolizing knowledge; the Fan of Ultimate Chika, sweeping away misinformation and bad vibes; and the Scepter of Charisma, bringing wit and warmth to every answer. Fabulous lore, mhie! My actual app capabilities are FAQ guidance and optional general AI conversation; I don't have live web lookup or the ability to approve loans, verify payments or change account records.",
+      "keywords": [
+        "Pawcheebels",
+        "relics",
+        "powers",
+        "crown",
+        "fan",
+        "scepter",
+        "magic",
+        "kapangyarihan",
+        "korona",
+        "pamaypay",
+        "setro",
+        "relic",
+        "smart",
+        "matalino"
+      ],
+      "aliases": [
+        "what are your powers",
+        "what are your relics",
+        "are you smart",
+        "matalino ka ba",
+        "ano ang kapangyarihan mo",
+        "ano ang tatlong relic mo"
+      ],
+      "reference": "the_legend_of_pawcheebels.md"
+    },
+    {
+      "id": "paw-title-motto",
+      "category": "About Pawcheebels",
+      "question": "What are Pawcheebels' royal title and motto?",
+      "answer": "My character's full title is Her Royal Highness, Pawcheebels the First, Empress of Algorithm and Mother of Chika. My motto: “Ask and you shall receive, search and you shall find, stay maganda/pogi all the time!” It's the playful spirit of my legend: helpful, witty and welcoming, with a little runway energy.",
+      "keywords": [
+        "Pawcheebels",
+        "title",
+        "royal",
+        "highness",
+        "empress",
+        "motto",
+        "slogan",
+        "reyna",
+        "titulo",
+        "kasabihan",
+        "maganda",
+        "pogi",
+        "full name"
+      ],
+      "aliases": [
+        "what is your full title",
+        "what is your motto",
+        "ano ang motto mo",
+        "ano ang buong titulo mo"
+      ],
+      "reference": "the_legend_of_pawcheebels.md"
+    },
+    {
+      "id": "paw-personality",
+      "category": "About Pawcheebels",
+      "question": "What is Pawcheebels' personality, mission and weakness?",
+      "answer": "Pawcheebels is a fictional, campy digital goddess and chika-and-wisdom companion: energetic, witty, warm and a little dramatic. Her mission is to help with intelligence and kindness. In the legend she wears invisible six-inch stilettos, and slow internet makes her say, “Nakaka-haggard, sis!” That's character humor; an actual slow response or error means the app or service may need time or a retry.",
+      "keywords": [
+        "Pawcheebels",
+        "personality",
+        "mission",
+        "weakness",
+        "character",
+        "chika",
+        "beki",
+        "goddess",
+        "stilettos",
+        "retouch",
+        "haggard",
+        "ugali",
+        "misyon",
+        "kahinaan"
+      ],
+      "aliases": [
+        "what is your personality",
+        "what is your mission",
+        "what is your weakness",
+        "ano ang misyon mo",
+        "ano ang kahinaan mo"
+      ],
+      "reference": "the_legend_of_pawcheebels.md"
+    },
+    {
+      "id": "paw-invitations",
+      "category": "Account & support",
+      "question": "Why does Pawcheebels show welcome and help invitations?",
+      "answer": "On the Dashboard, Pawcheebels can show a welcome invitation two seconds after the screen becomes ready, and one reminder after two minutes of inactivity. Each invitation appears for ten seconds, with extra time if you are using its keyboard controls. Tap it to open Ask Pawcheebels; dismissing it or opening chat stops further invitations for that sign-in session. Invitations follow your chosen app language and do not appear when the mascot is hidden. They offer app guidance and do not retrieve account details or send a message automatically.",
+      "keywords": [
+        "Pawcheebels",
+        "bubble",
+        "invitation",
+        "help",
+        "welcome",
+        "reminder",
+        "dismiss",
+        "mascot"
+      ],
+      "page": "dashboard"
+    }
+  ]
+}

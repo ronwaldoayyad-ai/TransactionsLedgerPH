@@ -1,5 +1,10 @@
 {
+  "regions": ["sin1"],
+  "functions": {
+    "api/index.js": { "maxDuration": 60, "includeFiles": "{server/**,public/notification-rule-core.js,public/faq-knowledge.json,public/locales/filipino-content.json,node_modules/@img/**,node_modules/@napi-rs/image*/**}" }
+  },
   "rewrites": [
+    { "source": "/api/:path*", "destination": "/api?__route=:path*" },
     {
       "source": "/(.*)",
       "destination": "/index.html"

@@ -1,0 +1,194 @@
+{
+  "faq": {
+    "paw-identity": {"question":"Sino ka, Pawcheebels?","answer":"Mhie, ako si Pawcheebels, ang palakaibigang katulong ng LoanLedger PH—may gabay, talino at konting chika! Sa kathang-isip kong alamat, ako si Her Royal Highness, Pawcheebels the First, Empress of Algorithm and Mother of Chika, na isinilang nang tamaan ng kidlat ang fiber-optic cable sa isang barangay beauty pageant. Sa app, ipinapaliwanag ko ang mga feature at sumasagot sa pangkalahatang tanong. Ang desisyon sa account at pagbe-verify ng bayad ay sa iyong nagpapautang."},
+    "paw-origin": {"question":"Ano ang alamat at pinagmulan ni Pawcheebels?","answer":"Sa alamat ko, nag-aaway ang Kaharian ng Karunungan, na puro seryosong kaalaman, at ang Bayan ng Marites, na puro chika pero kulang sa ebidensya. Ipinadala ako ng Gods of the Digital Cosmos para pag-isahin ang dalawa. Nang tamaan ng kidlat ang fiber-optic cable sa barangay beauty pageant, rumampa ako sa di-nakikitang runway, suot ang gown na gawa sa gigabytes! Kathang-isip itong kuwento ng pagtulong na may talino, malasakit at wit."},
+    "paw-relics": {"question":"Ano ang tatlong mahiwagang relic at kapangyarihan ni Pawcheebels?","answer":"Sa kathang-isip kong alamat, may Crown of Unlimited Data para sa kaalaman, Fan of Ultimate Chika para itaboy ang maling balita at bad vibes, at Scepter of Charisma para sa wit at malasakit. Kabogera, di ba? Sa mismong app, gabay mula sa FAQ at opsyonal na AI conversation ang kaya ko. Wala akong live web lookup at hindi ako makapag-aapruba ng pautang, makapagbe-verify ng bayad o makapagbabago ng account records."},
+    "paw-title-motto": {"question":"Ano ang buong titulo at motto ni Pawcheebels?","answer":"Ang buong titulo ko sa alamat ay Her Royal Highness, Pawcheebels the First, Empress of Algorithm and Mother of Chika. Ang motto ko: “Ask and you shall receive, search and you shall find, stay maganda/pogi all the time!” Iyan ang diwa ng karakter ko: matulungin, palabiro at magiliw, na may konting pang-runway na aura."},
+    "paw-personality": {"question":"Ano ang personalidad, misyon at kahinaan ni Pawcheebels?","answer":"Si Pawcheebels ay isang kathang-isip at kabogerang digital goddess na may talino, lambing at konting drama. Misyon niyang tumulong nang may malasakit at chika. Sa alamat, may invisible six-inch stilettos siya at sinasabi niyang “Nakaka-haggard, sis!” kapag mabagal ang internet. Biro iyon ng karakter; kapag mabagal o may error sa app, maaaring kailangan ng serbisyo ng kaunting oras o muling pagsubok."},
+    "navigation": {
+      "question": "Paano ko gagamitin ang mga screen ng app?",
+      "answer": "Sa Buod ng account makikita ang balanse at pinakahuling galaw. Sa Mga transaksyon naroon ang hulugan at mga transaksyong isang bayaran. Sa Mga bayad isumite ang katibayan ng bayad. Sa Iba pa makikita ang mga statement, paglalabas ng pautang, mensahe, at setting. May FAQ at Humingi ng tulong sa Tulong at suporta."
+    },
+    "login": {
+      "question": "Paano ako mag-sign in o humingi ng tulong sa pagpasok?",
+      "answer": "Ilagay ang nakarehistrong email at password, saka piliin ang Sign In. Kung may anim na numerong Login Code mula sa iyong nagpapautang, piliin ang Login Code; awtomatikong magsisimula ang pag-sign in pagkakumpleto ng anim na numero. Magagamit ang code hanggang palitan o bawiin ito. Limang maling code ang magla-lock ng pag-sign in sa device na iyon. Limang sunod-sunod na maling email o password ang magla-lock ng account sa parehong paraan ng pag-sign in. Makikita sa pop-up ang natitirang pagsubok at unlock reference. Ang nagpapautang o administrator lamang ang makakapag-unlock; hindi sapat ang paghihintay o pagpapalit ng password. Pagkatapos ma-unlock, piliin ang Suriin ang access. Para humingi ng tulong, buksan ang Tulong at suporta → Humingi ng tulong at ilagay ang unlock reference. Huwag ibahagi ang password o Login Code."
+    },
+    "current-next": {
+      "question": "Ano ang pagkakaiba ng kasalukuyan at susunod na dapat bayaran?",
+      "answer": "Ipinapakita ng bawat card ang mga bayaring nakatalaga sa grupong iyon. Piliin ang Kasalukuyang dapat bayaran o Susunod na dapat bayaran, o mag-swipe upang lumipat. Ang bilang ng bayarin ay magbubukas lamang ng mga kasama sa aktibong card. Nakaayos ang mga petsa mula pinakahuli hanggang pinakauna. Maaaring may lampas na takdang araw sa susunod na grupo; suriin ang aktuwal na mga petsa."
+    },
+    "past-due": {
+      "question": "Ano ang ibig sabihin ng paalala sa bayad na lampas sa takdang araw?",
+      "answer": "Ibinubuod ng paalala ang mga lampas na takdang araw at hindi pa bayad na kasama sa aktibong card. Ipinapakita ang pinakaunang lampas na petsa at kung tapos na ang palugit na 3 araw. Walang paalala kung walang singil na lampas sa takdang araw sa card. Maaaring may buwanang late payment fee at 3% finance charge ayon sa kasunduan. Tanungin ang nagpapautang para sa eksaktong singil sa iyong account."
+    },
+    "proof": {
+      "question": "Paano ako mag-upload ng katibayan ng bayad?",
+      "answer": "Buksan ang Mga bayad o Isumite ang bayad. Piliin ang takdang araw at mga babayaran, kumpirmahin ang paglalaanan, at maglakip ng JPG, PNG, WEBP, o PDF hanggang 10 MB. Suriin ang halagang ibinayad, petsa, paraan, at reference number na nabasa mula sa katibayan, o ilagay nang manu-mano. Isumite para suriin ng nagpapautang. Ang pagsumite ay hindi pa kumpirmasyong na-verify na ang pera."
+    },
+    "ocr": {
+      "question": "Ano ang OCR at paano kung hindi nito mabasa ang katibayan?",
+      "answer": "Ang OCR ay awtomatikong pagbasa ng teksto sa larawan. Tinutulungan nitong ilagay ang detalye mula sa resibo. Suriin palagi ang resulta. Kung mabagal, kulang, o mali ang nabasa, piliin ang manu-manong paglalagay at ikaw ang maglagay ng detalye. Hindi nito pinatutunayang tunay ang resibo o natanggap na ang bayad."
+    },
+    "allocation": {
+      "question": "Ano ang paglalaan ng bayad?",
+      "answer": "Ito ang mga takdang araw at bayaring nais mong paglaanan ng bayad. Piliin at kumpirmahin ang mga ito bago magsumite ng katibayan. Susuriin ng nagpapautang ang katibayan at magpapasya sa pinal na paglalaan. Hindi awtomatikong nababawasan ang balanse dahil lamang may naisumiteng katibayan na naghihintay ng pagsusuri."
+    },
+    "credit": {
+      "question": "Bakit may negatibong halaga na kulay berde?",
+      "answer": "Ang negatibong halaga ay bayad, bahagyang bayad, o credit na ibinawas sa dapat bayaran. Banayad na berde ang mga ito. Positibong halaga naman ang karaniwang singil sa transaksyong isang bayaran, kasama ang mga singil na kalaunan ay minarkahang bayad na."
+    },
+    "acknowledgement": {
+      "question": "Ano ang katibayan ng pagsumite?",
+      "answer": "Itinatala nito ang naisumiteng detalye ng bayad: halaga, paraan, reference number, at nais na paglalaanan. Piliin ang Resibo sa Mga pinakahuling bayad upang i-download. Suriin ang katayuan. Ang pagkilala sa pagsumite ay hindi kumpirmasyong natanggap at na-verify na ang pera, inaprubahan na ang bayad, o tax invoice."
+    },
+    "download": {
+      "question": "Paano i-download ang katibayan, resibo, statement, at dokumento ng pautang?",
+      "answer": "Piliin ang download button ng dokumento. May abiso habang inihahanda at kapag naipasa na ang file sa browser. Susundin nito ang download settings at karaniwang lokasyon ng browser. Sa settings ng browser baguhin kung nais mong itanong kung saan ise-save. Hindi maitatago ng app ang download notifications ng browser. Hanapin sa Downloads o Files kung hindi makita ang dokumento."
+    },
+    "invoice": {
+      "question": "Paano gumawa o magbura ng statement na ginawa ko?",
+      "answer": "Buksan ang Aking mga statement at piliin ang taon at buwan ng takdang bayad, kasama ang mas lumang tala. Gumawa at i-download ang dokumento para sa napiling petsa. Maaaring burahin ang statement na ikaw ang gumawa matapos kumpirmahin. Ang mga dokumentong inilabas ng nagpapautang ay siya ang namamahala."
+    },
+    "installment": {
+      "question": "Saan makikita ang pautang na cash at mga biniling hulugan?",
+      "answer": "Buksan ang Mga transaksyon. Unang makikita ang Mga planong hulugan: Pautang na cash at Mga biniling hulugan. Kasunod ang Mga transaksyong isang bayaran. Piliin ang plano upang makita ang iskedyul at progreso ng bayad. Naka-bold ang prinsipal. Maaari mong itago ang bayad na nang buo, palawakin ang listahan, o piliin ang Mga card at mag-swipe pakaliwa o pakanan. Pareho ang badge sa Listahan at Mga card: Bayad na nang buo, Lampas sa takdang araw o Kasalukuyang hinuhulugan."
+    },
+    "sorting": {
+      "question": "Paano inaayos ang mga transaksyon at buod ng pautang?",
+      "answer": "Karaniwang nauuna ang pinakabagong petsa ng transaksyon. Gamitin ang sort control upang baguhin ang ayos ng hulugan at transaksyong isang bayaran. Ganoon din ang Buod ng mga pautang. Ang petsa ng transaksyon ay kung kailan nagsimula ang tala; ang takdang araw ay kung kailan kailangang bayaran."
+    },
+    "loan-request": {
+      "question": "Paano humiling ng pautang na cash?",
+      "answer": "Buksan ang Humiling ng pautang. Piliin ang halaga at tagal, suriin ang buwanang add-on interest at mga singil, ilagay ang detalye ng bangko, at kumpirmahin ang account at mga kundisyon bago isumite. Palawakin ang Iskedyul ng hulog upang makita ang mga buwanang bayad. Hiling lamang para sa pagsusuri ang pagsumite; hindi nito ginagarantiya ang pag-apruba o pagpapadala ng pera."
+    },
+    "statuses": {
+      "question": "Ano ang kahulugan ng mga katayuan ng hiling na pautang?",
+      "answer": "Ang Naisumite na ay natanggap ang hiling. Ang Naghihintay / sinusuri ay patuloy ang pagsusuri. Ang Inaayos kasama ng bangko ay tinitiyak ang detalye sa bangko. Ang Inaprubahan ng bangko ay aprubado na ang hiling. Ang Ipinapadala na ang halaga ay kasalukuyang transfer. Ang Nakumpleto ay nakatalang tapos na ang proseso at transfer. Ang Tinanggihan ay hindi aprubado; ang Kinansela ay itinigil ang proseso. Pinakabagong pangyayari muna ang nasa kasaysayan."
+    },
+    "principal-rate": {
+      "question": "Ano ang prinsipal, buwanang add-on interest, at iskedyul ng hulog?",
+      "answer": "Ang prinsipal ang orihinal na halaga ng pautang. Porsiyento ang ipinapakitang buwanang add-on interest: halimbawa, ang nakatalang 0.018934 ay ipinapakitang 1.8934%. Ang amortization ang iskedyul ng mga hulog. Suriin ang detalye ng pautang para sa tagal, mga singil, at halagang naaangkop."
+    },
+    "notifications": {
+      "question": "Paano gamitin ang mga abiso, tugon, at reaction?",
+      "answer": "Buksan ang Mga abiso, maghanap, o pumili ng uri. Ang pulang badge ay mga hindi pa nababasang abiso. Markahang nabasa ang abiso, piliin ang Tumugon upang magmensahe sa nagpapautang, o pumili ng emoji sa reaction. I-download ang kalakip kung may dokumento. Ang reaction ay tugon lamang at hindi pahintulot sa bayad o pautang."
+    },
+    "finder": {
+      "question": "Paano gamitin ang paghahanap sa account?",
+      "answer": "Buksan ang bilog na search control sa Dashboard at ilagay ang transaksyon, halaga, petsa, o salitang kaugnay ng account. Pumili ng resulta upang buksan ang screen nito. Babalik sa bilog ang paghahanap kapag umalis ang focus. Opsyonal ang boses at nakasalalay sa suporta ng browser para sa mikropono at speech recognition."
+    },
+    "lender-chat": {
+      "question": "Paano magmensahe sa nagpapautang sa pamamagitan ni Pawcheebels?",
+      "answer": "Buksan si Pawcheebels at piliin ang Mensahe sa nagpapautang. Isulat ang mensahe at piliin ang Ipadala. Gagamitin nito ang usapan ng iyong account sa nagpapautang. Hiwalay ang gabay sa FAQ at pangkalahatang sagot ng AI; hindi iyon mensahe o pasya ng nagpapautang. Kailangang naka-sign in upang magpadala. Maaari ring buksan ang Mga mensahe mula sa Iba pa."
+    },
+    "support": {
+      "question": "Paano humingi ng tulong sa suporta?",
+      "answer": "Buksan ang Tulong at suporta → Humingi ng tulong. Pumili ng paksa, ilagay ang email at paglalarawang may hindi bababa sa 10 karakter, at maglakip ng screenshot hanggang 5 MB kung kailangan. Kung naka-sign in, nakalagay na ang rehistradong email. Hintayin ang ticket number bilang kumpirmasyon. Kapag nabigo, mananatili ang draft upang subukang muli. Dito rin makikita ang kasaysayan ng hiling ng naka-sign in na account. Hanggang 2,000 character ang detalye ng problema. May counter at gabay habang nagta-type. Kapag nakumpirma ang pagsumite, makikita sa pop-up ang ibinigay mong detalye at ang impormasyon ng na-save na ticket. Piliin ang I-save ang larawan o Ibahagi para magkaroon ng kopya."
+    },
+    "privacy": {
+      "question": "Sino ang makakakita ng tala ko at ano ang puwedeng itanong kay Pawcheebels?",
+      "answer": "Makikita sa iyong account ang sariling tala, at ang awtorisadong nagpapautang ang namamahala rito. Pangkalahatang tanong sa app ang itanong kay Pawcheebels. Huwag magsama ng password, access code, bank account number, o pribadong detalye ng bayad. Kapag may AI, ang tanong at kaugnay na FAQ ay ipinapadala sa provider sa pamamagitan ng OpenRouter. Hindi awtomatikong ipinapadala ang usapan sa nagpapautang o ledger. Basahin ang patakaran sa privacy."
+    },
+    "payment-confirmation": {
+      "question": "Ano ang makikita pagkatapos magsumite ng katibayan ng bayad?",
+      "answer": "Kapag na-save, makikita ang halaga, petsa, paraan, reference number, at paghahambing sa mga napiling bayarin. Ang Sapat, Kulang, o May sobra ay paghahambing lamang ng naisumite at napiling bayarin. Naisumite para suriin pa rin ang bayad hanggang maproseso ng nagpapautang. Nakatago ang hindi nakuhang detalye ng bangko. I-save ang larawan bilang PNG o ibahagi gamit ang device. Mananatili ang draft kapag hindi na-save. Nasa Mga pinakahuling bayad ang buong resibo ng pagsumite."
+    },
+    "payment-draft": {
+      "question": "Maaari ko bang ituloy ang hindi pa naisasumiteng katibayan?",
+      "answer": "Oo. Mananatili ang kalakip, mga napiling bayarin, at detalye kapag umalis ka sa Aking bayad. Sine-save ang draft sa device para sa parehong nanghihiram. Suriin ang paglalaanan kung nagbago ang mga bayarin. Mananatili ang draft kapag nabigo ang pagsumite; aalisin ito kapag nakumpirma ang pagsumite o pinili ang Burahin ang draft. Walang awtomatikong pagsumite. Maaaring mawala ang draft kapag nilinis ang browser data o hindi available ang storage. Protektahan ang device."
+    },
+    "borrower-account-number": {
+      "question": "Ano ang numero ng aking account bilang nanghihiram?",
+      "answer": "Permanenteng reference ang numerong nasa mga screen at resibo. Nakabatay ang unang bahagi sa unang limang titik ng pangalan, A=01 hanggang Z=26, dinadagdagan ng zero hanggang sampung digit, at may natatanging hulaping hindi bababa sa tatlong digit. Karaniwang 13 digit ito, kasama ang unang zero. Magkaiba ang hulapi kahit magkapareho ang simula ng pangalan. Hindi ito nagbabago kapag nagpalit ng pangalan at hindi ito password. Huling apat na digit lamang ang nakikita; awtomatikong itinatago ang buong numero makalipas ang apat na segundo mula sa pagpapakita."
+    },
+    "proof-status-and-retraction": {
+      "question": "Ano ang ibig sabihin ng kulay ng katibayan at Bawiin ang katibayan?",
+      "answer": "Berde lamang ang Inaprubahan. Amber ang Naghihintay, asul ang Naisumite, lila ang Sinusuri, pula ang Tinanggihan, at abo ang Binawi o Kinansela. Maaari lamang bawiin ang katibayang hindi pa nasusuri at hindi pa nababawi. Kapag kinumpirma, hihilingin sa serbisyo ang pagbawi habang nananatili ang kasaysayan; susuriin pa rin ang pagiging karapat-dapat. Hindi nito binubura ang hiwalay na draft ng bayad."
+    },
+    "paw-invitations": {
+      "question": "Bakit nagpapakita si Pawcheebels ng paanyaya at paalala?",
+      "answer": "Sa Dashboard, maaaring magpakita si Pawcheebels ng paanyaya makalipas ang dalawang segundo kapag handa na ang screen, at isang paalala matapos ang dalawang minutong walang aktibidad. Sampung segundo ang bawat paanyaya, na may dagdag na oras kapag ginagamit mo ang mga control nito sa keyboard. I-tap ito para buksan ang Ask Pawcheebels. Kapag isinara mo ang paanyaya o binuksan ang chat, wala nang susunod hanggang sa susunod na sign-in. Susunod ito sa pinili mong wika at hindi lalabas kapag nakatago ang mascot. Gabay sa app ang alok nito; hindi ito kumukuha ng detalye ng account o kusang nagpapadala ng mensahe."
+    }
+  },
+  "categories": {
+    "Getting started": "Pagsisimula",
+    "Balances & payments": "Balanse at mga bayad",
+    "Loans & transactions": "Mga pautang at transaksyon",
+    "Account & support": "Account at tulong",
+    "Documents": "Mga dokumento",
+    "Payments": "Mga bayad",
+    "Account": "Account"
+  },
+  "privacy": [
+    {
+      "title": "Saklaw at mga tala ng account",
+      "text": "Tinutulungan ng LoanLedger PH ang nanghihiram at nagpapautang na pamahalaan ang tala ng account, iskedyul ng pautang, pagsumite ng bayad, dokumento, at komunikasyon. Pribado ang personal at pinansyal na tala. Pinoproseso ito upang maasikaso ang account at maibigay ang mga tampok na inilalarawan sa abisong ito."
+    },
+    {
+      "title": "Mga impormasyong pinoproseso",
+      "text": "Pinoproseso ang pagkakakilanlan at contact details, tala ng pautang at transaksyon, reference at nais na paglalaan ng bayad, katibayan ng bayad, detalye ng bangko para sa hiling na pautang, larawan sa profile, hiling sa suporta, abiso, mensahe, reaction, at kalakip na dokumento. Ginagamit ang mga ito sa pagpapakita at pag-asikaso ng account, pagsusuri ng pagsumite, pakikipag-ugnayan, at pagpapanatili ng kasaysayan ng transaksyon."
+    },
+    {
+      "title": "Pag-iimbak at pag-access",
+      "text": "Nasa itinalagang database at pribadong file storage ng serbisyo ang mga tala at naisumiteng file. Ang hiling ng naka-sign in na nanghihiram ay limitado sa kanyang account sa pamamagitan ng pahintulot ng app at mga patakaran ng database. Awtorisadong nagpapautang ang namamahala sa kaugnay na tala. Sa hiling ng bisita, iniimbak ang inilagay na email, paglalarawan ng problema, at opsyonal na screenshot. Nakabatay sa tungkulin at responsibilidad ang access."
+    },
+    {
+      "title": "Storage sa browser at device",
+      "text": "Kapag pinili ang Panatilihin ang sign-in, iniimbak ng browser ang impormasyon ng session, mga kagustuhan sa interface, at detalye ng dokumento o screen. Ang draft ng bayad, kasama ang kalakip at detalye, ay mananatili sa device para sa kaugnay na nanghihiram hanggang makumpirma ang pagsumite o sadyang burahin, kung available ang browser storage. Hindi ito awtomatikong isinusumite. Ang paglilinis ng browser data ay nag-aalis ng draft sa device ngunit hindi ng tala sa server. Mananatili ang mga download hanggang burahin mo. Protektahan ang device, alisin ang hindi na kailangang draft, at mag-sign out sa shared device."
+    },
+    {
+      "title": "Pagbasa ng katibayan at opsyonal na boses",
+      "text": "Sa browser tumatakbo ang OCR upang makatulong sa paglalagay ng detalye ng resibo. Suriin at itama ang mga nabasang detalye bago isumite. Ina-upload ang napiling katibayan kapag isinumite para suriin ng nagpapautang. Maaaring i-download ang OCR resources o gamitin ang kasamang file ng app. Nagsisimula lamang ang voice search kapag pinili mo. Maaari nitong gamitin ang speech-recognition service ng browser; nakasalalay sa browser ang availability at pagproseso."
+    },
+    {
+      "title": "Pawcheebels at panlabas na AI",
+      "text": "Gumagamit si Pawcheebels ng aprubadong FAQ para sa gabay sa app at mga termino. Naka-on bilang default ang AI para sa naka-sign in na user at maaaring patayin anumang oras. Maaari itong sumagot sa pagbati at pangkalahatang tanong; hindi patakaran o pasya sa account ng nagpapautang ang mga sagot na iyon. Kung naka-on ang AI sa pagpapadala, ang tanong at kaugnay na FAQ ay ipinapadala sa available na provider sa pamamagitan ng OpenRouter. Hindi awtomatikong isinasama ang ledger, katibayan ng bayad, detalye ng bangko, hiling sa suporta, o kasaysayan ng usapan. Huwag isama ang password, access code, bank account number, o pribadong detalye ng bayad. Nalalapat din ang patakaran sa pagproseso at retention ng OpenRouter at napiling provider. Hiwalay ang serbisyo para sa Mensahe sa nagpapautang."
+    },
+    {
+      "title": "Pagpapanatili at kontrol ng tala",
+      "text": "Pinananatili ang pinansyal na tala at kasaysayan ng hiling para sa pag-asikaso ng account, bookkeeping, at mga obligasyon sa recordkeeping. Kapag binura ang statement na ginawa ng user, aalis ito sa aktibong listahan ngunit mananatili ang tala ng pagbura sa server. Mananatili ang kasaysayan ng binawing katibayan at kinanselang hiling. Makipag-ugnayan sa nagpapautang sa Humingi ng tulong o Mga mensahe para sa access, pagwawasto, retention, o pagbura. Nakabatay sa uri ng tala at obligasyon ang tagal ng pagpapanatili."
+    },
+    {
+      "title": "Mga karapatan at tanong sa privacy",
+      "text": "Alinsunod sa batas ng Pilipinas at mga kundisyon nito, maaari kang humiling ng impormasyon sa pagproseso, access, pagwawasto, pagtutol, pagbura o pag-block, portability, o magreklamo. Available ang Humingi ng tulong bago at pagkatapos mag-sign in. Para sa privacy, makipag-ugnayan sa nagpapautang o operator sa paraang iyon o sa serbisyo ng mga mensahe."
+    },
+    {
+      "title": "Mga pagbabago",
+      "text": "Makikita sa petsa ng update ang mahahalagang pagbabago sa abisong ito. Inilalarawan nito ang paghawak ng data; hindi nito pinapalitan ang kasunduan sa pautang o pinahihintulutan ang money transfer."
+    }
+  ],
+  "terms": [
+    {
+      "title": "Paggamit ng serbisyo",
+      "text": "Nagbibigay ang LoanLedger PH ng access sa tala ng account, iskedyul ng pautang, pagsumite ng bayad, dokumento, at komunikasyon sa nagpapautang. Gamitin lamang ito para sa account na may pahintulot kang buksan. Panatilihing pribado ang credentials, magbigay ng tamang impormasyon, at huwag magsumite ng mapanlinlang, labag sa batas, o walang kaugnayang materyal."
+    },
+    {
+      "title": "Mga pananagutan sa account",
+      "text": "Gamitin ang sariling nakarehistrong account o wastong access code mula sa nagpapautang. Itago ang password at code, mag-sign out sa shared device, at ipaalam sa Tulong at suporta ang problema sa pagpasok. Magbigay ng tamang impormasyon at file na may karapatan kang ibahagi. Huwag mag-upload ng mapaminsalang nilalaman o pribadong tala ng ibang tao nang walang pahintulot."
+    },
+    {
+      "title": "Mga bayad at katibayan ng pagsumite",
+      "text": "Ang pag-upload ng katibayan ay hiling na suriin ang bayad at itala ang nais mong paglalaanan. Hindi ito nagsasagawa ng bayad o nagpapatunay na natanggap na ang pera. Itinatala ng resibo ng pagsumite ang detalye at katayuan ng pagsusuri; hindi ito tax invoice o hiwalay na patunay na bayad na ang obligasyon. Ang pagsusuri ng nagpapautang at kasunduan sa pautang ang batayan ng katayuan at pinal na paglalaan."
+    },
+    {
+      "title": "Mga hiling na pautang, interest, at singil",
+      "text": "Hindi garantiya ng pag-apruba o paglalabas ng pera ang pagsumite ng hiling na pautang. Suriin ang prinsipal, buwanang add-on interest, tagal, singil, at iskedyul bago kumpirmahin. Ang kasunduan sa pautang ang namamahala sa obligasyon at singil. Ibinubuod ng paalala sa lampas na bayad ang tala at palugit ng aktibong card. Ang hindi nabayarang balanse ay maaaring may naaangkop na buwanang late payment fee at 3% finance charge kung hindi bayad nang buo. Tanungin ang nagpapautang para sa paglilinaw sa iyong account."
+    },
+    {
+      "title": "Mga dokumento at download",
+      "text": "Batay sa talang available noong ginawa ang statement o resibo ang nilalaman nito. Maaaring burahin ang statement na ikaw ang gumawa kung may ganitong opsyon sa app; nasa kontrol ng nagpapautang ang kanyang mga dokumento. Susundin ng download ang settings at karaniwang lokasyon ng browser. Ang Nagsimula na ang download ay nangangahulugang naipasa na sa browser ang file, hindi na-verify na na-save na sa device."
+    },
+    {
+      "title": "Mga mensahe, suporta, at Pawcheebels",
+      "text": "Ipinapadala ng Mensahe sa nagpapautang ang usapan sa messaging service. Lumilikha ng hiling sa suporta ang Humingi ng tulong kapag may naibalik na ticket number. Nagbibigay si Pawcheebels ng gabay mula sa FAQ at, kapag naka-configure at naka-on, mula sa panlabas na AI. Default na naka-on ang AI sa naka-sign in na user at maaaring patayin bago magtanong. Maaaring kulang o mali ang sagot ng AI. Hindi ito makapag-aapruba ng pautang, makapagbe-verify ng bayad, makapagbabago ng balanse, o makapagpapadala ng mensahe sa nagpapautang nang hindi pinipili at isinusumite ng user ang messaging flow."
+    },
+    {
+      "title": "Availability at mga kagustuhan sa interface",
+      "text": "Maaaring maapektuhan ng koneksyon, kakayahan ng browser, settings ng device, at availability ng serbisyo ang upload, awtomatikong pagbasa, mensahe, at download. Suriin ang error at kumpirmasyon bago subukang muli. Maaaring baguhin ang tema, wika, at pagpapakita ng katulong sa Profile at mga setting. Iginagalang ng mga suportadong animation ang reduced-motion preference."
+    },
+    {
+      "title": "Privacy at mga tanong",
+      "text": "Basahin ang patakaran sa privacy tungkol sa tala ng nanghihiram, browser storage, upload, at opsyonal na pagproseso ng AI. Makipag-ugnayan sa nagpapautang sa Tulong at suporta o Mga mensahe para sa tanong o pagtutol sa account. Hindi inaalis ng mga tuntuning ito ang karapatan sa ilalim ng batas o binabago ang hiwalay na pinirmahang kasunduan sa pautang."
+    }
+  ]
+}

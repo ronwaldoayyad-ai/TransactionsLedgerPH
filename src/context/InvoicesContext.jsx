@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { useApp } from './AppContext'
+import { useRecordRefresh } from '../lib/recordRefresh'
 import { supabase } from '../supabaseClient'
 
 // Data layer for the Invoice feature. RLS scopes reads: admins get every
@@ -47,6 +48,8 @@ export function InvoicesProvider({ children }) {
     }
     setInvoices((data ?? []).map(mapInvoice))
   }, [isLive, meId])
+
+  useRecordRefresh(fetchAll, isLive && !!meId)
 
   useEffect(() => {
     if (!isLive || !meId) return undefined

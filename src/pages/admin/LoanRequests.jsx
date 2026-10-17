@@ -145,6 +145,7 @@ export default function LoanRequests() {
     if (!res?.error && statusChanged) {
       try {
         await createNotification({
+          autoEvent:'loan.status_changed',eventPayload:{source_id:updating.id,status,note,reference:updating.reference||''},
           ...statusNotification({ status, note, reference: updating.reference }),
           audience: 'targeted',
           targetUserIds: [updating.userId],

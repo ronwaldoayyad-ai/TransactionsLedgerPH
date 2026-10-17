@@ -149,6 +149,7 @@ export default function Invoices() {
           })
         : ''
       await createNotification({
+        autoEvent:'invoice.assigned',eventPayload:{source_id:inv.id,period},
         category: 'general',
         title: '📊 Statement Ready',
         body: `Your monthly statement${period ? ` for ${period}` : ''} is now available for review.`,

@@ -1,5 +1,6 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { companionEnabled } from '../../lib/serviceEndpoint'
+import { useEffect, useRef, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
 import { PageHeader } from '../../components/AppShell'
 import Icon from '../../components/Icon'
@@ -8,14 +9,41 @@ import { Badge, Button, Card, CardHeader, Field, Modal, inputClass } from '../..
 import Pagination from '../../components/Pagination'
 import { usePagination } from '../../hooks/usePagination'
 import { formatDate } from '../../lib/amortization'
+import LocalLenderOperations from '../../components/LocalLenderOperations'
+import { borrowerReference, matchesBorrower } from '../../components/admin/workspaceNavigation'
+import { getBorrowerDetails } from '../../lib/borrowerAdministration'
+import BorrowerLoginControls from '../../components/admin/BorrowerLoginControls'
 
-const emptyForm = { name: '', email: '', phone: '' }
+const emptyForm = { name: '', nickname: '', email: '', phone: '', birthDate: '', address: '', occupation: '' }
+const profileForm = user => ({ name: [user.firstName, user.lastName].filter(Boolean).join(' ') || user.name || '', nickname: user.nickname || '', email: user.email || '', phone: user.phone || '', birthDate: user.birthDate || '', address: user.address || '', occupation: user.occupation || '' })
 
 // Global user management: invite (create), edit, disable, delete.
 export default function Users() {
   const { users, loans, transactions, inviteUser, updateUser, deleteUser, resendInvite, startViewAs } =
     useApp()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const urlQuery = searchParams.get('q') || ''
+  const [searchDraft, setSearchDraft] = useState({ source: urlQuery, value: urlQuery })
+  // Keep external navigation/back/forward in sync without replacing the input
+  // element or navigating on each keystroke.
+  if (searchDraft.source !== urlQuery) setSearchDraft({ source: urlQuery, value: urlQuery })
+  const query = searchDraft.source === urlQuery ? searchDraft.value : urlQuery
+  useEffect(() => {
+    if (query === urlQuery) return undefined
+    const timer = setTimeout(() => setSearchParams(previous => {
+      const next = new URLSearchParams(previous)
+      query ? next.set('q', query) : next.delete('q')
+      return next
+    }, { replace: true }), 350)
+    return () => clearTimeout(timer)
+  }, [query, urlQuery, setSearchParams])
+  const statusFilter = searchParams.get('status') || 'all'
+  const setFilter = (key, value) => {
+    pag.setPage(1)
+    if (key === 'q') { setSearchDraft({ source: urlQuery, value }); return }
+    setSearchParams(previous => { const next = new URLSearchParams(previous); value && value !== 'all' ? next.set(key, value) : next.delete(key); return next }, { replace: true })
+  }
 
   // Per-borrower portfolio counts.
   //  - Active Installments     = installment loans not yet fully paid
@@ -50,20 +78,34 @@ export default function Users() {
   const [form, setForm] = useState(emptyForm)
   const [error, setError] = useState('')
   const [toast, setToast] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [detailsLoading, setDetailsLoading] = useState(false)
+  const [detailsReady, setDetailsReady] = useState(false)
+  const detailGeneration = useRef(0)
+  const closeEditor = () => { if (busy) return; detailGeneration.current++; setModal(null); setDetailsLoading(false) }
 
-  const borrowers = users.filter((u) => u.role === 'user')
+  const allBorrowers = users.filter((u) => u.role === 'user')
+  const borrowers = allBorrowers.filter(user => matchesBorrower(user, query) && (statusFilter === 'all' || user.status === statusFilter))
   const pag = usePagination(borrowers, 10)
 
   const openInvite = () => {
+    detailGeneration.current++
     setForm(emptyForm)
     setError('')
+    setDetailsReady(true); setDetailsLoading(false)
     setModal('invite')
   }
-  const openEdit = (u) => {
+  const openEdit = async (u) => {
+    const generation = ++detailGeneration.current
     setTarget(u)
-    setForm({ name: u.name, email: u.email, phone: u.phone })
+    setForm(profileForm(u))
     setError('')
+    setDetailsLoading(true)
+    setDetailsReady(false)
     setModal('edit')
+    try { const detailed = await getBorrowerDetails(u.id); if (generation === detailGeneration.current) { setForm(profileForm(detailed)); setTarget(detailed); setDetailsReady(true) } }
+    catch (failure) { if (generation === detailGeneration.current) setError(failure.message || 'Unable to load the borrower details. Please retry.') }
+    finally { if (generation === detailGeneration.current) setDetailsLoading(false) }
   }
 
   const flash = (msg) => {
@@ -71,19 +113,24 @@ export default function Users() {
     setTimeout(() => setToast(''), 5000)
   }
 
-  const submit = () => {
+  const submit = async () => {
+    if (busy || detailsLoading || (modal === 'edit' && !detailsReady)) return
     if (!form.name.trim() || !/.+@.+\..+/.test(form.email)) {
       setError('A full name and a valid email address are required.')
       return
     }
-    if (modal === 'invite') {
-      inviteUser({ name: form.name.trim(), email: form.email.trim(), phone: form.phone.trim() })
-      flash(`Invitation sent to ${form.email.trim()} with a secure first-login link.`)
-    } else {
-      updateUser(target.id, { name: form.name.trim(), email: form.email.trim(), phone: form.phone.trim() })
-      flash('Profile updated.')
-    }
-    setModal(null)
+    setBusy(true); setError('')
+    try {
+      if (modal === 'invite') {
+        await inviteUser({ name: form.name.trim(), email: form.email.trim(), phone: form.phone.trim() })
+        flash('Borrower profile created. Complete the account invitation to enable sign-in.')
+      } else {
+        await updateUser(target.id, form)
+        flash('Borrower details and sign-in email updated.')
+      }
+      setModal(null)
+    } catch (failure) { setError(failure.message || 'Unable to save the borrower details. Please retry.') }
+    finally { setBusy(false) }
   }
 
   const confirmDelete = () => {
@@ -95,14 +142,14 @@ export default function Users() {
   return (
     <>
       <PageHeader
-        title="User Management"
-        subtitle="Public registration is disabled — accounts are created here by invitation."
+        title="Borrowers"
+        subtitle="Manage account access, borrower details and portfolio activity."
         action={
           <div className="flex flex-wrap gap-2">
             <RefreshButton />
             <Button variant="gold" onClick={openInvite}>
               <Icon name="plus" className="h-4 w-4" />
-              Invite new user
+              Invite borrower
             </Button>
           </div>
         }
@@ -116,7 +163,12 @@ export default function Users() {
       )}
 
       <Card>
-        <CardHeader title="Borrower Accounts" subtitle={`${borrowers.length} accounts`} />
+        <CardHeader title="Borrower accounts" subtitle={`${borrowers.length} of ${allBorrowers.length} accounts`} />
+        <div className="aw-directory-tools">
+          <label className="aw-directory-search"><Icon name="search" /><input value={query} onChange={event => setFilter('q', event.target.value)} aria-label="Search borrower accounts" placeholder="Search name, email or account number" /></label>
+          <label><span className="sr-only">Account status</span><select aria-label="Filter account status" value={statusFilter} onChange={event => setFilter('status', event.target.value)}><option value="all">All statuses</option><option value="active">Active</option><option value="invited">Invited</option><option value="disabled">Disabled</option></select></label>
+        </div>
+        {borrowers.length === 0 && <div className="aw-empty"><Icon name="users" /><h3>{allBorrowers.length ? 'No matching borrowers' : 'Your borrower directory starts here'}</h3><p>{allBorrowers.length ? 'Try another name, account number or status.' : 'Invite a borrower to create their account.'}</p>{allBorrowers.length > 0 && <button className="aw-text-link" onClick={() => setSearchParams({}, { replace: true })}>Clear filters</button>}</div>}
         {/* Mobile: stacked cards so every field wraps into view (no horizontal
             scroll). Mirrors the desktop table's data + actions. */}
         <ul className="divide-y divide-slate-100 md:hidden">
@@ -132,7 +184,7 @@ export default function Users() {
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <p className="truncate font-medium text-slate-900">{u.name}</p>
-                        <p className="truncate text-xs text-slate-500">{u.id}</p>
+                        <p className="truncate text-xs text-slate-500">{borrowerReference(u)}</p>
                       </div>
                       <Badge status={u.status} />
                     </div>
@@ -183,6 +235,7 @@ export default function Users() {
                         <Icon name="pencil" className="h-3.5 w-3.5" />
                         Edit
                       </button>
+                      <button onClick={() => { setTarget(u); setError(''); setModal('access') }} className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700"><Icon name="lock" className="h-3.5 w-3.5" />Login access</button>
                       <button
                         onClick={() => {
                           setTarget(u)
@@ -229,7 +282,7 @@ export default function Users() {
                         </span>
                         <div>
                           <p className="font-medium text-slate-900">{u.name}</p>
-                          <p className="text-xs text-slate-500">{u.id}</p>
+                          <p className="text-xs text-slate-500">{borrowerReference(u)}</p>
                         </div>
                       </div>
                     </td>
@@ -288,6 +341,7 @@ export default function Users() {
                         >
                           <Icon name="pencil" className="h-4 w-4" />
                         </button>
+                        <button onClick={() => { setTarget(u); setError(''); setModal('access') }} aria-label={`Manage login for ${u.name}`} title="Manage login access" className="cursor-pointer rounded-lg p-2 text-blue-600 transition-colors hover:bg-blue-50"><Icon name="lock" className="h-4 w-4" /></button>
                         <button
                           onClick={() => {
                             setTarget(u)
@@ -322,21 +376,23 @@ export default function Users() {
         )}
       </Card>
 
+      {companionEnabled && <details className="aw-access-tools"><summary>Borrower access tools</summary><LocalLenderOperations borrowers={allBorrowers} section="access" /></details>}
+
       {/* Invite / Edit modal */}
       <Modal
         open={modal === 'invite' || modal === 'edit'}
         title={modal === 'invite' ? 'Invite new user' : `Edit ${target?.name}`}
-        onClose={() => setModal(null)}
+        onClose={closeEditor}
         footer={
           <>
-            <Button variant="secondary" onClick={() => setModal(null)}>
+            <Button variant="secondary" disabled={busy} onClick={closeEditor}>
               Cancel
             </Button>
-            <Button onClick={submit}>
-              {modal === 'invite' ? (
+            <Button onClick={submit} disabled={busy || detailsLoading || (modal === 'edit' && !detailsReady)}>
+              {busy ? 'Saving…' : modal === 'invite' ? (
                 <>
                   <Icon name="mail" className="h-4 w-4" />
-                  Create & send invitation
+                  Create borrower profile
                 </>
               ) : (
                 'Save changes'
@@ -347,12 +403,14 @@ export default function Users() {
       >
         {modal === 'invite' && (
           <p className="mb-4 rounded-lg bg-navy-50 px-3 py-2.5 text-sm text-navy-800">
-            An automated email with a secure link and temporary credential will be sent. The user
-            must set a permanent password on first login.
+            Create the borrower profile, then complete their account invitation to enable sign-in.
           </p>
         )}
-        <div className="space-y-4">
-          <Field label="Full name" htmlFor="user-name">
+        {detailsLoading && <p role="status" className="mb-4 text-xs text-slate-500">Loading shared borrower details…</p>}
+        {modal === 'edit' && !detailsLoading && !detailsReady && <p role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-xs text-red-700">{error}<button className="ml-2 underline" onClick={() => openEdit(target)}>Retry</button></p>}
+        <fieldset disabled={busy || detailsLoading || (modal === 'edit' && !detailsReady)} className="space-y-4">
+          {modal === 'edit' && <div className="flex items-center gap-3 rounded-xl bg-blue-50 p-3">{target?.avatarUrl && <img src={target.avatarUrl} alt="Borrower profile" className="h-10 w-10 rounded-full object-cover" />}<div><p className="text-xs font-semibold text-blue-800">Account {borrowerReference(target)}</p><p className="mt-1 text-xs text-slate-500">Shared with the borrower’s Personal Information screen.</p></div></div>}
+          <Field label="Full legal name" htmlFor="user-name">
             <input
               id="user-name"
               type="text"
@@ -360,8 +418,10 @@ export default function Users() {
               onChange={(e) => setForm({ ...form, name: e.target.value })}
               className={inputClass}
               placeholder="Juan Dela Cruz"
+              maxLength={120}
             />
           </Field>
+          {modal === 'edit' && <Field label="Preferred display name" htmlFor="user-nickname"><input id="user-nickname" type="text" value={form.nickname} maxLength={80} onChange={event => setForm({ ...form, nickname: event.target.value })} className={inputClass} placeholder="Optional" /></Field>}
           <Field label="Email address" htmlFor="user-email">
             <input
               id="user-email"
@@ -370,8 +430,10 @@ export default function Users() {
               onChange={(e) => setForm({ ...form, email: e.target.value })}
               className={inputClass}
               placeholder="juan@example.com"
+              maxLength={254}
             />
           </Field>
+          {modal === 'edit' && <p className="-mt-2 text-xs text-slate-500">Changing this email also changes the borrower’s sign-in email.</p>}
           <Field label="Mobile number" htmlFor="user-phone">
             <input
               id="user-phone"
@@ -382,12 +444,21 @@ export default function Users() {
               placeholder="+63 9xx xxx xxxx"
             />
           </Field>
+          {modal === 'edit' && <>
+            <Field label="Date of birth" htmlFor="user-birth-date"><input id="user-birth-date" type="date" value={form.birthDate} onChange={event => setForm({ ...form, birthDate: event.target.value })} className={inputClass} /></Field>
+            <Field label="Home address" htmlFor="user-address"><textarea id="user-address" rows={3} maxLength={500} value={form.address} onChange={event => setForm({ ...form, address: event.target.value })} className={inputClass} /></Field>
+            <Field label="Occupation" htmlFor="user-occupation"><input id="user-occupation" type="text" maxLength={150} value={form.occupation} onChange={event => setForm({ ...form, occupation: event.target.value })} className={inputClass} /></Field>
+          </>}
           {error && (
             <p role="alert" className="rounded-lg bg-red-50 px-3 py-2.5 text-sm text-red-700">
               {error}
             </p>
           )}
-        </div>
+        </fieldset>
+      </Modal>
+
+      <Modal open={modal === 'access'} title="Borrower login access" onClose={closeEditor}>
+        {target && <BorrowerLoginControls key={target.id} borrower={target} onBusyChange={setBusy} />}
       </Modal>
 
       {/* Delete confirmation */}

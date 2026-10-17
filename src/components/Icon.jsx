@@ -1,5 +1,10 @@
 // Minimal inline icon set (Lucide-style strokes), 24x24 viewBox.
 const paths = {
+  sliders: 'M4 7h16M4 17h16M8 4v6M16 14v6',
+  search: 'M21 21l-4.4-4.4M19 11a8 8 0 1 1-16 0 8 8 0 0 1 16 0',
+  arrowRight: 'M5 12h14M13 6l6 6-6 6',
+  help: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01',
+  announcement: 'M3 10v4h4l10 5V5L7 10H3M7 14l2 6h3M21 9v6',
   dashboard: 'M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z',
   users:
     'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75',

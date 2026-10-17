@@ -36,6 +36,7 @@ export function useAcceptDisbursement() {
         acknowledgedByName: myName,
       })
       await createNotification({
+        autoEvent:'disbursement.accepted_copy',eventPayload:{source_id:accepted.id,reference:accepted.disbursementNumber},
         category: 'general',
         title: '✅ Loan Disbursement Accepted',
         body: 'Thank you for accepting the agreement. Please find the attached copy of the accepted Loan Disbursement Document.',

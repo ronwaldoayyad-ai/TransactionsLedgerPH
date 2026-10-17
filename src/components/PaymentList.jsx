@@ -1,3 +1,4 @@
+import { companionEnabled } from '../lib/serviceEndpoint'
 import { useState } from 'react'
 import { useApp } from '../context/AppContext'
 import { useAnnouncements } from '../context/AnnouncementsContext'
@@ -37,13 +38,15 @@ export default function PaymentList({
   const { triggerTemplateToast } = useAnnouncements()
 
   // Approve / reject, then push the matching one-time toast to that borrower.
-  const approve = (p) => {
-    reviewPayment(p.id, 'approved')
-    triggerTemplateToast({ ...APPROVE_TOAST, userId: p.userId })
+  const approve = async (p) => {
+    setBusy(true);setReviewError('');const result=await reviewPayment(p.id,'approved');setBusy(false);
+    if(result?.error){setReviewError(result.error);return;}
+    if(!companionEnabled)triggerTemplateToast({ ...APPROVE_TOAST, userId:p.userId });
   }
-  const reject = (p, note) => {
-    reviewPayment(p.id, 'rejected', note)
-    triggerTemplateToast({ ...REJECT_TOAST, userId: p.userId })
+  const reject = async (p, note) => {
+    setBusy(true);setReviewError('');const result=await reviewPayment(p.id,'rejected',note);setBusy(false);
+    if(result?.error){setReviewError(result.error);return false;}
+    if(!companionEnabled)triggerTemplateToast({ ...REJECT_TOAST, userId:p.userId });return true;
   }
   // Admin queue defaults to "pending" (work to do); the borrower's own history
   // defaults to "all" so approved/rejected proofs aren't hidden.
@@ -53,6 +56,7 @@ export default function PaymentList({
   const [viewing, setViewing] = useState(null)
   const [deleting, setDeleting] = useState(null) // payment pending delete confirm
   const [busy, setBusy] = useState(false)
+  const [reviewError,setReviewError]=useState('')
   const [query, setQuery] = useState('')
   const [sortKey, setSortKey] = useState('date') // date | amount
   const [sortDir, setSortDir] = useState('desc')
@@ -64,7 +68,7 @@ export default function PaymentList({
     }
   }
 
-  const base = payments.filter((p) => filter === 'all' || p.status === filter)
+  const base = payments.filter((p) => filter === 'all' || p.status === filter && !p.retractedAt)
   const q = query.trim().toLowerCase()
   const dir = sortDir === 'asc' ? 1 : -1
   // Search + sort only when the host opts in (My Payments); otherwise the list
@@ -86,7 +90,7 @@ export default function PaymentList({
               : String(a.submittedAt || '').localeCompare(String(b.submittedAt || ''))
           return (cmp || String(a.id).localeCompare(String(b.id))) * dir
         })
-  const pendingCount = payments.filter((p) => p.status === 'pending').length
+  const pendingCount = payments.filter((p) => p.status === 'pending' && !p.retractedAt).length
   const paginate = pageSize > 0
   const pag = usePagination(list, paginate ? pageSize : 1)
   const rows = paginate ? pag.pageItems : list
@@ -104,8 +108,8 @@ export default function PaymentList({
     a.download = p.fileName
     a.click()
   }
-  const confirmReject = () => {
-    reject(rejecting, note.trim())
+  const confirmReject = async () => {
+    if(!await reject(rejecting, note.trim()))return;
     setRejecting(null)
     setNote('')
   }
@@ -118,6 +122,7 @@ export default function PaymentList({
 
   return (
     <>
+      {reviewError&&<p role="alert" className="px-5 text-red-600">{reviewError}</p>}
       {showTabs && (
         <div
           className="flex flex-wrap gap-2 px-5 pt-4"
@@ -245,6 +250,8 @@ export default function PaymentList({
                     <p className="text-[11px] leading-snug text-slate-500 md:truncate md:text-xs md:leading-normal">
                       {loan?.label ?? p.loanId ?? 'Payment'} · {p.method} · Ref {p.reference}
                     </p>
+                    {p.allocations?.length>0&&<details className="text-xs text-slate-600"><summary>Requested allocation · {p.allocations.length} items</summary>{p.allocations.map(x=><p key={x.id}>{x.description} · {x.dueDate} · {formatPeso(x.amount)}</p>)}<p>Requested allocations; verification does not settle the ledger.</p></details>}
+                    {p.submissionNotes&&<p className="text-xs text-slate-500">Borrower notes: {p.submissionNotes}</p>}
                     <p className="text-[11px] leading-snug text-slate-400 md:truncate md:text-xs md:leading-normal">
                       {p.fileName} · submitted {formatDate(p.submittedAt)}
                       {p.reviewedAt && ` · reviewed ${formatDate(p.reviewedAt)}`}
@@ -273,22 +280,22 @@ export default function PaymentList({
                         </button>
                       </>
                     )}
-                    <button
+                    {canReview&&<button
                       onClick={() => setDeleting(p)}
                       aria-label={`Delete proof ${p.fileName}`}
                       title="Delete proof permanently"
                       className="cursor-pointer rounded-lg p-2 text-slate-500 transition-colors duration-200 hover:bg-red-50 hover:text-red-600"
                     >
                       <Icon name="trash" className="h-4 w-4" />
-                    </button>
-                    <Badge status={p.status} />
-                    {canReview &&
+                    </button>}
+                    {p.retractedAt?<span className="text-xs text-slate-500">Withdrawn</span>:<Badge status={p.status} />}
+                    {canReview && !p.retractedAt &&
                       (p.status === 'pending' ? (
                         <>
                           <Button
                             variant="primary"
                             className="!min-h-9 !px-3"
-                            onClick={() => approve(p)}
+                            disabled={busy} onClick={() => approve(p)}
                           >
                             <Icon name="check" className="h-4 w-4" />
                             Approve
@@ -306,7 +313,7 @@ export default function PaymentList({
                         <Button
                           variant="ghost"
                           className="!min-h-9 !px-3"
-                          onClick={() => reviewPayment(p.id, 'pending')}
+                          disabled={busy} onClick={async()=>{const r=await reviewPayment(p.id,'pending');if(r?.error)setReviewError(r.error)}}
                         >
                           Re-open
                         </Button>

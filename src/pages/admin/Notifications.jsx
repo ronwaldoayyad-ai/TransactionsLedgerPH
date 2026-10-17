@@ -1,3 +1,6 @@
+import { companionEnabled } from '../../lib/serviceEndpoint'
+import NotificationRulesWorkspace from '../../components/notifications/NotificationRulesWorkspace'
+import CategoriesManager from '../../components/notifications/CategoriesManager'
 import { useMemo, useRef, useState } from 'react'
 import { useApp } from '../../context/AppContext'
 import { useNotifications } from '../../context/NotificationsContext'
@@ -40,6 +43,8 @@ function InboxRow({ n, borrowerName, read, onToggleRead, onReply, onReact }) {
   const [replied, setReplied] = useState(false)
   const [reacted, setReacted] = useState(null) // emoji the admin picked
   const [reacting, setReacting] = useState(false)
+  const [actionError,setActionError] = useState('')
+  const [reactionsOpen,setReactionsOpen] = useState(false)
   const canReply = Boolean(n.createdBy)
 
   const send = async () => {
@@ -56,10 +61,13 @@ function InboxRow({ n, borrowerName, read, onToggleRead, onReply, onReact }) {
 
   const react = async (emoji) => {
     if (reacting) return
-    setReacting(true)
-    const res = await onReact(n, emoji)
-    setReacting(false)
-    if (!res?.error) setReacted(emoji)
+    setReacting(true);setActionError('')
+    try {
+      const res = await onReact(n, emoji)
+      if (res?.error) {setActionError(res.error);return}
+      setReacted(emoji);setReactionsOpen(false)
+    }catch{setActionError('Reaction could not be sent. Please try again.')}
+    finally{setReacting(false)}
   }
 
   return (
@@ -84,7 +92,7 @@ function InboxRow({ n, borrowerName, read, onToggleRead, onReply, onReact }) {
           </p>
 
           {/* Quick reactions — each sends a notification to the borrower. */}
-          {canReply && (
+          {canReply && reactionsOpen && (
             <div className="mt-2 flex flex-wrap items-center gap-1.5">
               {QUICK_REACTIONS.map((emoji) => (
                 <button
@@ -108,6 +116,7 @@ function InboxRow({ n, borrowerName, read, onToggleRead, onReply, onReact }) {
             </div>
           )}
 
+          {actionError&&<p role="alert" className="mt-2 text-xs text-red-600">{actionError}</p>}
           {/* Inline reply composer. */}
           {canReply && open && (
             <div className="mt-2.5">
@@ -134,6 +143,7 @@ function InboxRow({ n, borrowerName, read, onToggleRead, onReply, onReact }) {
         </div>
 
         <div className="flex shrink-0 flex-col items-end gap-2">
+          {canReply&&<button type="button" onClick={()=>setReactionsOpen(value=>!value)} aria-expanded={reactionsOpen} className="inline-flex min-h-9 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-medium text-slate-600">{reacted||'☺'} React</button>}
           <button
             onClick={() => onToggleRead(n, read)}
             className="cursor-pointer rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50"
@@ -157,7 +167,7 @@ function InboxRow({ n, borrowerName, read, onToggleRead, onReply, onReact }) {
 
 const emptyForm = { category: 'general', title: '', body: '', audience: 'all', attachments: [] }
 
-export default function AdminNotifications() {
+function ManualNotifications() {
   const { users } = useApp()
   const {
     notifications, inboxNotifications, createNotification, updateNotification, deleteNotification,
@@ -174,6 +184,7 @@ export default function AdminNotifications() {
   const replyToBorrower = (n, text) =>
     n.createdBy
       ? createNotification({
+          autoEvent:'notification.lender_reply',eventPayload:{source_id:n.id},
           category: n.category || 'general',
           title: n.title ? `Re: ${n.title}` : 'Reply from your lender',
           body: `${buildReplyQuote(n)}${text}`,
@@ -185,6 +196,7 @@ export default function AdminNotifications() {
   const reactToBorrower = (n, emoji) =>
     n.createdBy
       ? createNotification({
+          autoEvent:'notification.lender_reaction',eventPayload:{source_id:n.id},
           category: 'general',
           title: `Your lender reacted ${emoji}`,
           body: `${emoji} — in response to your message${n.title ? ` “${n.title}”` : ''}.`,
@@ -304,10 +316,7 @@ export default function AdminNotifications() {
 
   return (
     <>
-      <PageHeader
-        title="Notifications"
-        subtitle="Send a categorized notification — with optional attachments — to all borrowers or specific ones."
-      />
+
 
       <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
         {/* Composer */}
@@ -575,7 +584,7 @@ export default function AdminNotifications() {
                     <Icon name="pencil" className="h-4 w-4" />
                   </button>
                   <button
-                    onClick={() => deleteNotification(n.id)}
+                    onClick={async () => {try{await deleteNotification(n.id)}catch(failure){setError(failure.message)}}}
                     aria-label="Delete notification"
                     title="Delete"
                     className="shrink-0 cursor-pointer rounded-lg p-2 text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600"
@@ -602,4 +611,12 @@ export default function AdminNotifications() {
       )}
     </>
   )
+}
+
+export default function AdminNotifications(){
+ const [view,setView]=useState(companionEnabled?'rules':'manual')
+ return <><PageHeader title="Notifications" subtitle="Manage app messages, event rules and sent notifications."/>
+ <nav className="nr-tabs" aria-label="Notification workspace">{[['rules','Rules & canvas'],['sent','Sent & linking'],['manual','Compose & inbox'],['categories','Categories'],['activity','Activity']].map(([value,caption])=><button type="button" key={value} aria-selected={view===value} onClick={()=>setView(value)}>{caption}</button>)}</nav>
+ <div hidden={view!=='manual'}><ManualNotifications/></div>
+ {view==='categories'?<CategoriesManager/>:view!=='manual'&&<NotificationRulesWorkspace view={view}/>}</>
 }

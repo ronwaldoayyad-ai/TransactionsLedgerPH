@@ -1,4 +1,6 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { companionEnabled } from '../lib/serviceEndpoint'
+import { authenticatePassword } from '../lib/loginAccess'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { adminUser, mockAuditLog, mockLoans, mockPayments, mockUsers } from '../data/mock'
 import { addMonthsClamped, buildDisclosure, parseISODate, toISODate } from '../lib/amortization'
 import {
@@ -18,8 +20,11 @@ import {
 } from '../lib/dbMappers'
 import { allocate } from '../lib/paymentLogs'
 import { clearPageStore } from '../lib/pageStateStore'
-import { readStoredOverrides, writeStoredOverrides } from '../lib/paymentDueConfig'
+import { writeStoredOverrides } from '../lib/paymentDueConfig'
 import { supabase } from '../supabaseClient'
+import { mobileAction } from '../lib/mobileLocalFlow'
+import { refreshRecords } from '../lib/recordRefresh'
+import { saveBorrowerDetails } from '../lib/borrowerAdministration'
 
 // Map a payment_due_overrides row (one per borrower) to the app's shape.
 const mapPaymentDueOverride = (r) => ({
@@ -112,22 +117,27 @@ export function AppProvider({ children }) {
   const [authLoading, setAuthLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [syncError, setSyncError] = useState(null)
+  const [dataReady, setDataReady] = useState(false)
+  const loadGeneration = useRef(0)
+  const refreshFlight = useRef(null)
+  const authenticatedOwner = useRef(null)
+  const freshSignIn = useRef(false)
   // Admin "view as borrower": the real session stays admin; pages see the
   // borrower through the effective session below.
   const [viewAs, setViewAs] = useState(null)
-  const [users, setUsers] = useState(mockUsers)
-  const [loans, setLoans] = useState(mockLoans)
-  const [payments, setPayments] = useState(mockPayments)
-  const [transactions, setTransactions] = useState(() => buildTransactions(mockLoans))
+  const [users, setUsers] = useState([])
+  const [loans, setLoans] = useState([])
+  const [payments, setPayments] = useState([])
+  const [transactions, setTransactions] = useState([])
   const [archivedTransactions, setArchivedTransactions] = useState([])
   const [paymentLogs, setPaymentLogs] = useState([])
   const [arbitrageLoans, setArbitrageLoans] = useState([])
   const [interestRates, setInterestRates] = useState([])
   const [trackedLoans, setTrackedLoans] = useState([])
-  const [auditLog, setAuditLog] = useState(mockAuditLog)
+  const [auditLog, setAuditLog] = useState([])
   // Per-borrower admin overrides for the "Next Payment Due" tile. Loaded from
   // Supabase in live mode; the localStorage seed keeps the demo/dev flow alive.
-  const [paymentDueOverrides, setPaymentDueOverrides] = useState(() => readStoredOverrides())
+  const [paymentDueOverrides, setPaymentDueOverrides] = useState([])
 
   const isLive = session?.source === 'supabase'
   const actor = session?.user?.name ?? adminUser.name
@@ -185,8 +195,11 @@ export function AppProvider({ children }) {
   // Each slice updates independently and ONLY on success, so one failing
   // query never wipes the other records; storage URL resolution is guarded
   // so a missing proof file can't break the whole refresh.
-  const loadLiveData = useCallback(async () => {
+  const loadLiveData = useCallback(async ({ initialProfile = null } = {}) => {
+    const generation = ++loadGeneration.current
     const failures = []
+    const borrowerInitial = initialProfile?.role === 'user' && initialProfile.id === authenticatedOwner.current
+    const empty = { data: [], error: null }
     try {
       const [
         profilesRes,
@@ -202,7 +215,7 @@ export function AppProvider({ children }) {
       ] = await Promise.all([
           // Secondary .order('id') makes paging deterministic (a non-unique
           // primary sort key could otherwise shift rows across page boundaries).
-          fetchAllRows(() => supabase.from('profiles').select('*').order('created_at').order('id')),
+          borrowerInitial ? { data: [initialProfile], error: null } : fetchAllRows(() => supabase.from('profiles').select('*').order('created_at').order('id')),
           fetchAllRows(() => supabase.from('loans').select('*').order('created_at').order('id')),
           fetchAllRows(() => supabase.from('transactions').select('*').order('due_date').order('id')),
           fetchAllRows(() =>
@@ -215,17 +228,18 @@ export function AppProvider({ children }) {
           fetchAllRows(() =>
             supabase.from('payment_logs').select('*').order('created_at').order('id'),
           ),
-          fetchAllRows(() =>
+          borrowerInitial ? empty : fetchAllRows(() =>
             supabase.from('arbitrage_loans').select('*').order('created_at').order('id'),
           ),
-          fetchAllRows(() => supabase.from('interest_rates').select('*').order('kind').order('rate')),
-          fetchAllRows(() =>
+          borrowerInitial ? empty : fetchAllRows(() => supabase.from('interest_rates').select('*').order('kind').order('rate')),
+          borrowerInitial ? empty : fetchAllRows(() =>
             supabase.from('tracked_loans').select('*').order('created_at').order('id'),
           ),
-          supabase.from('audit_log').select('*').order('at', { ascending: false }).limit(500),
+          borrowerInitial ? empty : supabase.from('audit_log').select('*').order('at', { ascending: false }).limit(500),
         supabase.from('payment_due_overrides').select('*'),
         ])
 
+      if (generation !== loadGeneration.current) return
       if (profilesRes.error) failures.push(`profiles (${profilesRes.error.message})`)
       else setUsers((profilesRes.data ?? []).map(mapProfile))
 
@@ -259,7 +273,7 @@ export function AppProvider({ children }) {
       // Non-fatal: if the table is missing (migration not yet applied) tiles
       // simply fall back to the default calculation instead of breaking sync.
       if (overridesRes.error)
-        console.warn('[supabase] payment_due_overrides unavailable:', overridesRes.error.message)
+        failures.push(`payment due overrides (${overridesRes.error.message})`)
       else setPaymentDueOverrides((overridesRes.data ?? []).map(mapPaymentDueOverride))
 
       if (paymentsRes.error) {
@@ -269,7 +283,9 @@ export function AppProvider({ children }) {
         // Resolve signed URLs for rows that have a stored path. Map results by
         // REQUEST ORDER (not the returned `path`, which Supabase may re-encode
         // for keys with special characters — that mismatch dropped thumbnails).
-        const paths = [...new Set(paymentRows.map((p) => p.file_path).filter(Boolean))]
+        // Mobile borrowers request an individual proof through getProofUrl.
+        // Signing every old receipt must not hold up the first Dashboard.
+        const paths = borrowerInitial ? [] : [...new Set(paymentRows.map((p) => p.file_path).filter(Boolean))]
         const urlByPath = {}
         if (paths.length > 0) {
           try {
@@ -283,6 +299,7 @@ export function AppProvider({ children }) {
             console.error('[supabase] signed URLs failed:', e?.message ?? e)
           }
         }
+        if (generation !== loadGeneration.current) return
         setPayments(paymentRows.map((p) => mapPayment(p, urlByPath[p.file_path] ?? null)))
       }
 
@@ -292,6 +309,7 @@ export function AppProvider({ children }) {
         setSyncError(msg)
       } else {
         setSyncError(null)
+        setDataReady(true)
       }
     } catch (e) {
       const msg = e?.message ?? 'Unexpected error while syncing with the database.'
@@ -302,60 +320,168 @@ export function AppProvider({ children }) {
 
   // Manual re-sync from Supabase (Refresh button). Also resets retained
   // page state (filters, sorts, calculator inputs) back to defaults.
-  const refreshData = useCallback(async () => {
-    clearPageStore()
+  const refreshData = useCallback(async ({preservePageState=false}={}) => {
     if (!isLive) return
+    if (refreshFlight.current) return refreshFlight.current
+    if(!preservePageState)clearPageStore()
     setRefreshing(true)
-    await loadLiveData()
-    setRefreshing(false)
+    const flight = refreshRecords(loadLiveData).finally(() => {
+      if (refreshFlight.current === flight) {
+        refreshFlight.current = null
+        setRefreshing(false)
+      }
+    })
+    refreshFlight.current = flight
+    return flight
   }, [isLive, loadLiveData])
+
+  // A real preference/profile change needs only the signed-in profile row.
+  // Preserve the current screen, drafts and loaded financial records.
+  const refreshOwnProfile = useCallback(async () => {
+    const owner = authenticatedOwner.current
+    if (!owner) return
+    const { data, error } = await supabase.from('profiles').select('*').eq('id', owner).single()
+    if (error) throw Error('Your latest profile details could not be loaded.')
+    if (authenticatedOwner.current !== owner) return
+    const user = mapProfile(data)
+    setUsers(previous => previous.map(item => item.id === owner ? user : item))
+    setSession(previous => previous?.source === 'supabase' && previous.user.id === owner ? { ...previous, user } : previous)
+  }, [])
 
   // --- Supabase auth: restore the session on load, react to changes, resolve
   // the signed-in profile (role drives routing), then load the live data.
   useEffect(() => {
     let mounted = true
+    let profileGeneration = 0
+    let resolvedOwner
+    let pendingOwner
 
-    const loadProfile = async (sbSession) => {
+    const loadProfile = async (sbSession, profileRequest) => {
+      if (!mounted || profileRequest !== profileGeneration) return
       if (!sbSession) {
+        freshSignIn.current = false
+        resolvedOwner = null
+        pendingOwner = undefined
         if (mounted) {
+          ++loadGeneration.current
+          authenticatedOwner.current = null
+          setDataReady(false)
+          setSyncError(null)
+          setUsers([]); setLoans([]); setPayments([]); setTransactions([])
+          setArchivedTransactions([]); setPaymentLogs([]); setPaymentDueOverrides([])
           setSession((prev) => (prev?.source === 'demo' ? prev : null))
           setAuthLoading(false)
         }
         return
       }
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', sbSession.user.id)
-        .single()
-      if (!mounted) return
-      if (profile && !error) {
-        setSession({
-          source: 'supabase',
-          user: mapProfile(profile),
-          needsPasswordSetup: profile.status === 'invited',
-        })
-        loadLiveData()
+      try {
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', sbSession.user.id)
+          .single()
+        if (!mounted || profileRequest !== profileGeneration) return
+        pendingOwner = undefined
+        if (profile && !error && ['admin', 'user'].includes(profile.role)) {
+          resolvedOwner = profile.id
+          if (authenticatedOwner.current !== profile.id) {
+            ++loadGeneration.current
+            authenticatedOwner.current = profile.id
+            setDataReady(false)
+            setUsers([]); setLoans([]); setPayments([]); setTransactions([])
+            setArchivedTransactions([]); setPaymentLogs([]); setPaymentDueOverrides([])
+          }
+          setSession({
+            source: 'supabase',
+            user: mapProfile(profile),
+            needsPasswordSetup: profile.status === 'invited',
+          })
+          if (freshSignIn.current && profile.status !== 'disabled') {
+            freshSignIn.current = false
+            window.dispatchEvent(new CustomEvent('loanledger-authenticated'))
+          }
+          loadLiveData({ initialProfile: profile })
+        } else {
+          freshSignIn.current = false
+          setSyncError('Unable to load your account profile. Please try signing in again.')
+        }
+      } catch {
+        if (mounted && profileRequest === profileGeneration) {
+          pendingOwner = undefined
+          freshSignIn.current = false
+          setSyncError('Unable to open your account. Please try signing in again.')
+        }
+      } finally {
+        if (mounted && profileRequest === profileGeneration) setAuthLoading(false)
       }
-      setAuthLoading(false)
     }
 
-    supabase.auth.getSession().then(({ data }) => loadProfile(data.session))
     const { data: sub } = supabase.auth.onAuthStateChange((event, sbSession) => {
-      if (event === 'SIGNED_OUT' || event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+      if (event === 'SIGNED_OUT' || event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'USER_UPDATED') {
+        const owner = sbSession?.user.id ?? null
+        // Reconfirmation of the same session is not a fresh login. The SDK
+        // supplies INITIAL_SESSION, so a second getSession restore can race it.
+        if (event !== 'USER_UPDATED' && (owner === pendingOwner || (pendingOwner === undefined && owner === resolvedOwner))) return
+        pendingOwner = owner
+        const profileRequest = ++profileGeneration
         // defer: awaiting supabase calls directly inside this callback can deadlock
-        setTimeout(() => loadProfile(sbSession), 0)
+        setTimeout(() => loadProfile(sbSession, profileRequest), 0)
       }
     })
     return () => {
       mounted = false
+      ++profileGeneration
       sub.subscription.unsubscribe()
     }
   }, [loadLiveData])
 
   const signInWithPassword = useCallback(async (email, password) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    return { error: error?.message ?? null } // session arrives via onAuthStateChange
+    freshSignIn.current = true
+    setSyncError(null)
+    setAuthLoading(true)
+    try {
+      const { data, error, login } = companionEnabled
+        ? await authenticatePassword(String(email).trim().toLowerCase(), password)
+        : await supabase.auth.signInWithPassword({ email: String(email).trim().toLowerCase(), password })
+      if (error) {
+        freshSignIn.current = false
+        setAuthLoading(false)
+      } else if (freshSignIn.current) {
+        // Credential validation has succeeded. Start the presentation hold
+        // while the profile and Dashboard data prepare in parallel.
+        freshSignIn.current = false
+        window.dispatchEvent(new CustomEvent('loanledger-authenticated'))
+        if(authenticatedOwner.current&&authenticatedOwner.current===data?.user?.id){
+          // A retry for an already resolved owner may be deduplicated by the
+          // auth listener. Resume data loading without waiting for a new event.
+          setAuthLoading(false)
+          loadLiveData()
+        }
+      }
+      return { error: error?.message ?? null, login } // session arrives via onAuthStateChange
+    } catch (error) {
+      freshSignIn.current = false
+      setAuthLoading(false)
+      return { error: error?.message || 'Unable to sign in. Please try again.' }
+    }
+  }, [loadLiveData])
+
+  const signInWithLoginCode = useCallback(async (tokenHash) => {
+    // The companion has already accepted the credential for an active borrower.
+    // Show the four-second presentation while Auth establishes the session.
+    freshSignIn.current = false
+    setSyncError(null)
+    setAuthLoading(true)
+    window.dispatchEvent(new CustomEvent('loanledger-authenticated'))
+    try {
+      const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'magiclink' })
+      if (error) { freshSignIn.current = false; setAuthLoading(false) }
+      return { error: error?.message ?? null }
+    } catch (error) {
+      freshSignIn.current = false
+      setAuthLoading(false)
+      return { error: error.message || 'Unable to sign in. Please retry.' }
+    }
   }, [])
 
   // Prototype-only: enter as one of the mock users without real credentials.
@@ -410,7 +536,8 @@ export function AppProvider({ children }) {
   )
 
   const signOut = useCallback(async () => {
-    if (isLive) await supabase.auth.signOut()
+    // End this browser session without invalidating the borrower's other devices.
+    if (isLive) await supabase.auth.signOut({ scope: 'local' })
     resetToMocks()
     setViewAs(null)
     clearPageStore()
@@ -568,16 +695,11 @@ export function AppProvider({ children }) {
   )
 
   const updateUser = useCallback(
-    (id, patch) => {
-      setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...patch } : u)))
-      if (isLive) {
-        supabase
-          .from('profiles')
-          .update({ name: patch.name, email: patch.email, phone: patch.phone })
-          .eq('id', id)
-          .then(logDbError('profile update'))
-      }
+    async (id, patch) => {
+      const saved = isLive ? await saveBorrowerDetails(id, patch) : patch
+      setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...saved } : u)))
       log(actor, 'USER_UPDATED', `Profile ${id} updated`)
+      return saved
     },
     [isLive, log, actor],
   )
@@ -672,7 +794,11 @@ export function AppProvider({ children }) {
   )
 
   const reviewPayment = useCallback(
-    (id, status, note = '') => {
+    async (id, status, note = '') => {
+      if (isLive && companionEnabled) {
+        try { const row=await mobileAction('payment-review',{key:crypto.randomUUID(),id,status,note});setPayments(prev=>prev.map(p=>p.id===id?mapPayment(row):p));return {error:null}; }
+        catch(e) {return {error:e.message};}
+      }
       const today = toISODate(new Date())
       setPayments((prev) =>
         prev.map((p) => (p.id === id ? { ...p, status, note, reviewedAt: today } : p)),
@@ -1541,8 +1667,10 @@ export function AppProvider({ children }) {
       startViewAs,
       stopViewAs,
       authLoading,
+      dataReady,
       refreshing,
       refreshData,
+      refreshOwnProfile,
       syncError,
       getProofUrl,
       importLoans,
@@ -1571,6 +1699,7 @@ export function AppProvider({ children }) {
       transactions,
       auditLog,
       signInWithPassword,
+      signInWithLoginCode,
       signInDemo,
       signOut,
       completePasswordSetup,
@@ -1596,7 +1725,7 @@ export function AppProvider({ children }) {
     }),
     [
       session, effectiveSession, isViewingAs, startViewAs, stopViewAs, authLoading,
-      refreshing, refreshData, syncError, getProofUrl, importLoans, updateMyProfile, setMyAvatar,
+      dataReady, refreshing, refreshData, refreshOwnProfile, syncError, getProofUrl, importLoans, updateMyProfile, setMyAvatar,
       users, loans, payments, paymentLogs, createPaymentLog, updatePaymentLog, deletePaymentLog,
       arbitrageLoans, interestRates, createArbitrageLoan, deleteArbitrageLoan,
       addInterestRate, deleteInterestRate,
@@ -1604,7 +1733,7 @@ export function AppProvider({ children }) {
       paymentDueOverrides, savePaymentDueOverrides, clearPaymentDueOverride,
       clearAllPaymentDueOverrides,
       transactions, archivedTransactions, auditLog,
-      signInWithPassword, signInDemo, signOut, completePasswordSetup, inviteUser, updateUser,
+      signInWithPassword, signInWithLoginCode, signInDemo, signOut, completePasswordSetup, inviteUser, updateUser,
       deleteUser, resendInvite, submitPayment, reviewPayment, deletePayment, assignLoan, unassignLoan,
       setTransactionStatus, updateTransaction, replaceTransactionDescriptions, updateLoan,
       archiveTransactions, restoreTransactions,

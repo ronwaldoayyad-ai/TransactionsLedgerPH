@@ -208,6 +208,7 @@ export default function Disbursements() {
     // successful assignment.
     try {
       await createNotification({
+        autoEvent:'disbursement.assigned',eventPayload:{source_id:d.id,reference:d.disbursementNumber,amount:d.netProceeds},
         category: 'general',
         title: '💸 Loan Disbursement Ready',
         body: `Your loan disbursement ${d.disbursementNumber} (net ${formatPeso(d.netProceeds)}) is ready for your review and acceptance.`,

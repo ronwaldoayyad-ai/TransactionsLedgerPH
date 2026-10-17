@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { useApp } from './AppContext'
+import { useRecordRefresh } from '../lib/recordRefresh'
 import { supabase } from '../supabaseClient'
 
 // Admin-authored announcements delivered to borrowers (toast + push-down banner).
@@ -70,9 +71,11 @@ export function AnnouncementsProvider({ children }) {
   // (and keeps render pure — no Date.now() during render).
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
+    // Live announcements are filtered by RLS; only demo windows use this clock.
+    if (isLive || !meId || isAdmin || !demoAnnouncements.length) return undefined
     const id = setInterval(() => setNow(Date.now()), 30000)
     return () => clearInterval(id)
-  }, [])
+  }, [isLive, meId, isAdmin, demoVersion])
 
   // Reset dismissals whenever the signed-in identity changes (login / switch),
   // so a fresh session starts with every valid announcement visible again.
@@ -140,6 +143,9 @@ export function AnnouncementsProvider({ children }) {
     }
     setLiveTemplates((data ?? []).map(mapTemplate))
   }, [isLive, isAdmin])
+
+  const refreshAnnouncements = useCallback(() => Promise.all([fetchAll(), fetchTemplates()]), [fetchAll, fetchTemplates])
+  useRecordRefresh(refreshAnnouncements, isLive && !!meId)
 
   useEffect(() => {
     if (!isLive || !isAdmin) return undefined

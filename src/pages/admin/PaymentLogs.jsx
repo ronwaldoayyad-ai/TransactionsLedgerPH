@@ -144,6 +144,7 @@ export default function PaymentLogs() {
       if (created) {
         try {
           await createNotification({
+            autoEvent:'payment.recorded',eventPayload:{source_id:created.id,status:created.allocStatus,funds_applied:created.fundsApplied,remaining_balance:created.remainingBalance,reference:created.reference||'',amount:created.fundsApplied},
             ...paymentLogNotification(created),
             audience: 'targeted',
             targetUserIds: [created.userId],

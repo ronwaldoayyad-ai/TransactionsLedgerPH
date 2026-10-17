@@ -1,8 +1,12 @@
+import { companionEnabled } from '../lib/serviceEndpoint'
+import { notificationRuleRequest, publishNotificationEvent } from '../lib/notificationRules'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { useApp } from './AppContext'
+import { useRecordRefresh } from '../lib/recordRefresh'
 import { supabase } from '../supabaseClient'
 import { NOTIFICATION_TEMPLATES } from '../lib/notificationTemplates'
 import { adminUser } from '../data/mock'
+import { installNotificationCategories, NOTIFICATION_CATEGORIES } from '../lib/notifications'
 
 // Data layer for the Notification Center. Dual-mode like the rest of the app:
 // live sessions read/write the `notifications` + `notification_reads` tables and
@@ -25,6 +29,7 @@ const mapNotification = (r) => ({
   attachments: r.attachments ?? [],
   createdBy: r.created_by ?? null,
   createdAt: r.created_at ?? null,
+  ruleId:r.rule_id||null,ruleVersion:r.rule_version||null,deliverySurface:r.delivery_surface||'inbox',displayDuration:r.display_duration||10,
 })
 
 const mapRead = (r) => ({
@@ -132,16 +137,32 @@ export function NotificationsProvider({ children }) {
   const [loading, setLoading] = useState(isLive)
   const [liveTemplates, setLiveTemplates] = useState([])
   const [tplVersion, setTplVersion] = useState(0)
+  const [categoryError,setCategoryError] = useState('')
+  const [categoriesAll,setCategoriesAll] = useState(()=>[...NOTIFICATION_CATEGORIES])
+  const fetchCategories=useCallback(async()=>{
+    if(!isLive||!meId)return
+    try {
+      const {data,error}=await supabase.from('notification_categories').select('*').order('label')
+      if(error)throw error
+      setCategoryError('');setCategoriesAll(installNotificationCategories(data))
+    }catch{setCategoryError('Categories could not be loaded. Please refresh categories.')}
+  },[isLive,meId])
+  useEffect(()=>{
+    let active=true
+    queueMicrotask(()=>{if(!active)return;if(isLive&&meId)fetchCategories();else setCategoriesAll(installNotificationCategories(null))})
+    const changed=()=>{if(active)fetchCategories()}
+    window.addEventListener('loanledger-notification-rules-changed',changed)
+    return()=>{active=false;window.removeEventListener('loanledger-notification-rules-changed',changed)}
+  },[isLive,meId,fetchCategories])
 
   const borrowerCount = useMemo(() => users.filter((u) => u.role === 'user').length, [users])
 
   // ---- Fetching (live) ----
   const fetchAll = useCallback(async () => {
     if (!isLive || !meId) return
-    const { data, error } = await supabase
-      .from('notifications')
-      .select('*')
-      .order('created_at', { ascending: false })
+    let query = supabase.from('notifications').select('*')
+    if(companionEnabled)query=query.is('archived_at',null)
+    const { data, error } = await query.order('created_at', { ascending: false })
     if (error) {
       console.warn('[notifications] load failed (run the migration?):', error.message)
       return
@@ -175,12 +196,16 @@ export function NotificationsProvider({ children }) {
 
   useEffect(() => {
     if (!isLive || !meId) return undefined
+    let timer=0,needsNotifications=false,needsReads=false,needsRules=false
+    const queue=(kind)=>{needsNotifications ||= kind!=='reads';needsReads ||= kind==='reads';needsRules ||= kind==='rules';clearTimeout(timer);timer=setTimeout(()=>{const notifications=needsNotifications,reads=needsReads,rules=needsRules;needsNotifications=needsReads=needsRules=false;if(notifications)fetchAll();if(reads)fetchReads();if(rules)window.dispatchEvent(new CustomEvent('loanledger-notification-rules-changed'))},120)}
     const channel = supabase
       .channel(`notifications-rt-${meId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => fetchAll())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'notification_reads' }, () => fetchReads())
-      .subscribe()
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => queue('notifications'))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notification_reads' }, () => queue('reads'))
+    if(companionEnabled)channel.on('postgres_changes',{event:'*',schema:'public',table:'notification_change_signals',filter:'user_id=eq.'+meId},()=>queue('rules'))
+    channel.subscribe()
     return () => {
+      clearTimeout(timer)
       supabase.removeChannel(channel)
     }
   }, [isLive, meId, fetchAll, fetchReads])
@@ -300,9 +325,12 @@ export function NotificationsProvider({ children }) {
 
   // ---- Admin writes ----
   const createNotification = useCallback(
-    async ({ category, title = '', body, audience = 'all', targetUserIds = [], attachments = [] }) => {
+    async ({ category, title = '', body, audience = 'all', targetUserIds = [], attachments = [], autoEvent = null, eventPayload = {} }) => {
       const ids = audience === 'targeted' ? targetUserIds : []
       if (isLive) {
+        if(autoEvent&&companionEnabled){
+          try{await publishNotificationEvent(autoEvent,{category,title,body,audience,targetUserIds:ids,attachments},eventPayload);return {}}catch(error){return {error:error.message}}
+        }
         const { error } = await supabase.from('notifications').insert({
           category,
           title,
@@ -344,9 +372,10 @@ export function NotificationsProvider({ children }) {
   // The row keeps createdBy = the borrower so it lands in the admin Inbox and
   // the admin can reply straight back.
   const notifyAdmins = useCallback(
-    async ({ category = 'general', title = '', body }) => {
+    async ({ category = 'general', title = '', body, autoEvent = null, eventPayload = {} }) => {
       if (!body || !body.trim()) return { error: 'Message is required.' }
       if (isLive) {
+        if(autoEvent&&companionEnabled){try{await publishNotificationEvent(autoEvent,{category,title,body,audience:'targeted',targetUserIds:[]},eventPayload);return {}}catch(error){return {error:error.message}}}
         const { error } = await supabase.rpc('notify_admins', {
           p_category: category,
           p_title: title,
@@ -387,6 +416,7 @@ export function NotificationsProvider({ children }) {
     async (id, { category, title = '', body, audience = 'all', targetUserIds = [], attachments = [] }) => {
       const ids = audience === 'targeted' ? targetUserIds : []
       if (isLive) {
+        if(companionEnabled){try{await notificationRuleRequest('sent-edit',{id,notification:{category,title,body,audience,targetUserIds:ids,attachments}});await fetchAll();return {}}catch(error){return {error:error.message}}}
         const { error } = await supabase
           .from('notifications')
           .update({ category, title, body, audience, target_user_ids: ids, attachments })
@@ -410,6 +440,7 @@ export function NotificationsProvider({ children }) {
   const deleteNotification = useCallback(
     async (id) => {
       if (isLive) {
+        if(companionEnabled){await notificationRuleRequest('archive',{id});await Promise.all([fetchAll(),fetchReads()]);return}
         const { error } = await supabase.from('notifications').delete().eq('id', id)
         if (error) {
           console.error('[notifications] delete failed:', error.message)
@@ -439,6 +470,9 @@ export function NotificationsProvider({ children }) {
     }
     setLiveTemplates((data ?? []).map(mapTemplate))
   }, [isLive, isAdmin])
+
+  const refreshNotifications = useCallback(() => Promise.all([fetchAll(), fetchReads(), fetchTemplates(),fetchCategories()]), [fetchAll, fetchReads, fetchTemplates,fetchCategories])
+  useRecordRefresh(refreshNotifications, isLive && !!meId)
 
   useEffect(() => {
     if (!isLive || !isAdmin) return undefined
@@ -513,6 +547,9 @@ export function NotificationsProvider({ children }) {
   const value = useMemo(
     () => ({
       notifications,
+      categoriesAll, categoryError,
+      categories:categoriesAll.filter(category=>!category.deleted),
+      refreshCategories:fetchCategories,
       inboxNotifications,
       loading,
       isAdmin,
@@ -522,6 +559,7 @@ export function NotificationsProvider({ children }) {
       markUnread,
       readCountFor,
       recipientCountFor,
+      refreshNotifications,
       createNotification,
       notifyAdmins,
       updateNotification,
@@ -532,7 +570,7 @@ export function NotificationsProvider({ children }) {
       deleteTemplate,
     }),
     [
-      notifications, inboxNotifications, loading, isAdmin, isRead, unreadCount, markRead, markUnread,
+      categoriesAll,categoryError,fetchCategories,refreshNotifications,notifications, inboxNotifications, loading, isAdmin, isRead, unreadCount, markRead, markUnread,
       readCountFor, recipientCountFor, createNotification, notifyAdmins, updateNotification, deleteNotification,
       templates, createTemplate, updateTemplate, deleteTemplate,
     ],

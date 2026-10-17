@@ -14,12 +14,12 @@ import {
   portfolioSummary,
 } from '../../lib/loanTracker'
 
-// Bank logo via Clearbit, with a colored-initials fallback when the image is
-// missing or fails to load.
+// Use supplied local bank artwork; unprovided banks use their initials.
 function BankLogo({ domain, acronym, color, size = 36, rounded = 'rounded-lg' }) {
   const [failed, setFailed] = useState(false)
+  const logo = { 'bdo.com.ph': 'bdo.svg', 'bpi.com.ph': 'bpi.svg', 'securitybank.com': 'security.svg' }[domain]
   const dim = { width: size, height: size }
-  if (!domain || failed) {
+  if (!logo || failed) {
     return (
       <span
         className={`flex shrink-0 items-center justify-center ${rounded} font-bold text-white`}
@@ -31,7 +31,7 @@ function BankLogo({ domain, acronym, color, size = 36, rounded = 'rounded-lg' })
   }
   return (
     <img
-      src={`https://logo.clearbit.com/${domain}`}
+      src={`/assets/transfer-accounts/${logo}`}
       alt={acronym}
       onError={() => setFailed(true)}
       className={`shrink-0 border border-slate-200 bg-white object-contain ${rounded}`}

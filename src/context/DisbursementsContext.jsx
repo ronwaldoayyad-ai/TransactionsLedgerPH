@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { useApp } from './AppContext'
+import { useRecordRefresh } from '../lib/recordRefresh'
 import { supabase } from '../supabaseClient'
 
 // Data layer for the Loan Disbursement feature. RLS scopes reads: admins get
@@ -122,6 +123,8 @@ export function DisbursementsProvider({ children }) {
     }
     setLiveDisbursements((data ?? []).map(mapDisbursement))
   }, [isLive, meId])
+
+  useRecordRefresh(fetchAll, isLive && !!meId)
 
   useEffect(() => {
     if (!isLive || !meId) return undefined

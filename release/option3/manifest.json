@@ -1,0 +1,69 @@
+{
+  "status": "rehearsal candidate; production approval required",
+  "classic_commit": "db08a917120a6455b8d2d0d42ddf981c5b3cbd63",
+  "sha256": "89845ce1a5959087930db720d33405ec52887a8c42274c3e4a53ecac525cf5b6",
+  "sources": [
+    {
+      "file": "release/option3/foundation.sql",
+      "sha256": "90cf88047ab945655ac7f231aa7fa3f64842c45a5e2cd38816b0fe7abc27f5eb"
+    },
+    {
+      "file": "supabase/migrations/20261013041107_notification_interactions_guest_support.sql",
+      "sha256": "31dd755495b2dd813bdf2d608a1ed2f05520ea81a02f45e7c17ffd8c2c3fe592"
+    },
+    {
+      "file": "supabase/migrations/20261013061101_borrower_invoice_deletion.sql",
+      "sha256": "fe6e5d4f773ad69ad82cb73b2fecad5742d80aa92cc9f599f22daa054171b60e"
+    },
+    {
+      "file": "supabase/migrations/20261014033328_borrower_account_numbers.sql",
+      "sha256": "00e8ddf961bf7c662edbd3c6862dab6bc5ae7d76465199177f7c354000cc5c75"
+    },
+    {
+      "file": "supabase/migrations/20261016090000_borrower_profile_updates.sql",
+      "sha256": "3efc6e554a54c378589e182916f0cd94940dda544adc4bdf6368c795428054d6"
+    },
+    {
+      "file": "supabase/migrations/20261016091000_session_check_initplan.sql",
+      "sha256": "c620cc84f9d92453b4a2521031ec69df4b98be827c9555036ca23b516e42c772"
+    },
+    {
+      "file": "supabase/migrations/20261016133725_login_access_lockout.sql",
+      "sha256": "56fa30a8cd12581dd8ab1f3a5b74992283066b56428f547496089772fb54cde1"
+    },
+    {
+      "file": "supabase/migrations/20261016143643_notification_rules_and_delivery.sql",
+      "sha256": "f342b9e93ecfd6bc4ec578628a11b0d4fb695a1b8cfac50f36ef698b5a00febd"
+    },
+    {
+      "file": "supabase/migrations/20261016205239_release_access.sql",
+      "sha256": "6f1901acb72e19a928ee40e75fa1178135b924500556280c3f53b3a28e0678a9"
+    },
+    {
+      "file": "supabase/migrations/20261016230322_notification_categories.sql",
+      "sha256": "642618bda8db0f7cefb12fb4717696b1cdd8af9a102ff535ea2a4ed8ee5dcc22"
+    },
+    {
+      "file": "supabase/migrations/20261017002202_optimize_portfolio_read_policies.sql",
+      "sha256": "8555cd8ff69c89df33c4cb9a5e000b7addce6b0310c893d028435be779a3d981"
+    },
+    {
+      "file": "supabase/migrations/20261017134229_release_runtime_hardening.sql",
+      "sha256": "e5cee562838bb86fca7b736c0b3dc8d2efe3f15e50dc1974c2d12f4b4fb2c867"
+    },
+    {
+      "file": "supabase/migrations/20261017142819_proof_submission_timestamp.sql",
+      "sha256": "0b2fe217665dbd510f92c159784ef1f646bd91e06cb6e0eca0e0b07ed3bd9018"
+    },
+    {
+      "file": "supabase/migrations/20261017145342_login_gate_compatibility.sql",
+      "sha256": "237a70ce8db73b6ed98335e1a0728cf02b7a7d62b0706dc9a1058db2eb19e318"
+    }
+  ],
+  "adaptations": [
+    "Preserve Classic borrower payment/message policies",
+    "Do not infer or backfill loan categories",
+    "One transaction; paused rollout and default Classic",
+    "No staging accounts, passwords, codes or enrollments"
+  ]
+}

@@ -415,8 +415,8 @@ export default function AdminDashboard() {
   return (
     <>
       <PageHeader
-        title="Command Center"
-        subtitle="Portfolio health, verifications, and recent activity at a glance."
+        title="Portfolio detail"
+        subtitle="Detailed receivables, due-date controls and borrower breakdowns."
         action={
           <div className="flex flex-wrap gap-2">
             <RefreshButton />

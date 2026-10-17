@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { useState } from 'react'
+import { Navigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import Icon from '../components/Icon'
-import LoadingScreen from '../components/LoadingScreen'
 import { Button, FloatingInput } from '../components/ui'
 import { adminUser, mockUsers } from '../data/mock'
+import { sessionDestination } from '../lib/sessionDestination'
 
 // Invite-only sign-in against Supabase (AUTH-5/AUTH-7: no public
 // registration, no demo backdoor).
@@ -13,39 +13,13 @@ export default function Login() {
   // Dev-only: local sign-in against the mock dataset, so the app can be checked
   // on localhost without real Supabase credentials. Tree-shaken out of prod
   // builds (import.meta.env.DEV is false there).
-  const showDemo = import.meta.env.DEV
-  const navigate = useNavigate()
+  const showDemo = import.meta.env.DEV && import.meta.env.VITE_ALLOW_DEMO === 'true'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  // Sign-in choreography: a 5s loading splash, then route to the app.
-  const [splash, setSplash] = useState(false)
-  const [minElapsed, setMinElapsed] = useState(false)
 
-  const target = !session
-    ? null
-    : session.needsPasswordSetup
-      ? '/set-password'
-      : session.user.role === 'admin'
-        ? '/admin'
-        : '/portal'
-
-  // Keep the splash on screen for at least 5 seconds after sign-in.
-  useEffect(() => {
-    if (!splash) return undefined
-    const t = setTimeout(() => setMinElapsed(true), 5000)
-    return () => clearTimeout(t)
-  }, [splash])
-
-  // Once the 5s minimum has passed and the session/target is ready, route in.
-  useEffect(() => {
-    if (splash && minElapsed && target) navigate(target, { replace: true })
-  }, [splash, minElapsed, target, navigate])
-
-  // During a fresh sign-in, hold on the splash (don't let the restored-session
-  // redirect below short-circuit it).
-  if (splash) return <LoadingScreen />
+  const target = sessionDestination(session)
 
   // Restored session (page reload / invite-link landing): route instantly —
   // never animate a flow the user didn't just initiate.
@@ -68,7 +42,7 @@ export default function Login() {
       )
       return
     }
-    setSplash(true) // show the 5s loading screen; effect routes once ready
+    // The shared successful-authentication matrix continues across navigation.
   }
 
   return (

@@ -2,6 +2,7 @@
 // (camelCase, numbers) and back. The app shapes are the PRD §7 contracts.
 import { buildDisclosure } from './amortization'
 import { supabase } from '../supabaseClient'
+import { paymentTimestamp } from './paymentTimestamp'
 
 const num = (v) => (v == null ? 0 : Number(v))
 const day = (v) => (v ? String(v).slice(0, 10) : null)
@@ -20,12 +21,16 @@ const stamp = (v) =>
 
 export const mapProfile = (r) => ({
   id: r.id,
+  accountNumber: r.borrower_account_number ?? null,
   name: r.name,
   firstName: r.first_name ?? '',
   lastName: r.last_name ?? '',
   nickname: r.nickname ?? '',
   email: r.email,
   phone: r.phone ?? '',
+  birthDate: day(r.birth_date) || '',
+  address: r.address ?? '',
+  occupation: r.occupation ?? '',
   role: r.role,
   status: r.status,
   invitedAt: day(r.invited_at),
@@ -42,6 +47,7 @@ export const mapLoan = (r) => {
     userId: r.user_id,
     label: r.label,
     txnType: r.txn_type,
+    loanCategory: r.loan_category ?? null,
     principal: num(r.principal),
     monthlyRate: num(r.monthly_rate),
     durationMonths: r.duration_months,
@@ -87,10 +93,17 @@ export const mapPayment = (r, fileUrl = null) => ({
   fileType: r.file_type,
   filePath: r.file_path,
   fileUrl,
-  submittedAt: day(r.submitted_at),
+  submittedAt: paymentTimestamp(r),
+  paidDate: day(r.paid_date),
   status: r.status,
-  reviewedAt: day(r.reviewed_at),
+  reviewedAt: r.reviewed_at,
   note: r.note ?? '',
+  submissionNotes: r.submission_notes ?? '',
+  allocations: r.requested_allocations,
+  correctionOf: r.correction_of,
+  correctionNote: r.correction_note,
+  retractedAt: r.retracted_at,
+  receiptNumber: r.receipt_number,
 })
 
 export const mapPaymentLog = (r) => ({

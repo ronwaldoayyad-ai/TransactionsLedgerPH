@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { useApp } from './AppContext'
 import { supabase } from '../supabaseClient'
 import { playReaction, playReceive } from '../lib/chatSounds'
+import { useRecordRefresh } from '../lib/recordRefresh'
 
 // Isolated data layer for in-app messaging (borrower ⇄ lender). Mirrors the
 // app's dual-mode pattern: live sessions read/write the `messages` table and
@@ -21,6 +22,12 @@ const mapMessage = (r) => ({
   readAt: r.read_at ?? null,
   reactions: r.reactions ?? {},
   pinned: !!r.pinned,
+  replyTo: r.reply_to_id,
+  notificationId: r.notification_id,
+  attachmentPath: r.attachment_path,
+  attachmentName: r.attachment_name,
+  attachmentType: r.attachment_type,
+  attachmentSize: r.attachment_size,
 })
 
 // Demo store: module-scoped so it survives navigation within the tab.
@@ -62,6 +69,8 @@ export function MessagesProvider({ children }) {
     }
     setLiveMessages((data ?? []).map(mapMessage))
   }, [isLive, isAdmin, meId])
+
+  useRecordRefresh(fetchMessages, isLive && !!meId)
 
   // Initial load (live only) — all setState happens after the first await.
   useEffect(() => {
@@ -298,6 +307,7 @@ export function MessagesProvider({ children }) {
   const value = useMemo(
     () => ({
       messages,
+      refreshMessages: fetchMessages,
       loading,
       isAdmin,
       me,
@@ -311,7 +321,7 @@ export function MessagesProvider({ children }) {
       unreadByBorrower,
       unreadTotal,
     }),
-    [messages, loading, isAdmin, me, sendMessage, markRead, reactToMessage, togglePin, deleteMessage, clearConversation, messagesFor, unreadByBorrower, unreadTotal],
+    [messages, fetchMessages, loading, isAdmin, me, sendMessage, markRead, reactToMessage, togglePin, deleteMessage, clearConversation, messagesFor, unreadByBorrower, unreadTotal],
   )
 
   return <MessagesContext.Provider value={value}>{children}</MessagesContext.Provider>

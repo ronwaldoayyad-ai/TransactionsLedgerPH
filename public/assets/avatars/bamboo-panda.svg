@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 100 100" role="img" aria-label="Bamboo Panda">
+<title>Bamboo Panda</title><style>
+.character{transform-origin:50px 68px;animation:bob 3.26s ease-in-out infinite}
+.eyes{transform-origin:50px 50px;animation:blink 5.8s infinite;animation-delay:0.62s}
+.sparkle{transform-origin:83px 19px;animation:twinkle 3.4s ease-in-out infinite}
+.beacon{animation:twinkle 2s ease-in-out infinite}
+@keyframes bob{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-3px) rotate(1.5deg)}}
+@keyframes blink{0%,43%,48%,100%{transform:scaleY(1)}45%,46%{transform:scaleY(.08)}}
+@keyframes twinkle{0%,100%{opacity:.55}50%{opacity:1}}
+@media(prefers-reduced-motion:reduce){.character,.eyes,.sparkle,.beacon{animation:none!important}}
+</style><rect width="100" height="100" rx="26" fill="#d6f3e4"/><circle cx="23" cy="20" r="26" fill="#fff" opacity=".26"/><path class="sparkle" d="m83 12 2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="#fff" opacity=".8"/><ellipse cx="50" cy="91" rx="26" ry="5" fill="#203858" opacity=".09"/><g class="character"><path d="M28 94V82q1-15 22-16 21 1 22 16v12" fill="#effcf5"/><path d="M38 94V82q12-12 24 0v12" fill="#fff" opacity=".6"/><circle cx="28" cy="27" r="12" fill="#354c54"/><circle cx="72" cy="27" r="12" fill="#354c54"/><circle cx="50" cy="48" r="29" fill="#f5fffa"/><ellipse cx="37" cy="49" rx="11" ry="14" fill="#354c54" transform="rotate(15 37 49)"/><ellipse cx="63" cy="49" rx="11" ry="14" fill="#354c54" transform="rotate(-15 63 49)"/><path d="m46 60 4-2 4 2-4 4z" fill="#354c54"/><g class="eyes"><ellipse cx="38" cy="50" rx="4.6" ry="5.5" fill="#fff"/><ellipse cx="62" cy="50" rx="4.6" ry="5.5" fill="#fff"/><ellipse cx="38" cy="51" rx="3.3" ry="4.2" fill="#273b53"/><ellipse cx="62" cy="51" rx="3.3" ry="4.2" fill="#273b53"/><circle cx="39" cy="49" r="1.1" fill="#fff"/><circle cx="63" cy="49" r="1.1" fill="#fff"/></g><ellipse cx="30" cy="59" rx="4" ry="2.4" fill="#e894ac" opacity=".45"/><ellipse cx="70" cy="59" rx="4" ry="2.4" fill="#e894ac" opacity=".45"/><path d="M46 65q4 4 8 0" fill="none" stroke="#6e4957" stroke-width="1.7" stroke-linecap="round"/></g></svg>

@@ -1,0 +1,79 @@
+{
+  "updated": "October 14, 2026",
+  "privacy": [
+    {
+      "title": "Scope and account records",
+      "text": "LoanLedger PH lets borrowers and their lender manage borrower records, loan schedules, payment submissions, documents, and account communication. Personal and financial records are confidential and are processed to provide account servicing and the features described in this notice."
+    },
+    {
+      "title": "Information processed",
+      "text": "The service processes account identity and contact information, loan and transaction records, payment references and requested allocations, payment proof, bank details supplied for loan requests, profile images, support tickets, notifications, messages, reactions, and attached documents. Information is used to display account records, service requests, review submissions, communicate with borrowers, and maintain transaction history."
+    },
+    {
+      "title": "Storage and access",
+      "text": "Account records and submitted files are stored in the service’s configured database and private file storage. Signed-in borrower requests are limited to the associated account through application authorization and database access policies; authorized lender users manage the associated records. Guest support requests store the email, issue description, and optional screenshot supplied in the form. Access is limited according to account roles and service responsibilities."
+    },
+    {
+      "title": "Browser and device storage",
+      "text": "Browser storage holds sign-in session information when Remember me is selected, interface preferences, and document or screen metadata. Unsubmitted payment drafts, including their selected proof attachment and entered details, are retained on your device for the associated borrower until confirmed submission or explicit discard, subject to browser storage availability. Drafts are not automatically submitted. Clearing browser data removes device drafts but does not delete server records. Downloaded documents remain on your device until you remove them. Protect your device, discard drafts you no longer need, and sign out on shared devices."
+    },
+    {
+      "title": "Payment proof recognition and optional voice input",
+      "text": "Payment proof OCR runs in the browser to assist with entering receipt details. Review and correct the extracted fields before submitting. Selected proofs are uploaded when you submit them for lender review. OCR resources may be downloaded or loaded from the app’s bundled files. Finder voice input starts only when selected and may use the browser’s speech-recognition service; its availability and processing depend on your browser."
+    },
+    {
+      "title": "Pawcheebels and external AI",
+      "text": "Pawcheebels uses the approved FAQ knowledge base for app navigation and terminology. AI assistance, enabled by default for signed-in users and switchable off at any time, can also answer greetings and general questions without a FAQ match; those general answers are not lender policy or account decisions. When signed-in users send a question with AI assistance enabled, their question and relevant FAQ content are sent through OpenRouter to an available AI model provider. The app does not automatically include borrower ledger rows, payment proof, bank details, support tickets, or lender conversation history in that request. Do not put passwords, access codes, bank account numbers, or private payment details into an AI question. OpenRouter and the selected model provider’s processing and retention terms also apply. Message lender uses the separate account messaging service."
+    },
+    {
+      "title": "Retention and control",
+      "text": "Financial records and request history are retained for account servicing, bookkeeping, and applicable recordkeeping obligations. A request to delete a user-generated invoice removes it from the borrower’s active list while preserving the server’s deletion record. Withdrawn proof and canceled requests retain their history. Contact your lender through Submit Request or Messages for access, correction, retention, or deletion questions. Retention periods depend on the record and applicable obligations."
+    },
+    {
+      "title": "Your rights and privacy questions",
+      "text": "Subject to applicable Philippine law and its conditions, you may request information about processing, access, correction, objection, erasure or blocking, portability, or raise a complaint. Submit Request is available before and after sign-in. For privacy questions, contact the lender/operator through that flow or the account messaging service.",
+      "link": {
+        "label": "National Privacy Commission: data subject rights",
+        "url": "https://privacy.gov.ph/data-subject-rights/"
+      }
+    },
+    {
+      "title": "Changes",
+      "text": "Material changes to this notice are reflected in its update date. This notice describes data handling; it does not replace your loan agreement or authorize a money transfer."
+    }
+  ],
+  "terms": [
+    {
+      "title": "Use of the service",
+      "text": "LoanLedger PH provides borrower access to account records, loan schedules, payment submissions, documents, and communication with the lender. Use the service only for an account you are authorized to access. Keep your credentials confidential, provide accurate information, and avoid submitting misleading, unlawful, or unrelated material."
+    },
+    {
+      "title": "Account responsibilities",
+      "text": "Use your own registered account or a valid lender-issued access code. Keep passwords and codes confidential, sign out on shared devices, and report access problems through Help & Support. Submit accurate information and only files you are entitled to share. Do not upload malicious content or another person’s private records without authority."
+    },
+    {
+      "title": "Payments and acknowledgements",
+      "text": "Uploading proof requests payment review and records your requested allocation. It does not execute a payment or verify receipt of funds. An acknowledgement receipt records submitted details and review status; it is not a tax invoice or independent confirmation of settlement. The lender’s verification and applicable loan agreement determine payment status and the final applied allocation."
+    },
+    {
+      "title": "Loan requests, rates, and charges",
+      "text": "Submitting a loan request does not guarantee approval or disbursement. Review the principal, monthly add-on rate, term, fees, and amortization schedule before confirming. The applicable loan agreement governs obligations and charges. A past-due advisory summarizes the active card’s records and grace-period status. Unpaid balances are subject to the applicable monthly Late Payment Fee and 3% monthly Finance Charge if not paid in full; contact your lender for account-specific clarification."
+    },
+    {
+      "title": "Documents and downloads",
+      "text": "Generated invoices and receipts reflect the records available at generation time. You may delete invoices you generated where the app offers that option; lender-issued documents remain under lender control. Downloads use your browser’s download settings and default location. Download started means the file was handed to the browser, not that saving to your device has been verified."
+    },
+    {
+      "title": "Messages, support, and Pawcheebels",
+      "text": "Message lender sends account communication through the messaging service. Submit Request creates a support ticket when a ticket number is returned. Pawcheebels provides navigation and terminology assistance from FAQ content and, when configured and enabled, an external AI service. AI assistance starts enabled for signed-in users and can be switched off before sending a question. AI answers may be incomplete or inaccurate and cannot approve loans, verify payments, change balances, or send a lender message without the user selecting the messaging flow and submitting it."
+    },
+    {
+      "title": "Availability and interface preferences",
+      "text": "Connectivity, browser capabilities, device settings, and service availability can affect uploads, recognition, messages, and downloads. Review errors and confirmation messages before retrying. You can adjust appearance, language preferences, and mascot visibility in Profile & Settings. Supported animations respect reduced-motion preferences."
+    },
+    {
+      "title": "Privacy and questions",
+      "text": "Read the Privacy Policy for information about real borrower records, browser storage, uploads, and optional AI processing. Contact your lender through Help & Support or Messages for account questions or disputes. These terms do not remove rights provided by applicable law or amend a separate signed loan agreement."
+    }
+  ]
+}

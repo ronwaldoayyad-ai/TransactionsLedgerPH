@@ -67,7 +67,7 @@ export default function BillTracker({ cards, accounts, bills, payments, wallet }
   return (
     <div className="space-y-4">
       {/* Sub-tabs */}
-      <div className="grid grid-cols-3 gap-2">
+      <div className="wallet-bill-statuses grid grid-cols-3 gap-2">
         {SUB_TABS.map(([key, label]) => (
           <button
             key={key}

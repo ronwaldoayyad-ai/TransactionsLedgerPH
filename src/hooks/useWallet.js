@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useApp } from '../context/AppContext'
+import { useRecordRefresh } from '../lib/recordRefresh'
 import { supabase } from '../supabaseClient'
 import { walletRound2 as round2 } from '../lib/wallet'
 
@@ -117,32 +118,41 @@ export function useWallet() {
   const [payments, setPayments] = useState([])
   const [loading, setLoading] = useState(isLive)
   const [error, setError] = useState(null)
+  const loadFlight = useRef(null), owner = useRef(null)
+  const ownerId = realSession?.user.id ?? null
+  useEffect(() => { owner.current = ownerId; return () => { owner.current = null } }, [ownerId])
 
-  const fetchAll = useCallback(async () => {
-    const [c, ac, b, p] = await Promise.all([
-      supabase.from('wallet_cards').select('*').order('sort_order').order('created_at'),
-      supabase.from('wallet_accounts').select('*').order('sort_order').order('created_at'),
-      supabase.from('wallet_bills').select('*').order('due_date'),
-      supabase.from('wallet_payments').select('*').order('paid_on', { ascending: false }),
-    ])
-    const failed = c.error || ac.error || b.error || p.error
-    if (failed) {
-      console.error('[wallet] load failed:', failed.message)
-      setError(`${failed.message} — a migration may be missing`)
-    } else setError(null)
-    setCards((c.data ?? []).map(mapCard))
-    setAccounts((ac.data ?? []).map(mapAccount))
-    setBills((b.data ?? []).map(mapBill))
-    setPayments((p.data ?? []).map(mapPayment))
-  }, [])
+  const fetchAll = useCallback(() => {
+    if (!isLive || !ownerId) return Promise.resolve()
+    if (loadFlight.current?.ownerId === ownerId) return loadFlight.current.promise
+    const request = (async () => {
+      try {
+        const results = await Promise.all([
+          supabase.from('wallet_cards').select('*').order('sort_order').order('created_at'),
+          supabase.from('wallet_accounts').select('*').order('sort_order').order('created_at'),
+          supabase.from('wallet_bills').select('*').order('due_date'),
+          supabase.from('wallet_payments').select('*').order('paid_on', { ascending: false }),
+        ])
+        if (owner.current !== ownerId) return
+        const failed = results.find(result => result.error)?.error
+        if (failed) { setError(failed.message); return }
+        setError(null)
+        setCards((results[0].data??[]).map(mapCard)); setAccounts((results[1].data??[]).map(mapAccount))
+        setBills((results[2].data??[]).map(mapBill)); setPayments((results[3].data??[]).map(mapPayment))
+      } catch (failure) {
+        if (owner.current === ownerId) setError(failure.message || 'Wallet could not be refreshed. Please retry.')
+      } finally {
+        if (loadFlight.current?.promise === request) loadFlight.current = null
+      }
+    })()
+    loadFlight.current = {ownerId,promise:request}
+    return request
+  }, [isLive, ownerId])
 
-  // Manual refresh (button / user event) — may set loading synchronously.
-  const reload = useCallback(async () => {
-    if (!isLive) return
-    setLoading(true)
-    await fetchAll()
-    setLoading(false)
-  }, [isLive, fetchAll])
+  // Refresh keeps the current cards and details visible, and shares an in-flight load.
+  const reload = useCallback(() => fetchAll(), [fetchAll])
+
+  useRecordRefresh(fetchAll, isLive)
 
   // Initial load: every setState happens AFTER the first await, so the effect
   // never sets state synchronously.

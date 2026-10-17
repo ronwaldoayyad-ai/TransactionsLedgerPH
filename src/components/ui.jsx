@@ -48,7 +48,7 @@ export function Badge({ status, children }) {
 export function Card({ className = '', children, ...props }) {
   return (
     <div
-      className={`rounded-xl border border-white/60 bg-white/80 shadow-sm backdrop-blur-xl ${className}`}
+      className={`ui-card rounded-xl border border-white/60 bg-white/80 shadow-sm backdrop-blur-xl ${className}`}
       {...props}
     >
       {children}
