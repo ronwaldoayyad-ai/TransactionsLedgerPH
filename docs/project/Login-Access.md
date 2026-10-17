@@ -42,4 +42,3 @@ Sources consulted: [Supabase password verification hooks](https://supabase.com/d
 ### Inline notice placement correction
 
 The lock notice is a full-width sibling immediately below the sign-in method tabs, outside their two-column grid. This centers the notice across both methods instead of restricting it to the first tab column. Chrome layout review at 390 pixels confirmed equal tab/notice widths and zero horizontal center offset using synthetic display state. Static assets only; reload once, no server restart.
-

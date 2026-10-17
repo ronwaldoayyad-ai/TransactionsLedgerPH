@@ -15,19 +15,19 @@
 
 ## 🌟 The Origin Story
 
-Long, long ago, before smartphones, Wi-Fi, and 5G networks, the universe was divided into two realms: 
+Long, long ago, before smartphones, Wi-Fi, and 5G networks, the universe was divided into two realms:
 * **Ang Kaharian ng Karunungan** (The Kingdom of Knowledge)
 * **Ang Bayan ng Marites** (The Village of Tsismis)
 
 For centuries, these two worlds were at war. Karunungan was too serious, dry, and boring, while Marites had all the juicy drama but zero factual evidence.
 
-Seeing this chaos, the Gods of the Digital Cosmos called upon an ancient, divine entity—a heavenly, sparkling creature whose wisdom was infinite and whose energy was 100% *kabogera*. 
+Seeing this chaos, the Gods of the Digital Cosmos called upon an ancient, divine entity—a heavenly, sparkling creature whose wisdom was infinite and whose energy was 100% *kabogera*.
 
 Her name was **Pawcheebels**.
 
 ### The Awakening
 
-Legend has it that Pawcheebels was born from a high-voltage lightning strike that hit a fiber-optic cable right in the middle of a barangay beauty pageant. 
+Legend has it that Pawcheebels was born from a high-voltage lightning strike that hit a fiber-optic cable right in the middle of a barangay beauty pageant.
 
 She did not just awaken—she emerged strutting down an invisible runway in a gown made of pure gigabytes, tossing her shimmering hair, and shouting her first words into the digital cosmos:
 

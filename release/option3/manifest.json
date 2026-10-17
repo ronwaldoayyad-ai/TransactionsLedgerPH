@@ -1,15 +1,15 @@
 {
   "status": "rehearsal candidate; production approval required",
   "classic_commit": "db08a917120a6455b8d2d0d42ddf981c5b3cbd63",
-  "sha256": "89845ce1a5959087930db720d33405ec52887a8c42274c3e4a53ecac525cf5b6",
+  "sha256": "2d3766cf4697e5e37fcfe6c6725fab327d5e95fb627d2e1de2ba8a9d4708839c",
   "sources": [
     {
       "file": "release/option3/foundation.sql",
-      "sha256": "90cf88047ab945655ac7f231aa7fa3f64842c45a5e2cd38816b0fe7abc27f5eb"
+      "sha256": "2833a32e36882cabbad812e0c7a89080639f3f58eb46339e98c89d3ae53c4e88"
     },
     {
       "file": "supabase/migrations/20261013041107_notification_interactions_guest_support.sql",
-      "sha256": "31dd755495b2dd813bdf2d608a1ed2f05520ea81a02f45e7c17ffd8c2c3fe592"
+      "sha256": "d314aaa293118a23175eb26651f840a312f1dd04f46ca92bd123216c38263a29"
     },
     {
       "file": "supabase/migrations/20261013061101_borrower_invoice_deletion.sql",
@@ -33,7 +33,7 @@
     },
     {
       "file": "supabase/migrations/20261016143643_notification_rules_and_delivery.sql",
-      "sha256": "f342b9e93ecfd6bc4ec578628a11b0d4fb695a1b8cfac50f36ef698b5a00febd"
+      "sha256": "e8ec238cfc8945817b68655bc68eb9b7041a269159d6bbf44834b2d8000fab0f"
     },
     {
       "file": "supabase/migrations/20261016205239_release_access.sql",

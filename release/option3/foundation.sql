@@ -390,4 +390,3 @@ grant execute on function mobile_private.review_proof(jsonb) to authenticated;
 create or replace function public.mobile_action(p_action text,p_payload jsonb) returns jsonb language sql security invoker set search_path='' as $$select case when p_action='statement-create' then mobile_private.statement(p_payload) when p_action='payment-review' then mobile_private.review_proof(p_payload) else mobile_private.action(p_action,p_payload) end$$;
 notify pgrst,'reload schema';
 commit;
-

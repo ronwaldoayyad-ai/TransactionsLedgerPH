@@ -407,7 +407,7 @@ alter table public.notification_reactions enable row level security;
 revoke all on public.notification_reactions from anon,authenticated;
 grant select on public.notification_reactions to authenticated;
 create policy own_notification_reactions on public.notification_reactions for select to authenticated using(user_id=(select auth.uid()) or public.is_admin());
-create policy notification_reactions_active on public.notification_reactions as restrictive to authenticated using((select mobile_private.valid_session()) and exists(select 1 from public.profiles where id=(select auth.uid()) and status='active')); 
+create policy notification_reactions_active on public.notification_reactions as restrictive to authenticated using((select mobile_private.valid_session()) and exists(select 1 from public.profiles where id=(select auth.uid()) and status='active'));
 do $migration$
 declare definition text;
 begin

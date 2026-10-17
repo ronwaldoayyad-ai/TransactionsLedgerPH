@@ -44,4 +44,3 @@ body.dark .transfer-dialog-shell{background:#0f1d2e;border-color:#30435c}
 .transfer-channels button+button::before{content:"";position:absolute;inset-inline-start:0;top:9px;bottom:9px;width:1px;background:var(--line,#dfe8f6);opacity:.75;pointer-events:none}
 .transfer-channels button[data-transfer-bank="gcash"] img{width:28px;max-width:100%;height:25px;object-fit:contain}
 @media(max-width:350px){.transfer-channels button{padding-inline:6px}}
-

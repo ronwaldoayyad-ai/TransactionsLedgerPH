@@ -22,4 +22,4 @@ export const dashboardMovableOccasions={
  '2026-11-02':{id:'all-souls',english:'A day to remember',choices:[['English','A day to remember'],['Filipino','Isang araw ng pag-alala']]},
  '2026-12-24':{id:'christmas-eve',english:'Warm Christmas wishes',choices:[['English','Warm Christmas wishes'],['Filipino','Mainit na pagbati ngayong Pasko']]},
  '2026-12-31':{id:'year-end',english:'Cheers to new beginnings',choices:[['English','Cheers to new beginnings'],['Filipino','Para sa mga bagong simula']]}
-};
+};

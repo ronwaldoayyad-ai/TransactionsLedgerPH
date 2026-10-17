@@ -19,4 +19,3 @@
 .device-holder#deviceHolder #app>.paw-messages-card{padding-inline:0}
 .paw-messages-card>:not(.paw-composer){margin-left:18px;margin-right:18px}
 .paw-messages-card>.paw-composer.chat-composer{margin:9px 10px 0;width:calc(100% - 20px)}
-
