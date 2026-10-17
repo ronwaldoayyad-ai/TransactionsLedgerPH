@@ -1,6 +1,6 @@
 # Option 3 release candidate
 
-Status: local acceptance completed; hosted acceptance and production recovery gates remain open. Do not promote this candidate to production yet.
+Status: local acceptance and hosted database preparation completed; hosted application acceptance and production recovery gates remain open. Do not promote this candidate to production yet.
 
 ## Hosting design
 
@@ -11,7 +11,7 @@ Status: local acceptance completed; hosted acceptance and production recovery ga
 
 ## Configure a protected preview first
 
-1. Use a separate, empty Supabase project and synthetic accounts. Never point acceptance tests at production. The attempted Free preview creation was blocked by the account's two-active-project limit; the owner supplied isolated project lzprybrxhwktfxqvsbjk, but the connected Supabase account currently cannot access it. Grant that access before proceeding.
+1. Use a separate, empty Supabase project and synthetic accounts. Never point acceptance tests at production. The isolated project lzprybrxhwktfxqvsbjk is now initialized and verified. It contains schema, rule templates and storage configuration, with no production customers or financial records. See HOSTED-PREVIEW.md for current status and remaining credentials.
 2. Restore the reviewed Classic **schema only** into that project, then apply the exact reviewed `forward-candidate.sql`. Do not run the entire historical migration directory against the live database: production already has an untracked schema. Reconcile any drift first.
 3. Configure Vercel from `.env.hosted.example`. All `VITE_` values are public. Database credentials, the privileged Supabase key, database root CA, Login Code HMAC secret and worker secret belong only in Vercel server environment settings. Use different secrets for preview and production. Never import local environment files.
 4. Enable the standard Supabase Custom Access Token hook: `mobile_private.login_access_token`. This rejects fresh sign-ins to a locked account while preserving refreshes for existing work. The app endpoint counts failed password attempts. The optional Password Verification hook counts direct Auth password attempts too, but currently requires Team/Enterprise and is **not** a prerequisite for this Free/Pro-compatible implementation. Without it, failed password attempts made outside the app endpoint are not included in the app's five-attempt counter. Verify this limitation before release.

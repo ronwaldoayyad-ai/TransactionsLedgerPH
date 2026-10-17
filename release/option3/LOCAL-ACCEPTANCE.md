@@ -40,7 +40,7 @@ These are observed browser interactions, not inferred from compilation. Tests us
 
 ## Remaining gates
 
-1. The user supplied isolated Supabase project `lzprybrxhwktfxqvsbjk`; current connector calls were denied permission. No schema or accounts were created in it. Access must be granted before hosted preparation.
+1. Access to isolated Supabase project `lzprybrxhwktfxqvsbjk` is restored. The schema and storage baseline are now installed and checked; no production records were copied and no test Auth accounts exist yet. See HOSTED-PREVIEW.md for the latest hosted checks.
 2. Vercel connection is not yet confirmed. No hosted function build, Linux native dependency package, TLS database session, hosted cookie, Auth hook or pg_net/Cron delivery has passed acceptance yet.
 3. Capture and rehearse a current full production recovery set, including Auth configuration/users and Storage objects. The source tag/archive and schema-only rehearsal do not satisfy this requirement.
 4. Verify live schema drift against the candidate, freeze an independent public Classic deployment, then run the documented hosted acceptance matrix and pilot recovery tests.
