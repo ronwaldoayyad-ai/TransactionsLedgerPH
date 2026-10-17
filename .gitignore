@@ -41,3 +41,4 @@ test-results/
 .npm-cache/
 
 supabase/.temp/
+.vercel
