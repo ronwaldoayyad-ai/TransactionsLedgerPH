@@ -12,7 +12,11 @@ exports.patchClassicRecovery=(code,id)=>{
   const limit=profileEnd>profileStart?profileEnd:code.indexOf('export const mapTransaction =');
   if(profileStart<0||limit<=profileStart)throw Error('Unrecognized Classic profile layout.');
   const profile=replaceRequired(code.slice(profileStart,limit),'status: r.status,','status: r.status, creditBalance: num(r.credit_balance),');
-  return "import {transactionAmounts} from 'virtual:classic-accounting-reader';\n"+code.slice(0,profileStart)+profile+code.slice(limit);
+  code=code.slice(0,profileStart)+profile+code.slice(limit);
+  const paymentStart=code.indexOf('export const mapPayment ='),paymentEnd=code.indexOf('export const mapPaymentLog =');
+  const paymentLimit=paymentEnd>paymentStart?paymentEnd:code.length;
+  const payment=replaceRequired(code.slice(paymentStart,paymentLimit),'status: r.status,',"status: r.retracted_at ? 'withdrawn' : r.status,");
+  return "import {transactionAmounts} from 'virtual:classic-accounting-reader';\n"+code.slice(0,paymentStart)+payment+code.slice(paymentLimit);
  }
  if(id.endsWith('/src/supabaseClient.js')){
   const reader=`async function classicRecoveryFetch(input,init){
@@ -41,5 +45,6 @@ exports.patchClassicRecovery=(code,id)=>{
   code=replaceRequired(code,'transactions.reduce((s, t) => s + t.amount, 0)','transactions.reduce((s, t) => s + (t.originalAmount ?? t.amount), 0)');
   return code.replaceAll('formatPeso(t.amount)','formatPeso(t.originalAmount ?? t.amount)');
  }
+ if(id.endsWith('/src/components/PaymentList.jsx'))return replaceRequired(code,'  const { users, loans, reviewPayment, getProofUrl, deletePayment } = useApp()', '  canReview = false;\n  const { users, loans, reviewPayment, getProofUrl, deletePayment } = useApp()');
  return code;
 };
