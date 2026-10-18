@@ -39,8 +39,8 @@ export default function PaymentAllocationDialog({proof,borrower,transactions,onS
       <Field label="Lender note (optional)" htmlFor="posting-note"><textarea id="posting-note" maxLength={2000} value={note} onChange={e=>setNote(e.target.value)} rows={2} className={inputClass}/></Field>
     </fieldset>
     {review&&<dl className="my-4 grid grid-cols-2 gap-2 rounded-xl border border-blue-100 bg-blue-50 p-3 text-sm"><dt>Apply to dues</dt><dd className="text-right font-mono">{formatPeso(review.allocatedCents/100)}</dd><dt>Use prior credit</dt><dd className="text-right font-mono">{formatPeso(review.creditUsedCents/100)}</dd><dt>Add to credit</dt><dd className="text-right font-mono">{formatPeso(review.creditAddedCents/100)}</dd><dt>Credit after posting</dt><dd className="text-right font-mono font-semibold">{formatPeso(review.creditAfterCents/100)}</dd></dl>}
-    {(error||validation)&&<p role="alert" className="my-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error||validation}</p>}
+    {creditOnly&&!Object.keys(amounts).length&&!error?<p className="my-3 text-sm text-slate-600">Select a due and enter how much credit to apply.</p>:(error||validation)&&<p role="alert" className="my-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error||validation}</p>}
     {frozen&&error&&<p className="mb-3 text-xs text-slate-600">Retry uses the same review to prevent duplicates. If the balances changed, close this window, refresh records and review again.</p>}
-    <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={confirmed} disabled={busy||frozen} onChange={e=>setConfirmed(e.target.checked)} className="mt-1"/>I verified the proof and every allocation, including any credit retained or used.</label>
+    <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={confirmed} disabled={busy||frozen} onChange={e=>setConfirmed(e.target.checked)} className="mt-1"/>{creditOnly?'I reviewed every allocation and the account credit to use.':'I verified the proof and every allocation, including any credit retained or used.'}</label>
   </Modal>
 }

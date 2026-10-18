@@ -138,8 +138,8 @@ export default function UserDashboard() {
   // Totals split by transaction type (across all of the borrower's records).
   const straightTxns = myTxns.filter((t) => t.type === 'Straight')
   const installmentTxns = myTxns.filter((t) => t.type === 'Installment')
-  const straightTotal = straightTxns.reduce((s, t) => s + t.amount, 0)
-  const installmentTotal = installmentTxns.reduce((s, t) => s + t.amount, 0)
+  const straightTotal = straightTxns.reduce((s, t) => s + (t.originalAmount ?? t.amount), 0)
+  const installmentTotal = installmentTxns.reduce((s, t) => s + (t.originalAmount ?? t.amount), 0)
 
   // Clickable tiles: pre-seed the destination page's persisted filters (read on
   // mount by usePersistedState), then navigate.

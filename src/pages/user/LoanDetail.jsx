@@ -90,8 +90,8 @@ export default function LoanDetail() {
       `NET PROCEEDS: ${formatPeso(d.netProceeds)}`,
       '',
       'AMORTIZATION SCHEDULE',
-      ...loanTxns.map((t) => `${t.n}. ${formatDate(t.dueDate)} — ${formatPeso(t.amount)}`),
-      `TOTAL REPAYABLE: ${formatPeso(loanTxns.reduce((s, t) => s + t.amount, 0))}`,
+      ...loanTxns.map((t) => `${t.n}. ${formatDate(t.dueDate)} — ${formatPeso(t.originalAmount ?? t.amount)}`),
+      `TOTAL REPAYABLE: ${formatPeso(loanTxns.reduce((s, t) => s + (t.originalAmount ?? t.amount), 0))}`,
     ]
     const subject = `Loan Disclosure Statement — ${loan.label}`
     const to = borrower.email ?? ''

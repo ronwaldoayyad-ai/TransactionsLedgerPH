@@ -4,4 +4,7 @@ export function collectionEntries(transactions,postings=[]) {
   return [...legacy,...cash]
 }
 
-export function postingFigures() { throw Error('Posting history figures are not implemented.') }
+export function postingFigures(posting) {
+  const sign=posting.reversal_of?-1:1
+  return {cash:sign*Number(posting.cash_amount)||0,allocated:sign*Number(posting.allocated_amount)||0,creditChange:sign*(Number(posting.credit_added)-Number(posting.credit_used))||0}
+}

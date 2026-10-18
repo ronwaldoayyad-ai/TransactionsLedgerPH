@@ -1608,4 +1608,9 @@ language sql security invoker set search_path='' as $$select case
  else mobile_private.action(p_action,p_payload) end$$;
 notify pgrst,'reload schema';
 
+-- 20261018120945_accounting_lookup_index.sql
+-- New accounting table: ownership reads and FK checks share this index.
+
+create index payment_allocations_user on public.payment_allocations(user_id,posting_id);
+
 commit;

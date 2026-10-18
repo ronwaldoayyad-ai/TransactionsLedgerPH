@@ -9,6 +9,7 @@ import Pagination from '../../components/Pagination'
 import { usePagination } from '../../hooks/usePagination'
 import { formatDate, formatPeso, toISODate } from '../../lib/amortization'
 import PaymentAllocationDialog from '../../components/PaymentAllocationDialog'
+import {postingFigures} from '../../lib/paymentCollections'
 import {
   PAY_LOG_METHODS,
   PAY_LOG_STATUSES,
@@ -56,8 +57,10 @@ export default function PaymentLogs() {
   const [reversing,setReversing]=useState(null),[reverseReason,setReverseReason]=useState(''),[reverseConfirmed,setReverseConfirmed]=useState(false),[reverseError,setReverseError]=useState('')
   const openReversal=posting=>{setReversing({posting,key:crypto.randomUUID(),credit:users.find(u=>u.id===posting.user_id)?.creditBalance??0});setReverseReason('');setReverseConfirmed(false);setReverseError('')}
   const submitReversal=async()=>{setSaving(true);const r=await reversePayment({key:reversing.key,id:reversing.posting.id,reviewed:true,expectedCredit:String(reversing.credit),reason:reverseReason});setSaving(false);if(r.error)setReverseError(r.error);else setReversing(null)}
-  const postingFor=log=>paymentPostings.find(p=>p.id===log.sourcePostingId)
-  const canReverse=posting=>posting&&!posting.reversal_of&&!paymentPostings.some(p=>p.reversal_of===posting.id)
+  const postingsById=useMemo(()=>new Map(paymentPostings.map(p=>[p.id,p])),[paymentPostings])
+  const reversedIds=useMemo(()=>new Set(paymentPostings.filter(p=>p.reversal_of).map(p=>p.reversal_of)),[paymentPostings])
+  const postingFor=log=>postingsById.get(log.sourcePostingId)
+  const canReverse=posting=>posting&&!posting.reversal_of&&!reversedIds.has(posting.id)
   const blank = {
     userId: '',
     txnDate: today,
@@ -166,7 +169,7 @@ export default function PaymentLogs() {
     setOpen(false)
   }
 
-  const rows = useMemo(() => {
+  const allRows = useMemo(() => {
     const q = query.trim().toLowerCase()
     // Only acknowledgement rows — there are no "carried forward" entries.
     const list = paymentLogs.filter((l) => {
@@ -186,6 +189,11 @@ export default function PaymentLogs() {
     })
     return [...list].sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')))
   }, [paymentLogs, borrowerSel, statusSel, query, users])
+
+  const rows=allRows.filter(l=>!l.sourcePostingId)
+  const postedRows=allRows.filter(l=>postingFor(l))
+  const postedPag=usePagination(postedRows,10)
+  const shownCash=postedRows.reduce((sum,l)=>sum+postingFigures(postingFor(l)).cash,0)
 
   const pag = usePagination(rows, 10)
 
@@ -210,7 +218,7 @@ export default function PaymentLogs() {
         action={
           <div className="flex flex-wrap gap-2">
             <RefreshButton />
-            <Button variant="secondary" onClick={()=>setCreditPicker(true)}>Apply account credit</Button>
+            <Button variant="secondary" onClick={()=>{setCreditBorrower('');setCreditPicker(true)}}>Apply account credit</Button>
             <Button variant="gold" onClick={openForm}>
               <Icon name="plus" className="h-4 w-4" />
               Manual acknowledgement
@@ -219,9 +227,21 @@ export default function PaymentLogs() {
         }
       />
 
+      <Card className="mb-5">
+        <CardHeader title="Posted payments & account credit" subtitle={`Net cash in shown entries: ${formatPeso(shownCash)} · ${postedRows.length} accounting entries`}/>
+        <p className="px-5 pb-3 text-xs text-slate-500">Cash received, amounts applied to dues and credit changes are shown separately. Reversals retain the original entry. Receipt balances are snapshots and are not added together.</p>
+        {postedRows.length===0?<EmptyState title="No reviewed postings" body="Approved allocations, credit applications and reversals will appear here."/>:<div className="divide-y divide-slate-100">{postedPag.pageItems.map(l=>{const posting=postingFor(l),figures=postingFigures(posting),reversed=reversedIds.has(posting.id);return <article key={l.id} className="px-5 py-4">
+          <div className="flex flex-wrap items-start justify-between gap-2"><div className="min-w-0"><p className="font-medium text-slate-900">{nameOf(l.userId)}</p><p className="mt-1 break-all text-xs text-slate-500">{formatDate(l.txnDate)} · {l.reference}</p></div><span className={`rounded-full px-2 py-1 text-xs font-semibold ${posting.reversal_of||reversed?'bg-slate-100 text-slate-600':'bg-blue-50 text-blue-700'}`}>{posting.reversal_of?'Reversal':reversed?'Reversed':posting.cash_amount>0?'Payment posted':'Credit applied'}</span></div>
+          <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 rounded-xl bg-slate-50 p-3 text-sm"><dt>Cash received</dt><dd className="text-right font-mono">{formatPeso(figures.cash)}</dd><dt>Applied to dues</dt><dd className="text-right font-mono">{formatPeso(figures.allocated)}</dd><dt>Credit change</dt><dd className="text-right font-mono">{formatPeso(figures.creditChange)}</dd></dl>
+          {posting.note&&<p className="mt-2 break-words text-xs text-slate-600">{posting.note}</p>}
+          {canReverse(posting)&&<div className="mt-3 flex justify-end"><Button variant="danger" onClick={()=>openReversal(posting)}>Review reversal</Button></div>}
+        </article>})}</div>}
+        {postedRows.length>0&&<Pagination page={postedPag.page} pageCount={postedPag.pageCount} pageSize={postedPag.pageSize} total={postedPag.total} start={postedPag.start} end={postedPag.end} onPageChange={postedPag.setPage} onPageSizeChange={postedPag.setPageSize} itemLabel="accounting entries"/>}
+      </Card>
+
       <Card>
         <CardHeader
-          title="Recorded payments"
+          title="Manual acknowledgements"
           subtitle={`${rows.filter((r) => r.kind === 'payment').length} payment${rows.filter((r) => r.kind === 'payment').length === 1 ? '' : 's'} logged`}
           action={
             <div className="flex flex-wrap items-center gap-2">
@@ -255,9 +275,9 @@ export default function PaymentLogs() {
             icon="scroll"
             title="No payment logs found"
             body={
-              paymentLogs.some((l) => l.kind === 'payment')
+              paymentLogs.some((l) => l.kind === 'payment'&&!l.sourcePostingId)
                 ? 'No logs match your search or status filter.'
-                : 'Use Record Payment to acknowledge a payment received from a borrower.'
+                : 'Historical and manually recorded acknowledgements appear here. Reviewed postings are shown above.'
             }
           />
         ) : (
@@ -323,7 +343,7 @@ export default function PaymentLogs() {
             })}
             <div className="flex items-center justify-between border-t-2 border-slate-200 bg-navy-50/70 px-3 py-3 text-[11px] font-semibold text-navy-900">
               <span>Totals ({rows.length} payment{rows.length === 1 ? '' : 's'})</span>
-              <span className="font-mono">{formatPeso(totals.remaining)}</span>
+              <span className="text-xs">Receipt snapshots</span>
             </div>
           </div>
 
@@ -399,9 +419,9 @@ export default function PaymentLogs() {
                   <td className="px-3 py-2" colSpan={5}>
                     Totals ({rows.length} payment{rows.length === 1 ? '' : 's'})
                   </td>
-                  <td className="px-3 py-2 text-right font-mono">{formatPeso(totals.amountOwed)}</td>
+                  <td className="px-3 py-2 text-right font-mono">—</td>
                   <td className="px-3 py-2 text-right font-mono">{formatPeso(totals.fundsApplied)}</td>
-                  <td className="px-3 py-2 text-right font-mono">{formatPeso(totals.remaining)}</td>
+                  <td className="px-3 py-2 text-right font-mono">—</td>
                   <td className="px-3 py-2" colSpan={2} />
                 </tr>
               </tfoot>
@@ -424,7 +444,7 @@ export default function PaymentLogs() {
         )}
       </Card>
 
-      <Modal open={creditPicker} title="Choose a borrower for account credit" onClose={()=>setCreditPicker(false)} footer={<Button disabled={!creditBorrower} onClick={()=>{setCreditReview(borrowers.find(b=>b.id===creditBorrower));setCreditPicker(false)}}>Review allocation</Button>}>
+      <Modal open={creditPicker} title="Choose a borrower for account credit" onClose={()=>setCreditPicker(false)} footer={<Button disabled={!borrowers.some(b=>b.id===creditBorrower&&b.creditBalance>0)} onClick={()=>{setCreditReview(borrowers.find(b=>b.id===creditBorrower));setCreditPicker(false)}}>Review allocation</Button>}>
         <Field label="Borrower" htmlFor="credit-borrower"><select id="credit-borrower" value={creditBorrower} onChange={e=>setCreditBorrower(e.target.value)} className={inputClass}><option value="">Select borrower</option>{borrowers.filter(b=>b.creditBalance>0).map(b=><option key={b.id} value={b.id}>{b.name} · {formatPeso(b.creditBalance)} credit</option>)}</select></Field>
         {!borrowers.some(b=>b.creditBalance>0)&&<p className="mt-3 text-sm text-slate-500">No borrower currently has unapplied account credit.</p>}
       </Modal>

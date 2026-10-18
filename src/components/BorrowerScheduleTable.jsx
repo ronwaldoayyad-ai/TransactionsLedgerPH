@@ -35,7 +35,7 @@ export default function BorrowerScheduleTable({
   pageSize = 0, // 0 = show all; >0 paginates rows while the footer keeps full totals
 }) {
   const today = toISODate(new Date())
-  const total = transactions.reduce((s, t) => s + t.amount, 0)
+  const total = transactions.reduce((s, t) => s + (t.originalAmount ?? t.amount), 0)
   const colCount = 2 + (showTxnDate ? 1 : 0) + 2 // # + desc + [txn] + due + paid, before amount
   const paginate = pageSize > 0
   const pag = usePagination(transactions, paginate ? pageSize : 1)
@@ -63,6 +63,7 @@ export default function BorrowerScheduleTable({
               <span className="font-mono text-xs font-medium text-slate-500">#{t.n}</span>
               <select
                 value={t.status}
+                disabled={t.paidAmount>0}
                 onChange={(e) => onUpdate(t.id, { status: e.target.value })}
                 aria-label={`Status for installment ${t.n}`}
                 className={`${inputClass} !min-h-8 !w-32 !px-2 !py-1 !text-xs`}
@@ -116,6 +117,7 @@ export default function BorrowerScheduleTable({
                 <EditCell
                   type="date"
                   value={t.datePaid ?? ''}
+                  disabled={t.paidAmount>0}
                   onCommit={(v) => onUpdate(t.id, { datePaid: v || null })}
                   className="!w-full"
                 />
@@ -126,7 +128,8 @@ export default function BorrowerScheduleTable({
                 </span>
                 <EditCell
                   type="number"
-                  value={t.amount}
+                  value={t.originalAmount ?? t.amount}
+                  disabled={t.paidAmount>0}
                   onCommit={(v) => onUpdate(t.id, { amount: Number(v) || 0 })}
                   className="!w-full !text-right"
                   step="0.01"
@@ -140,13 +143,14 @@ export default function BorrowerScheduleTable({
             <span className="w-6 shrink-0 font-mono text-xs text-slate-400">{t.n}</span>
             <div className="min-w-0 flex-1">
               <p className="truncate text-[13px] font-medium text-slate-800">{t.description}</p>
+              {t.paidAmount>0&&t.remainingAmount>0&&<p className="mt-1 text-xs text-blue-700">Applied {formatPeso(t.paidAmount)} · Remaining {formatPeso(t.remainingAmount)}</p>}
               <p className="mt-0.5 text-[11px] leading-snug text-slate-500">
                 {showTxnDate ? `Txn ${formatDate(t.txnDate)} · ` : ''}Due {formatDate(t.dueDate)}
                 {t.datePaid ? ` · Paid ${formatDate(t.datePaid)}` : ''}
               </p>
             </div>
             <div className="flex shrink-0 flex-col items-end gap-1">
-              <span className="font-mono text-[13px] font-semibold text-slate-900">{formatPeso(t.amount)}</span>
+              <span className="font-mono text-[13px] font-semibold text-slate-900">{formatPeso(t.originalAmount ?? t.amount)}</span>
               <Badge status={status}>{BORROWER_STATUS_LABELS[status]}</Badge>
             </div>
           </div>
@@ -195,6 +199,7 @@ export default function BorrowerScheduleTable({
                   ) : (
                     t.description
                   )}
+                  {t.paidAmount>0&&t.remainingAmount>0&&<small className="mt-1 block text-blue-700">Applied {formatPeso(t.paidAmount)} · Remaining {formatPeso(t.remainingAmount)}</small>}
                 </td>
                 {showTxnDate && (
                   <td className="px-4 py-2.5 text-slate-700">
@@ -217,6 +222,7 @@ export default function BorrowerScheduleTable({
                     <EditCell
                       type="date"
                       value={t.datePaid ?? ''}
+                      disabled={t.paidAmount>0}
                       onCommit={(v) => onUpdate(t.id, { datePaid: v || null })}
                     />
                   ) : t.datePaid ? (
@@ -229,20 +235,22 @@ export default function BorrowerScheduleTable({
                   {editable ? (
                     <EditCell
                       type="number"
-                      value={t.amount}
+                      value={t.originalAmount ?? t.amount}
+                      disabled={t.paidAmount>0}
                       onCommit={(v) => onUpdate(t.id, { amount: Number(v) || 0 })}
                       className="!text-right"
                       step="0.01"
                       min="0"
                     />
                   ) : (
-                    formatPeso(t.amount)
+                    formatPeso(t.originalAmount ?? t.amount)
                   )}
                 </td>
                 <td className="px-4 py-2.5">
                   {editable ? (
                     <select
                       value={t.status}
+                      disabled={t.paidAmount>0}
                       onChange={(e) => onUpdate(t.id, { status: e.target.value })}
                       aria-label={`Status for installment ${t.n}`}
                       className={`${inputClass} !min-h-8 !w-28 !px-2 !py-1 !text-xs`}
