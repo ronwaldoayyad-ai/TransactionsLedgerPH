@@ -58,7 +58,7 @@ export default function BorrowerScheduleTable({
         const status = borrowerStatus(t, today)
         const tint = tintFor(t, status)
         return editable ? (
-          <div key={t.id} className={`space-y-2.5 border-b border-slate-100 px-3 py-3 ${tint}`}>
+          <div key={t.id} data-fee-kind={t.feeKind||undefined} className={`space-y-2.5 border-b border-slate-100 px-3 py-3 ${tint}`}>
             <div className="flex items-center justify-between gap-2">
               <span className="font-mono text-xs font-medium text-slate-500">#{t.n}</span>
               <select
@@ -139,7 +139,7 @@ export default function BorrowerScheduleTable({
             </div>
           </div>
         ) : (
-          <div key={t.id} className={`flex items-center gap-3 border-b border-slate-100 px-3 py-3 ${tint}`}>
+          <div key={t.id} data-fee-kind={t.feeKind||undefined} className={`flex items-center gap-3 border-b border-slate-100 px-3 py-3 ${tint}`}>
             <span className="w-6 shrink-0 font-mono text-xs text-slate-400">{t.n}</span>
             <div className="min-w-0 flex-1">
               <p className="truncate text-[13px] font-medium text-slate-800">{t.description}</p>
@@ -184,6 +184,7 @@ export default function BorrowerScheduleTable({
             return (
               <tr
                 key={t.id}
+                data-fee-kind={t.feeKind||undefined}
                 className={`border-b border-slate-100 transition-colors duration-150 ${
                   t.amount < 0 || status === 'paid'
                     ? 'bg-emerald-50/70 hover:bg-emerald-50'

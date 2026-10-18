@@ -190,11 +190,12 @@ export function FloatingInput({ id, label, type = 'text', className = '', ...pro
 }
 
 // Modern iOS-style toggle. Knob slides with a transform (GPU, 200ms ease-out).
-export function Switch({ checked, onChange, label }) {
+export function Switch({ checked, onChange, label, disabled = false }) {
   return (
     <button
       type="button"
       role="switch"
+      disabled={disabled}
       aria-checked={checked}
       aria-label={label}
       onClick={() => onChange(!checked)}

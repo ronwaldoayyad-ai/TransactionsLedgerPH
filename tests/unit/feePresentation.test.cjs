@@ -1,0 +1,10 @@
+const {test}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const record={id:'fee-1',description:'3% Finance Charge <img>',feeKind:'finance_charge',feeAssessmentId:'assessment',amount:30,dueDate:'2026-10-20',txnDate:'2026-10-19',status:'unpaid'};
+function load(){const c=vm.createContext({stagingData:{transactions:[record]},stagingRows(){return this.stagingData.transactions},htmlSafe:s=>String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;'),transactionItem:(icon,title,sub,amount,color,kind,status,classes)=>'<article class="'+classes+'">'+title+' '+amount+' '+status+'</article>',stagingStatus:r=>r.status,stagingDate:s=>s,history:()=>'<h1>History</h1>',insertCreditActivity:(html,section)=>html+section,expandableRowsHTML:(key,rows)=>rows.join(''),page:'login',hf:'All',preferredLanguage:'English',render(){}});c.stagingRows=()=>c.stagingData.transactions;vm.runInContext(fs.readFileSync('public/v41224-fee-entries.js','utf8'),c);return c;}
+test('persisted fee metadata adds red styling and one escaped History entry',()=>{
+ const c=load(),html=c.history();assert.match(html,/assessed-fee-entry/);assert.match(html,/&lt;img&gt;/);assert.equal((html.match(/data-fee-ledger-id/g)||[]).length,1);assert.doesNotMatch(html,/<img/);
+ c.hf='Fees';assert.match(c.history(),/data-fee-ledger-id/);c.hf='Payments';assert.doesNotMatch(c.history(),/data-fee-ledger-id/);
+})
+test('ordinary transaction titles do not become fees and new snapshots invalidate the metadata cache',()=>{
+ const c=load();assert.equal(c.isAssessedFeeTitle('Unrelated payment'),false);assert.equal(c.isAssessedFeeTitle('3% Finance Charge &lt;img&gt;'),true);c.stagingData={transactions:[{...record,feeKind:null,feeAssessmentId:null}]};assert.equal(c.isAssessedFeeTitle('3% Finance Charge &lt;img&gt;'),false);assert.doesNotMatch(c.history(),/data-fee-ledger-id/);
+})

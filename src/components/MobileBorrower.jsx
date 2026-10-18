@@ -37,7 +37,7 @@ function LedgerRows({ rows, limit = 8 }) {
   const [shown,setShown] = useState(limit)
   const today = toISODate(new Date())
   if (!rows.length) return <p className="mb-empty">No records to show.</p>
-  return <><div className="mb-records">{rows.slice(0,shown).map(t => <Link key={t.id} className="mb-record" to={t.loanId ? `/portal/loans/${encodeURIComponent(t.loanId)}` : '/portal/straight'}>
+  return <><div className="mb-records">{rows.slice(0,shown).map(t => <Link key={t.id} data-fee-kind={t.feeKind||undefined} className="mb-record" to={t.loanId ? `/portal/loans/${encodeURIComponent(t.loanId)}` : '/portal/straight'}>
     <span className="mb-record-icon">{t.type === 'Straight' ? '↔' : '▤'}</span><span><b>{t.description}</b><small>{formatDate(t.dueDate)} · {BORROWER_STATUS_LABELS[borrowerStatus(t,today)] || t.status}</small></span><strong>{formatPeso(t.amount)}</strong>
   </Link>)}</div>{shown < rows.length && <button className="mb-link" onClick={() => setShown(n => n+20)}>Show more ({rows.length-shown})</button>}</>
 }

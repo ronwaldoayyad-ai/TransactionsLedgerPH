@@ -943,6 +943,7 @@ export function AppProvider({ children }) {
   const setTransactionStatus = useCallback(
     (ids, status) => {
       const idSet = new Set(ids)
+      if(transactions.some(t=>idSet.has(t.id)&&t.feeAssessmentId)){reportDbError?.('Use payment review to settle assessed fees, or Loan fees & billing to void them.');return false}
       if(transactions.some(t=>idSet.has(t.id)&&t.paidAmount>0)){reportDbError?.('Use a reviewed reversal to change the status of an allocated due.');return false}
       const today = toISODate(new Date())
       const resultingDatePaid = (t) =>
@@ -986,6 +987,7 @@ export function AppProvider({ children }) {
   const archiveTransactions = useCallback(
     (ids) => {
       const idSet = new Set(ids)
+      if(transactions.some(t=>idSet.has(t.id)&&t.feeAssessmentId)){reportDbError?.('Assessed fees remain in the ledger. Void an unpaid assessment in Loan fees & billing.');return false}
       if(transactions.some(t=>idSet.has(t.id)&&t.paidAmount>0&&['unpaid','past_due'].includes(t.status))){reportDbError?.('An allocated due with an unpaid remainder cannot be archived.');return false}
       const archivedAt = toISODate(new Date())
       if (isLive) {
@@ -1205,6 +1207,7 @@ export function AppProvider({ children }) {
     (id, patch) => {
       const current = transactions.find((t) => t.id === id)
       if (!current) return
+        if(current.feeAssessmentId){reportDbError?.('Use Loan fees & billing to manage assessed fees.');return false}
       if(current.paidAmount>0&&['amount','status','datePaid','loanId','userId'].some(key=>Object.hasOwn(patch,key))){reportDbError?.('Use a reviewed reversal before changing an allocated due’s financial details.');return false}
       const next = { ...current, ...patch }
       if(Object.hasOwn(patch,'amount'))next.originalAmount=patch.amount
@@ -1247,9 +1250,10 @@ export function AppProvider({ children }) {
   // row's new description to Supabase in parallel. Returns the number applied.
   const replaceTransactionDescriptions = useCallback(
     (edits) => {
+      const feeIds=new Set(transactions.filter(t=>t.feeAssessmentId).map(t=>t.id))
       const map = new Map(
         (edits ?? [])
-          .filter((e) => e && e.id && typeof e.description === 'string' && e.description.trim())
+          .filter((e) => e && e.id && !feeIds.has(e.id) && typeof e.description === 'string' && e.description.trim())
           .map((e) => [e.id, e.description.trim()]),
       )
       if (map.size === 0) return 0

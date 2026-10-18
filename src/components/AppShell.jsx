@@ -45,6 +45,7 @@ const adminNav = [
     title: 'Loans',
     items: [
       { to: '/admin/calculator', label: 'Loan Calculator', icon: 'calculator' },
+      { to: '/admin/fee-manager', label: 'Loan fees & billing', icon: 'calculator' },
       { to: '/admin/loan-requests', label: 'Loan Requests', icon: 'file' },
       { to: '/admin/loan-tracker', label: 'Loan Tracker', icon: 'wallet' },
     ],

@@ -39,6 +39,8 @@ const PortfolioDetail = lazy(() => import('./pages/admin/AdminDashboard'))
 const AdminSupport = lazy(() => import('./pages/admin/Support'))
 const Transactions = lazy(() => import('./pages/admin/Transactions'))
 const Calculator = lazy(() => import('./pages/admin/Calculator'))
+const LoanFeeManager = lazy(() => import('./pages/admin/LoanFeeManager'))
+import './components/fee-entries.css'
 const Queue = lazy(() => import('./pages/admin/Queue'))
 const Users = lazy(() => import('./pages/admin/Users'))
 const Logs = lazy(() => import('./pages/admin/Logs'))
@@ -142,6 +144,7 @@ export default function App() {
           <Route path="/admin/transactions" element={<Protected role="admin"><Transactions /></Protected>} />
           <Route path="/admin/payment-due" element={<Protected role="admin"><PaymentDue /></Protected>} />
           <Route path="/admin/calculator" element={<Protected role="admin"><Calculator /></Protected>} />
+          <Route path="/admin/fee-manager" element={<Protected role="admin"><LoanFeeManager /></Protected>} />
           <Route path="/admin/queue" element={<Protected role="admin"><Queue /></Protected>} />
           <Route path="/admin/users" element={<Protected role="admin"><Users /></Protected>} />
           <Route path="/admin/payment-logs" element={<Protected role="admin"><PaymentLogs /></Protected>} />

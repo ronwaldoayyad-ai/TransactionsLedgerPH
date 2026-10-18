@@ -262,13 +262,13 @@ test('proof storage and verified submissions cap new files at 5 MB even when an 
  }finally{await release(f)}
 });
 
-async function feePayload(f,patch={}){const date=(await f.client.query("select to_char(due_date,'YYYY-MM-DD') as day from public.transactions where id=$1",[f.due])).rows[0].day;return {key:crypto.randomUUID(),borrowerId:f.borrower,sourceDueDate:date,chargeDueDate:date,financeEnabled:true,rate:'3',lateEnabled:true,lateAmount:'1500',reviewed:true,selections:[{id:f.due,expectedBalance:'1000'}],...patch}}
+async function feePayload(f,patch={}){const dates=(await f.client.query("select to_char(due_date,'YYYY-MM-DD') as day,to_char(now() at time zone 'Asia/Manila','YYYY-MM-01') as cycle from public.transactions where id=$1",[f.due])).rows[0];return {key:crypto.randomUUID(),borrowerId:f.borrower,assessmentMonth:dates.cycle,sourceDueDate:dates.day,chargeDueDate:dates.day,financeEnabled:true,rate:'3',lateEnabled:true,lateAmount:'1500',reviewed:true,selections:[{id:f.due,expectedBalance:'1000'}],...patch}}
 const assessFee=async(f,payload)=>((await f.client.query("select public.mobile_action('fee-assess',$1) result",[payload])).rows[0].result)
 
 test('fee assessment posts both positive fee dues atomically with immutable calculation snapshots',async()=>{
  const f=await fixture();try{const p=await feePayload(f),result=await assessFee(f,p);assert.equal(Number(result.total),1530);
  const rows=(await f.client.query('select * from public.transactions where fee_assessment_id=$1 order by fee_kind',[result.id])).rows;
- assert.equal(rows.length,2);assert.deepEqual(rows.map(r=>Number(r.amount)),[30,1500]);assert.ok(rows.every(r=>r.type==='Straight'&&!r.loan_id&&r.user_id===f.borrower));assert.match(rows[0].description,/3% Finance Charge.*₱1,000.00/);assert.equal(rows[0].due_date.toISOString().slice(0,10),p.chargeDueDate);
+ assert.equal(rows.length,2);assert.deepEqual(rows.map(r=>Number(r.amount)),[30,1500]);assert.ok(rows.every(r=>r.type==='Straight'&&!r.loan_id&&r.user_id===f.borrower));assert.match(rows[0].description,/3% Finance Charge.*₱1,000.00/);assert.equal((await f.client.query("select to_char(due_date,'YYYY-MM-DD') as day from public.transactions where id=$1",[rows[0].id])).rows[0].day,p.chargeDueDate);
  const header=(await f.client.query('select * from public.fee_assessments where id=$1',[result.id])).rows[0];assert.equal(Number(header.base_amount),1000);assert.equal(header.source_rows[0].id,f.due);
  assert.equal(Number((await f.client.query('select amount from public.transactions where id=$1',[f.due])).rows[0].amount),1000);
  }finally{await release(f)}
@@ -280,7 +280,7 @@ test('fee assessment retries are idempotent and a different key cannot assess th
 });
 test('fee calculation includes selected unpaid prior fees and uses only the remaining balance',async()=>{
  const f=await fixture();try{await f.client.query('reset role');await f.client.query('update public.transactions set amount_applied=400 where id=$1',[f.due]);
- const oldFee='legacy-fee-'+crypto.randomUUID();await f.client.query("insert into public.transactions(id,user_id,n,description,amount,type,txn_date,due_date) select $1,user_id,0,'Late Payment fee for earlier period',1500,'Straight',txn_date,due_date from public.transactions where id=$2",[oldFee,f.due]);await f.client.query('set local role authenticated');
+ const oldFee='legacy-fee-'+crypto.randomUUID();await f.client.query("insert into public.transactions(id,user_id,n,description,amount,type,txn_date,due_date) select $1,user_id,1,'Late Payment fee for earlier period',1500,'Straight',txn_date,due_date from public.transactions where id=$2",[oldFee,f.due]);await f.client.query('set local role authenticated');
  const result=await assessFee(f,await feePayload(f,{lateEnabled:false,lateAmount:'',selections:[{id:f.due,expectedBalance:'600'},{id:oldFee,expectedBalance:'1500'}]}));assert.equal(Number(result.base),2100);assert.equal(Number(result.finance),63);assert.equal(Number(result.late),0);
  }finally{await release(f)}
 });
@@ -306,4 +306,27 @@ test('assessed fees accept reviewed payments and cannot be voided after allocati
  await post(f,{allocations:[{id:fee,amount:'30',expectedBalance:'30'}]});assert.equal((await f.client.query('select status from public.transactions where id=$1',[fee])).rows[0].status,'paid');
  await assert.rejects(f.client.query("select public.mobile_action('fee-void',$1)",[{id:r.id,key:crypto.randomUUID(),reason:'Must reverse allocated payment first',reviewed:true}]),/payment|allocated/i);
  }finally{await release(f)}
+});
+
+test('two concurrent fee confirmations cannot charge the same borrower and month twice',async()=>{
+ const f=await fixture(),p=await feePayload(f);await f.client.query('commit');f.client.release();
+ const clients=await Promise.all([db.connect(),db.connect()]);
+ try{const results=await Promise.allSettled(clients.map(async c=>{try{await c.query('begin');await c.query("select set_config('request.jwt.claims',$1,true)",[JSON.stringify({sub:f.admin,role:'authenticated',session_id:f.sid})]);await c.query('set local role authenticated');const result=await c.query("select public.mobile_action('fee-assess',$1)",[{...p,key:crypto.randomUUID()}]);await c.query('commit');return result.rows}catch(e){await c.query('rollback');throw e}}));assert.equal(results.filter(r=>r.status==='fulfilled').length,1);assert.equal(results.filter(r=>r.status==='rejected'&&/already assessed/i.test(r.reason.message)).length,1);assert.equal(Number((await db.query('select count(*) n from public.fee_assessments where user_id=$1',[f.borrower])).rows[0].n),1)}finally{clients.forEach(c=>c.release())}
+});
+
+test('fee snapshots are private to their borrower and deny direct financial edits',async()=>{
+ const f=await fixture();try{const r=await assessFee(f,await feePayload(f));await f.client.query('reset role');await f.client.query("update public.profiles set role='user' where id=$1",[f.admin]);await f.client.query('set local role authenticated');assert.equal(Number((await f.client.query('select count(*) n from public.fee_assessments where id=$1',[r.id])).rows[0].n),0);}finally{await release(f)}
+ const other=await fixture();try{const r=await assessFee(other,await feePayload(other));await assert.rejects(other.client.query('update public.transactions set amount=1 where fee_assessment_id=$1',[r.id]),/fee manager|payment review/i);}finally{await release(other)}
+});
+
+test('a stale calendar cycle and invalid or empty fee requests fail without posting charges',async()=>{
+ for(const patch of [{assessmentMonth:'2000-01-01'},{financeEnabled:false,lateEnabled:false},{rate:'3.001'},{rate:'101'},{lateAmount:'-1'},{selections:[]},{selections:[{id:'missing',expectedBalance:'1000'}]}]){const f=await fixture();try{await assert.rejects(assessFee(f,await feePayload(f,patch)));}finally{await release(f)}}
+});
+
+test('a retry key cannot change its reviewed fees and a 100 percent description retains both zeros',async()=>{
+ const f=await fixture();try{const p=await feePayload(f,{rate:'100',lateEnabled:false}),r=await assessFee(f,p);assert.equal((await f.client.query('select description from public.transactions where fee_assessment_id=$1',[r.id])).rows[0].description.startsWith('100% Finance Charge'),true);await assert.rejects(assessFee(f,{...p,rate:'99'}),/retry details changed/i);}finally{await release(f)}
+});
+
+test('an older monthly assessment does not block a new reviewed calendar month',async()=>{
+ const f=await fixture();try{const p=await feePayload(f);await f.client.query('reset role');await f.client.query("insert into public.fee_assessments(user_id,actor_id,operation_key,source_due_date,assessment_month,charge_due_date,finance_enabled,finance_rate,late_enabled,base_amount,finance_amount,late_amount,total_amount,source_rows) values($1,$2,$3,$4,($5::date-interval '1 month')::date,$4,true,3,false,1000,30,0,30,'[]')",[f.borrower,f.admin,crypto.randomUUID(),p.sourceDueDate,p.assessmentMonth]);await f.client.query('set local role authenticated');const r=await assessFee(f,p);assert.equal(r.saved,true);assert.equal(Number((await f.client.query('select count(*) n from public.fee_assessments where user_id=$1',[f.borrower])).rows[0].n),2);}finally{await release(f)}
 });

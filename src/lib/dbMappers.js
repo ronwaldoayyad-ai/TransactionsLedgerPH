@@ -70,6 +70,8 @@ export const mapLoan = (r) => {
 export const mapTransaction = (r) => ({
   id: r.id,
   loanId: r.loan_id,
+  feeAssessmentId: r.fee_assessment_id ?? null,
+  feeKind: r.fee_kind ?? null,
   userId: r.user_id,
   n: r.n,
   description: r.description,

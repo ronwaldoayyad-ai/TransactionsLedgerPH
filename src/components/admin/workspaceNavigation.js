@@ -12,6 +12,7 @@ export const workspaceNavigation = [
   { title: 'Lending', items: [
     { to: '/admin/loan-requests', label: 'Loan requests', icon: 'file' },
     { to: '/admin/calculator', label: 'Loan calculator', icon: 'calculator' },
+    { to: '/admin/fee-manager', label: 'Loan fees & billing', icon: 'calculator' },
     { to: '/admin/loan-tracker', label: 'Loan tracker', icon: 'wallet' },
     { to: '/admin/disbursements', label: 'Disbursements', icon: 'send' },
     { to: '/admin/invoices', label: 'Invoices', icon: 'file' },

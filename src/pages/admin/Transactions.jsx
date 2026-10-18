@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
+import {useNavigate} from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
 import { usePersistedState } from '../../hooks/usePersistedState'
 import PaymentAdjustmentActivity from '../../components/PaymentAdjustmentActivity'
@@ -76,6 +77,7 @@ function computeReplacement(desc, { find, replace, mode, matchCase }) {
 // borrowers, filterable, with editable dates and single/bulk status updates.
 // Status written here is the same store the borrower views read from.
 export default function Transactions() {
+  const navigate=useNavigate()
   const {
     users, transactions, setTransactionStatus, updateTransaction, archiveTransactions,
     replaceTransactionDescriptions, importTransactions, importLoans,
@@ -187,8 +189,8 @@ export default function Transactions() {
   // filtered set, so paging never changes what an action applies to.
   const pag = usePagination(filtered, 15)
 
-  const filteredIds = filtered.map((t) => t.id)
-  const allSelected = filtered.length > 0 && filteredIds.every((id) => selected.has(id))
+  const filteredIds = filtered.filter(t=>!t.feeAssessmentId).map((t) => t.id)
+  const allSelected = filteredIds.length > 0 && filteredIds.every((id) => selected.has(id))
   const selectedInView = filteredIds.filter((id) => selected.has(id))
 
   const toggleAll = () => {
@@ -692,12 +694,13 @@ export default function Transactions() {
               return (
                 <button
                   key={t.id}
+                  data-fee-kind={t.feeKind||undefined}
                   type="button"
-                  onClick={() => setActionTxn(t)}
+                  onClick={() => t.feeAssessmentId ? navigate('/admin/fee-manager') : setActionTxn(t)}
                   className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50 active:bg-slate-100 ${
                     idx > 0 ? 'border-t border-slate-100' : 'border-t border-slate-200'
                   } ${
-                    t.amount < 0 || eff === 'paid' ? 'bg-emerald-50/50' : eff === 'past_due' ? 'bg-red-50/50' : ''
+                    t.amount < 0 || eff === 'paid' ? 'bg-emerald-50/50' : t.feeKind ? 'bg-red-50/50' : eff === 'past_due' ? 'bg-red-50/50' : ''
                   }`}
                 >
                   <div className="min-w-0 flex-1">
@@ -771,10 +774,11 @@ export default function Transactions() {
                   return (
                     <tr
                       key={t.id}
+                      data-fee-kind={t.feeKind||undefined}
                       className={`border-b border-slate-100 transition-colors duration-150 ${
                         t.amount < 0 || effective === 'paid'
                           ? 'bg-emerald-50/70 hover:bg-emerald-50'
-                          : isPastDue
+                          : t.feeKind || isPastDue
                             ? 'bg-red-50/70 hover:bg-red-50'
                             : selected.has(t.id)
                               ? 'bg-navy-50/60 hover:bg-navy-50/40'
@@ -786,6 +790,7 @@ export default function Transactions() {
                           type="checkbox"
                           checked={selected.has(t.id)}
                           onChange={() => toggleOne(t.id)}
+                          disabled={!!t.feeAssessmentId}
                           aria-label={`Select ${t.description} for ${nameOf(t.userId)}`}
                           className="h-4 w-4 cursor-pointer accent-[#1e3a8a]"
                         />
@@ -798,6 +803,7 @@ export default function Transactions() {
                           type="date"
                           value={t.txnDate}
                           onChange={(e) => updateTransaction(t.id, { txnDate: e.target.value })}
+                          disabled={!!t.feeAssessmentId}
                           aria-label={`Transaction date for ${t.description}`}
                           className={dateCellClass}
                         />
@@ -817,6 +823,7 @@ export default function Transactions() {
                           type="date"
                           value={t.dueDate}
                           onChange={(e) => updateTransaction(t.id, { dueDate: e.target.value })}
+                          disabled={!!t.feeAssessmentId}
                           aria-label={`Due date for ${t.description}`}
                           className={dateCellClass}
                         />
@@ -828,6 +835,7 @@ export default function Transactions() {
                           onChange={(e) =>
                             updateTransaction(t.id, { datePaid: e.target.value || null })
                           }
+                          disabled={!!t.feeAssessmentId}
                           aria-label={`Date paid for ${t.description}`}
                           className={dateCellClass}
                         />
@@ -841,6 +849,8 @@ export default function Transactions() {
                         </label>
                         <select
                           id={`action-${t.id}`}
+                          disabled={!!t.feeAssessmentId}
+                          title={t.feeAssessmentId?'Use payment review to settle fees, or Loan fees & billing to void an unpaid assessment.':undefined}
                           value={t.status}
                           onChange={(e) => setTransactionStatus([t.id], e.target.value)}
                           className={`${inputClass} !min-h-8 !w-[6.8rem] !px-1.5 !py-1 !text-[11px]`}
@@ -1256,6 +1266,8 @@ function DescriptionCell({ txn, onSave, className, inputId }) {
   return (
     <input
       id={inputId}
+      readOnly={!!txn.feeAssessmentId}
+      title={txn.feeAssessmentId?'Assessed fee · manage in Loan fees & billing':undefined}
       type="text"
       value={value}
       onChange={(e) => setValue(e.target.value)}

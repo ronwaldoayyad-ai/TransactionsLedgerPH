@@ -1,0 +1,3 @@
+[data-fee-kind] :is(td,input,p,strong,b,.amt),[data-fee-kind].mb-record{color:#b91c1c}
+[data-fee-kind].mb-record{background:#fff5f5}
+@media(prefers-color-scheme:dark){.dark [data-fee-kind] :is(td,input,p,strong,b,.amt){color:#fca5a5}}
