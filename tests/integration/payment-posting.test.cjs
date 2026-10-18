@@ -30,7 +30,7 @@ async function fixture(amount=1000){
  await client.query("insert into public.payments(id,user_id,loan_id,amount,method,reference,file_name,file_type,file_path,paid_date,requested_allocations) values($1,$2,$3,$4,'Bank Transfer',$6,'synthetic.png','image','synthetic-only.png',current_date,$5)",[proof,borrower,loan,amount,JSON.stringify([{id:due,amount:1000}]),proof]);
  await client.query("select set_config('request.jwt.claims',$1,true)",[JSON.stringify({sub:admin,role:'authenticated',session_id:sid})]);
  await client.query('set local role authenticated');
- return {client,admin,borrower,proof,due,loan,payload:{key:crypto.randomUUID(),id:proof,status:'approved',reviewed:true,creditUsed:'0.00',expectedCredit:'0.00',allocations:[{id:due,amount:String(amount),expectedBalance:'1000.00'}]}};
+ return {client,admin,borrower,sid,proof,due,loan,payload:{key:crypto.randomUUID(),id:proof,status:'approved',reviewed:true,creditUsed:'0.00',expectedCredit:'0.00',allocations:[{id:due,amount:String(amount),expectedBalance:'1000.00'}]}};
  }catch(error){await client.query('rollback');client.release();throw error}
 }
 async function release(f){await f.client.query('rollback');f.client.release()}
@@ -43,5 +43,65 @@ test('reviewed approval atomically posts the proof to its selected installment',
   assert.equal(Number(row.amount),1000,'the original installment amount is preserved');
   assert.equal(Number(row.amount_applied),1000);
   const logs=await f.client.query('select count(*)::int as count from public.payment_logs where user_id=$1',[f.borrower]);assert.equal(logs.rows[0].count,1);
+ }finally{await release(f)}
+});
+
+const post=(f,patch={})=>f.client.query("select public.mobile_action('payment-review',$1) as result",[{...f.payload,...patch}]);
+async function addDue(f,amount=500,n=2){
+ const id='due-'+crypto.randomUUID();
+ await f.client.query("insert into public.transactions(id,loan_id,user_id,n,description,amount,type,txn_date,due_date) values($1,$2,$3,$4,'Additional synthetic due',$5,'Installment',current_date,current_date+30)",[id,f.loan,f.borrower,n,amount]);return id;
+}
+
+test('partial approval reduces only the outstanding remainder and creates an underpayment acknowledgement',async()=>{
+ const f=await fixture(400);try{
+  await post(f);
+  const row=(await f.client.query('select amount,amount_applied,status,date_paid from public.transactions where id=$1',[f.due])).rows[0];
+  assert.equal(Number(row.amount),1000);assert.equal(Number(row.amount_applied),400);assert.equal(row.status,'unpaid');assert.equal(row.date_paid,null);
+  const log=(await f.client.query('select alloc_status,remaining_balance,funds_applied from public.payment_logs where user_id=$1',[f.borrower])).rows[0];
+  assert.equal(log.alloc_status,'Underpayment');assert.equal(Number(log.remaining_balance),-600);assert.equal(Number(log.funds_applied),400);
+ }finally{await release(f)}
+});
+
+test('excess credit can be explicitly applied later without a fake cash proof',async()=>{
+ const f=await fixture(1200);try{
+  await post(f,{allocations:[{id:f.due,amount:'1000',expectedBalance:'1000'}]});
+  const profile=()=>f.client.query('select credit_balance from public.profiles where id=$1',[f.borrower]);
+  assert.equal(Number((await profile()).rows[0].credit_balance),200);
+  const id=await addDue(f,200),date=(await f.client.query('select current_date::text as date')).rows[0].date;
+  await f.client.query("select public.mobile_action('credit-apply',$1)",[{key:crypto.randomUUID(),userId:f.borrower,reviewed:true,paidDate:date,creditUsed:'200',expectedCredit:'200',allocations:[{id,amount:'200',expectedBalance:'200'}]}]);
+  assert.equal(Number((await profile()).rows[0].credit_balance),0);
+  const due=(await f.client.query('select status,amount_applied from public.transactions where id=$1',[id])).rows[0];assert.equal(due.status,'paid');assert.equal(Number(due.amount_applied),200);
+  const totals=(await f.client.query('select sum(cash_amount)::text as cash,count(*)::int as postings from public.payment_postings where user_id=$1',[f.borrower])).rows[0];assert.equal(Number(totals.cash),1200);assert.equal(totals.postings,2);
+ }finally{await release(f)}
+});
+
+test('an uncertain response can be retried without posting or acknowledging twice',async()=>{
+ const f=await fixture();try{
+  const first=await post(f),again=await post(f);assert.deepEqual(first.rows,again.rows);
+  const count=(await f.client.query('select count(*)::int as count from public.payment_postings where payment_id=$1',[f.proof])).rows[0].count;assert.equal(count,1);
+  await f.client.query('savepoint changed_retry');await assert.rejects(post(f,{note:'changed retry'}),/Retry details changed/);await f.client.query('rollback to savepoint changed_retry');
+  await f.client.query('savepoint duplicate_proof');await assert.rejects(post(f,{key:crypto.randomUUID()}),/already been reviewed/);await f.client.query('rollback to savepoint duplicate_proof');
+ }finally{await release(f)}
+});
+
+test('stale review, unavailable funds and duplicate allocations leave the financial state untouched',async()=>{
+ const f=await fixture();try{
+  const bad=[{reviewed:false},{expectedCredit:'1'},{allocations:[{id:f.due,amount:'1000',expectedBalance:'999'}]},{allocations:[{id:f.due,amount:'1001',expectedBalance:'1000'}]},{allocations:[{id:f.due,amount:'500',expectedBalance:'1000'},{id:f.due,amount:'500',expectedBalance:'1000'}]},{creditUsed:'1'},{allocations:[{id:f.due,amount:'0.001',expectedBalance:'1000'}]}];
+  for(const patch of bad){await f.client.query('savepoint invalid_review');await assert.rejects(post(f,patch));await f.client.query('rollback to savepoint invalid_review')}
+  const row=(await f.client.query('select status,amount_applied from public.transactions where id=$1',[f.due])).rows[0];assert.equal(row.status,'unpaid');assert.equal(Number(row.amount_applied),0);
+  assert.equal((await f.client.query('select count(*)::int as count from public.payment_logs where user_id=$1',[f.borrower])).rows[0].count,0);
+ }finally{await release(f)}
+});
+
+test('direct browser updates cannot change applied amounts, credit or posted financial history',async()=>{
+ const f=await fixture();try{
+  await post(f);
+  for(const [sql,args] of [
+   ['update public.transactions set amount_applied=0 where id=$1',[f.due]],
+   ['update public.profiles set credit_balance=1 where id=$1',[f.borrower]],
+   ['delete from public.payments where id=$1',[f.proof]],
+   ['delete from public.payment_logs where user_id=$1',[f.borrower]],
+   ['update public.payment_postings set cash_amount=1 where payment_id=$1',[f.proof]],
+  ]){await f.client.query('savepoint immutable_record');await assert.rejects(f.client.query(sql,args));await f.client.query('rollback to savepoint immutable_record')}
  }finally{await release(f)}
 });
