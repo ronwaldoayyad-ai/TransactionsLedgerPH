@@ -20,6 +20,8 @@ test('recovery permits authentication and signed document reads, while blocking 
  assert.equal(reads,3);
  const denied=await fetch('https://test.invalid/rest/v1/transactions',{method:'PATCH'});assert.equal(denied.status,403);assert.match((await denied.json()).message,/read-only/i);assert.equal(reads,3);
  assert.equal((await fetch('https://test.invalid/auth/v1/user',{method:'PUT'})).status,403);
+ assert.equal((await fetch('https://other.invalid/rest/v1/transactions',{method:'GET'})).status,403);
+ assert.equal((await fetch({url:'https://test.invalid/rest/v1/profiles',method:'HEAD'})).status,200);
 });
 test('recovery wraps account mutators before they can optimistically change balances',()=>{
  const code=patchClassicRecovery('return <AppContext.Provider value={value}>{children}</AppContext.Provider>','/src/context/AppContext.jsx');
@@ -36,4 +38,18 @@ test('recovery hides legacy proof-approval controls and does not queue withdrawn
  const component=patchClassicRecovery('  const { users, loans, reviewPayment, getProofUrl, deletePayment } = useApp()','/src/components/PaymentList.jsx');
  assert.match(component,/canReview = false/);
  assert.match(patchClassicRecovery(source,'/src/lib/dbMappers.js'),/r.retracted_at \? 'withdrawn' : r.status/);
+});
+test('recovery preserves schedule totals and routes partial paid-fund drilldown to history',()=>{
+ const schedule=patchClassicRecovery('const total=transactions.reduce((s, t) => s + t.amount, 0);formatPeso(t.amount)','/src/components/BorrowerScheduleTable.jsx');assert.match(schedule,/t.originalAmount \?\? t.amount/);
+ assert.match(patchClassicRecovery('  const goStatus = (key) => {','/src/components/DuesOverview.jsx'),/navigate\('\/portal\/payment-logs'\)/);
+ assert.equal(patchClassicRecovery('untouched','/src/other.js'),'untouched');
+});
+test('full mapper layout retains adjacent functions and rejects incomplete profile/payment layouts',()=>{
+ const full=source.replace('export const mapTransaction', 'export const mapLoan=r=>r;export const mapTransaction')+'export const mapPaymentLog=r=>r;';
+ const code=patchClassicRecovery(full,'/src/lib/dbMappers.js');assert.match(code,/export const mapLoan/);assert.match(code,/export const mapPaymentLog/);
+ assert.throws(()=>patchClassicRecovery(source.replace(/export const mapProfile[^\n]+\n/,''),'/src/lib/dbMappers.js'),/layout/i);
+ assert.throws(()=>patchClassicRecovery(source.replace('id:r.id,status: r.status,','id:r.id,'),'/src/lib/dbMappers.js'),/layout/i);
+});
+test('recovery sign-out remains local to the current device',()=>{
+ const code=patchClassicRecovery('supabase.auth.signOut();return <AppContext.Provider value={value}>{children}</AppContext.Provider>','/src/context/AppContext.jsx');assert.match(code,/signOut\(\{ scope: 'local' \}\)/);
 });
