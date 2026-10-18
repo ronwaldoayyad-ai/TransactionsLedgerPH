@@ -234,3 +234,15 @@ test('invited account activation accepts a live session and rejects a revoked on
   else{await f.client.query('select public.activate_my_account()');await f.client.query('reset role');assert.equal((await f.client.query('select status from public.profiles where id=$1',[f.admin])).rows[0].status,'active')}
  }finally{await release(f)}}
 });
+
+test('revoked sessions cannot read their profile through the older own-record policy',async()=>{
+ const f=await fixture();try{
+  assert.equal((await f.client.query('select count(*)::int n from public.profiles where id=$1',[f.admin])).rows[0].n,1);
+  await revokeSession(f);assert.equal((await f.client.query('select count(*)::int n from public.profiles where id=$1',[f.admin])).rows[0].n,0);
+ }finally{await release(f)}
+});
+
+test('every public table exposed to signed-in clients has a restrictive live-session boundary',async()=>{
+ const rows=(await db.query("select distinct p.tablename from pg_policies p where p.schemaname='public' and p.permissive='PERMISSIVE' and (p.roles && array['authenticated','public']::name[]) and not exists(select 1 from pg_policies s where s.schemaname=p.schemaname and s.tablename=p.tablename and s.permissive='RESTRICTIVE' and s.policyname in ('mobile_valid_session','mobile_live_session'))")).rows;
+ assert.deepEqual(rows,[]);
+});
