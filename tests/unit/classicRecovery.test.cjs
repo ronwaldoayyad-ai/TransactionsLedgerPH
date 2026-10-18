@@ -2,7 +2,7 @@ const test=require('node:test'),assert=require('node:assert/strict'),vm=require(
 const {patchClassicRecovery}=require('../../release/option3/classic-recovery-compat.cjs');
 const source=`export const mapProfile = (r) => ({id:r.id, status: r.status,});
 export const mapTransaction = (r) => ({id:r.id, amount: num(r.amount),status:r.status});
-export const mapPayment = (r) => ({id:r.id});`;
+export const mapPayment = (r) => ({id:r.id,status: r.status,});`;
 test('independent Classic uses the same tested remaining-balance reader and exposes account credit',()=>{
  const code=patchClassicRecovery(source,'/src/lib/dbMappers.js');
  assert.match(code,/transactionAmounts\(r\)/);assert.match(code,/creditBalance: num\(r.credit_balance\)/);
@@ -31,4 +31,9 @@ const straightTotal = straightTxns.reduce((s, t) => s + t.amount, 0)
 const installmentTotal = installmentTxns.reduce((s, t) => s + t.amount, 0)
       {/* Featured: Current */}`;
  const code=patchClassicRecovery(source,'/src/pages/user/UserDashboard.jsx');assert.match(code,/Available account credit/);assert.match(code,/t.originalAmount \?\? t.amount/);assert.match(code,/users.find/);
+});
+test('recovery hides legacy proof-approval controls and does not queue withdrawn proofs',()=>{
+ const component=patchClassicRecovery('  const { users, loans, reviewPayment, getProofUrl, deletePayment } = useApp()','/src/components/PaymentList.jsx');
+ assert.match(component,/canReview = false/);
+ assert.match(patchClassicRecovery(source,'/src/lib/dbMappers.js'),/r.retracted_at \? 'withdrawn' : r.status/);
 });
