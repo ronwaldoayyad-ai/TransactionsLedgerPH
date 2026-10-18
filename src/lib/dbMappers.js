@@ -231,7 +231,7 @@ export const toDbTransaction = (t) => ({
   user_id: t.userId,
   n: t.n,
   description: t.description,
-  amount: t.amount,
+  amount: t.originalAmount ?? t.amount,
   type: t.type,
   txn_date: t.txnDate,
   due_date: t.dueDate,
