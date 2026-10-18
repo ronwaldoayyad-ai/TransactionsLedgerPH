@@ -18,3 +18,11 @@ test('all upload boundaries enforce the same 5 MB cap and assigned installment c
  assert.match(read('src/context/AppContext.jsx'),/loan_category:.*loan.loanCategory/);
  assert.match(read('src/pages/admin/Calculator.jsx'),/aria-label="Installment category"/);
 });
+
+test('Change image becomes visible immediately while recognition is still pending',async()=>{
+ let finish;const button={isConnected:true,hidden:true,style:{}},input={};const elements={'#proof':input,'#changePaymentProof':button,'#filemeta':{}};
+ const c={file:null,$:id=>elements[id],preferredLanguage:'English',mobileProofSubmitting:false,page:'payment',restorePaymentDraft(){},clearPaymentProof(){},setPaymentDraftBusy(){},render(){}};
+ c.pick=()=>{c.file={name:'new.png'};return new Promise(r=>finish=r)};
+ vm.createContext(c);vm.runInContext(read('public/v41224-payment-experience.js'),c);
+ const pending=c.pick({files:[{size:100,type:'image/png'}]});assert.equal(button.hidden,false);finish();await pending;
+});
