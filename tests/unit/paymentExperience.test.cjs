@@ -5,7 +5,7 @@ test('proof validation allows 5 MB, rejects oversized replacements before cleari
  vm.runInContext(code.slice(0,code.indexOf('// Browser integration')),context);
  assert.equal(context.proofCandidateError({size:5242880,type:'image/png'}),'');assert.match(context.proofCandidateError({size:5242881,type:'image/png'}),/5 MB/);
  assert.match(context.proofCandidateError({size:0,type:'image/png'}),/empty/);assert.match(context.proofCandidateError({size:1,type:'text/plain'}),/JPG/);
- assert.ok(code.indexOf('proofCandidateError(input.files')<code.indexOf('await experiencePick(input)'));
+ assert.ok(code.indexOf('proofCandidateError(input.files')<code.indexOf('experiencePick(input)'));
 });
 test('expanded Finder fits above a keyboard and accounts for a scrolled visual viewport',()=>{
  const code=read('public/v41224-finder-viewport.js'),context={};vm.createContext(context);vm.runInContext(code.slice(0,code.indexOf('// Browser integration')),context);

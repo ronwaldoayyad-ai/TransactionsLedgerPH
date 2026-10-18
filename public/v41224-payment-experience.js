@@ -14,7 +14,7 @@ function refreshChangeProof(){
  button.textContent=preferredLanguage==='Filipino'?'Palitan ang patunay':'Change uploaded image';button.hidden=!file;button.disabled=mobileProofSubmitting;
 }
 const experiencePick=pick;
-pick=async input=>{const error=proofCandidateError(input.files?.[0]);if(error){input.value='';$('#paymentError').textContent=error;refreshChangeProof();return;}try{await experiencePick(input);}finally{refreshChangeProof();}};
+pick=async input=>{const error=proofCandidateError(input.files?.[0]);if(error){input.value='';$('#paymentError').textContent=error;refreshChangeProof();return;}const pending=experiencePick(input);refreshChangeProof();try{await pending;}finally{refreshChangeProof();}};
 const experienceRestore=restorePaymentDraft;restorePaymentDraft=()=>{experienceRestore();refreshChangeProof();};
 const experienceClear=clearPaymentProof;clearPaymentProof=()=>{experienceClear();refreshChangeProof();};
 const experienceBusy=setPaymentDraftBusy;setPaymentDraftBusy=busy=>{experienceBusy(busy);refreshChangeProof();};
