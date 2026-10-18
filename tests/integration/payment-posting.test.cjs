@@ -204,3 +204,33 @@ test('review date records the lender action separately from the earlier bank pay
 test('borrower allocation reads have a covering ownership index',async()=>{
  assert.match((await db.query("select indexdef from pg_indexes where schemaname='public' and indexname='payment_allocations_user'")).rows[0]?.indexdef??'',/user_id, posting_id/);
 });
+
+const invoice=f=>f.client.query("select public.create_invoice($1,'Synthetic borrower',current_date,array[current_date],1000,0,0,1000,'[]'::jsonb)",[f.borrower]);
+async function revokeSession(f){await f.client.query('reset role');await f.client.query('delete from auth.sessions where id=$1',[f.sid]);await f.client.query('set local role authenticated')}
+
+test('legacy invoice creation accepts an active lender but rejects the same revoked session',async()=>{
+ const f=await fixture();try{
+  assert.equal((await f.client.query('select public.is_admin() allowed')).rows[0].allowed,true);await invoice(f);
+  await revokeSession(f);await assert.rejects(invoice(f),/not authorized|active sign-in/i);
+ }finally{await release(f)}
+});
+
+test('legacy administrator predicate is false after the auth session is revoked',async()=>{
+ const f=await fixture();try{await revokeSession(f);assert.equal((await f.client.query('select public.is_admin() allowed')).rows[0].allowed,false)}finally{await release(f)}
+});
+
+test('self-service profile editing requires an active account and a live session',async()=>{
+ for(const mode of ['revoked','disabled']){const f=await fixture();try{
+  await f.client.query("select public.update_my_profile('Synthetic','Lender','','123')");
+  if(mode==='revoked')await revokeSession(f);else{await f.client.query('reset role');await f.client.query("update public.profiles set status='disabled' where id=$1",[f.admin]);await f.client.query('set local role authenticated')}
+  await assert.rejects(f.client.query("select public.update_my_profile('Changed','After lock','','456')"),/active sign-in/i);
+ }finally{await release(f)}}
+});
+
+test('invited account activation accepts a live session and rejects a revoked one',async()=>{
+ for(const revoked of [false,true]){const f=await fixture();try{
+  await f.client.query('reset role');await f.client.query("update public.profiles set role='user',status='invited' where id=$1",[f.admin]);await f.client.query('set local role authenticated');
+  if(revoked){await revokeSession(f);await assert.rejects(f.client.query('select public.activate_my_account()'),/active sign-in/i)}
+  else{await f.client.query('select public.activate_my_account()');await f.client.query('reset role');assert.equal((await f.client.query('select status from public.profiles where id=$1',[f.admin])).rows[0].status,'active')}
+ }finally{await release(f)}}
+});
