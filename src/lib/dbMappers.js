@@ -3,6 +3,7 @@
 import { buildDisclosure } from './amortization'
 import { supabase } from '../supabaseClient'
 import { paymentTimestamp } from './paymentTimestamp'
+import { transactionAmounts } from './paymentReadModel'
 
 const num = (v) => (v == null ? 0 : Number(v))
 const day = (v) => (v ? String(v).slice(0, 10) : null)
@@ -33,6 +34,7 @@ export const mapProfile = (r) => ({
   occupation: r.occupation ?? '',
   role: r.role,
   status: r.status,
+  creditBalance: num(r.credit_balance),
   invitedAt: day(r.invited_at),
   lastLogin: day(r.last_login),
   avatarPath: r.avatar_path ?? null,
@@ -71,7 +73,7 @@ export const mapTransaction = (r) => ({
   userId: r.user_id,
   n: r.n,
   description: r.description,
-  amount: num(r.amount),
+  ...transactionAmounts(r),
   type: r.type,
   txnDate: day(r.txn_date),
   dueDate: day(r.due_date),
@@ -104,12 +106,14 @@ export const mapPayment = (r, fileUrl = null) => ({
   correctionNote: r.correction_note,
   retractedAt: r.retracted_at,
   receiptNumber: r.receipt_number,
+  postedAt: r.posted_at ?? null,
 })
 
 export const mapPaymentLog = (r) => ({
   id: r.id,
   userId: r.user_id,
   kind: r.kind,
+  sourcePostingId: r.source_posting_id ?? null,
   txnDate: day(r.txn_date),
   reference: r.reference ?? '',
   subject: r.subject ?? '',

@@ -18,7 +18,7 @@ export function centsAmount(cents) {
 }
 
 export function outstandingCents(due) {
-  const original = moneyCents(due.amount), paid = moneyCents(due.paidAmount ?? '0')
+  const original = moneyCents(due.originalAmount ?? due.amount), paid = moneyCents(due.paidAmount ?? '0')
   if (paid > original) throw Error('Paid amount exceeds the original due.')
   return ['paid', 'cancelled', 'refunded'].includes(due.status) ? 0 : original - paid
 }

@@ -17,3 +17,9 @@ test('fully paid and past-due rows show consistent original and remaining amount
  assert.deepEqual(transactionAmounts({amount:'1000',amount_applied:'1000',status:'paid'}),{originalAmount:1000,paidAmount:1000,remainingAmount:0,amount:1000})
  assert.equal(transactionAmounts({amount:'1000',amount_applied:'0.01',status:'past_due'}).remainingAmount,999.99)
 })
+test('legacy negative ledger adjustments remain readable without inventing allocations',()=>{
+ assert.deepEqual(transactionAmounts({amount:'-50.00',status:'unpaid'}),{originalAmount:-50,paidAmount:0,remainingAmount:-50,amount:-50})
+})
+test('corrupt applied balances are reported instead of silently showing an inaccurate amount',()=>{
+ assert.throws(()=>transactionAmounts({amount:100,amount_applied:101,status:'unpaid'}),/exceeds/)
+})
