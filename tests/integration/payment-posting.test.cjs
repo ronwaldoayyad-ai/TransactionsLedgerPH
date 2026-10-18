@@ -2,7 +2,9 @@ const {test,before,after}=require('node:test'),assert=require('node:assert/stric
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
 const {Pool}=require('pg');
 const root=path.resolve(__dirname,'../..'),workspace=path.resolve(root,'../..');
-const config={host:'127.0.0.1',port:54322,user:'postgres',password:'postgres',connectionTimeoutMillis:5000,statement_timeout:10000};
+const port=Number(process.env.PAYMENT_TEST_PORT??54322);
+if(![54322,25432].includes(port))throw Error('Only the local staging or separate rehearsal port is permitted.');
+const config={host:'127.0.0.1',port,user:'postgres',password:'postgres',connectionTimeoutMillis:5000,statement_timeout:10000};
 const database='payment_posting_test_'+crypto.randomBytes(6).toString('hex');
 const control=new Pool({...config,database:'postgres'});let db,created=false;
 const clean=sql=>sql.replace(/^\\.*$/gm,'');
