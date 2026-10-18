@@ -42,6 +42,8 @@ test('reviewed approval atomically posts the proof to its selected installment',
   assert.equal(row.status,'paid','approval must settle its fully allocated installment');
   assert.equal(Number(row.amount),1000,'the original installment amount is preserved');
   assert.equal(Number(row.amount_applied),1000);
+  const proof=(await f.client.query('select to_jsonb(p) data from public.payments p where id=$1',[f.proof])).rows[0].data;
+  assert.equal(proof.posted_allocations?.[0]?.id,f.due);assert.equal(Number(proof.posted_allocations?.[0]?.amount),1000);
   const logs=await f.client.query('select count(*)::int as count from public.payment_logs where user_id=$1',[f.borrower]);assert.equal(logs.rows[0].count,1);
  }finally{await release(f)}
 });
@@ -162,4 +164,29 @@ test('concurrent approvals of one proof commit exactly one posting and acknowled
 
 test('legacy negative adjustments remain valid and are not treated as payment allocations',async()=>{
  const f=await fixture();try{const id=await addDue(f,-50);const row=(await f.client.query('select amount,amount_applied from public.transactions where id=$1',[id])).rows[0];assert.equal(Number(row.amount),-50);assert.equal(Number(row.amount_applied),0)}finally{await release(f)}
+});
+
+test('prior credit and new cash fund the exact reviewed allocation without overpaying a due',async()=>{
+ const f=await fixture(400);try{
+  await post(f,{allocations:[]});
+  await f.client.query('reset role');const proof=crypto.randomUUID();await f.client.query("insert into public.payments(id,user_id,loan_id,amount,method,reference,file_name,file_type,file_path,paid_date) values($1,$2,$3,600,'Bank Transfer','SYNTHETIC-SECOND','synthetic.png','image','synthetic.png',current_date)",[proof,f.borrower,f.loan]);await f.client.query('set local role authenticated');
+  await post(f,{key:crypto.randomUUID(),id:proof,creditUsed:'400',expectedCredit:'400',allocations:[{id:f.due,amount:'1000',expectedBalance:'1000'}]});
+  assert.equal(Number((await f.client.query('select credit_balance from public.profiles where id=$1',[f.borrower])).rows[0].credit_balance),0);assert.equal((await f.client.query('select status from public.transactions where id=$1',[f.due])).rows[0].status,'paid');
+ }finally{await release(f)}
+});
+
+test('closed, archived and foreign borrower dues cannot receive an allocation',async()=>{
+ const f=await fixture();try{
+  for(const change of ["status='cancelled'","status='paid',date_paid=current_date","archived_at=current_date","user_id='"+f.admin+"'"]){
+   await f.client.query('savepoint unavailable');await f.client.query('reset role');await f.client.query('update public.transactions set '+change+' where id=$1',[f.due]);await f.client.query('set local role authenticated');await assert.rejects(post(f),/unavailable borrower due/);await f.client.query('rollback to savepoint unavailable');
+  }
+  assert.equal((await f.client.query('select status from public.payments where id=$1',[f.proof])).rows[0].status,'pending');
+ }finally{await release(f)}
+});
+
+test('two simultaneous credit reviews cannot spend the same credit twice',async()=>{
+ const f=await fixture();await post(f,{allocations:[]});const a=await addDue(f,600,2),b=await addDue(f,600,3);await f.client.query('commit');f.client.release();
+ const run=async id=>{const client=await db.connect();try{await client.query('begin');await client.query("select set_config('request.jwt.claims',$1,true)",[JSON.stringify({sub:f.admin,role:'authenticated',session_id:f.sid})]);await client.query('set local role authenticated');await client.query("select public.mobile_action('credit-apply',$1)",[{key:crypto.randomUUID(),reviewed:true,userId:f.borrower,paidDate:new Date().toISOString().slice(0,10),creditUsed:'600',expectedCredit:'1000',allocations:[{id,amount:'600',expectedBalance:'600'}]}]);await client.query('commit')}catch(e){await client.query('rollback');throw e}finally{client.release()}};
+ const results=await Promise.allSettled([run(a),run(b)]);assert.equal(results.filter(r=>r.status==='fulfilled').length,1);assert.match(results.find(r=>r.status==='rejected').reason.message,/credit changed/);
+ assert.equal(Number((await db.query('select credit_balance from public.profiles where id=$1',[f.borrower])).rows[0].credit_balance),400);
 });
