@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 import { useApp } from '../../context/AppContext'
 import { usePersistedState } from '../../hooks/usePersistedState'
+import PaymentAdjustmentActivity from '../../components/PaymentAdjustmentActivity'
 import { PageHeader } from '../../components/AppShell'
 import Icon from '../../components/Icon'
 import RefreshButton from '../../components/RefreshButton'
@@ -521,6 +522,7 @@ export default function Transactions() {
           </div>
         }
       />
+      <PaymentAdjustmentActivity />
 
       {importNotice && (
         <p role="status" className="mb-4 flex items-center gap-2 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
@@ -695,7 +697,7 @@ export default function Transactions() {
                   className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50 active:bg-slate-100 ${
                     idx > 0 ? 'border-t border-slate-100' : 'border-t border-slate-200'
                   } ${
-                    t.amount < 0 ? 'bg-emerald-50/50' : eff === 'past_due' ? 'bg-red-50/50' : ''
+                    t.amount < 0 || eff === 'paid' ? 'bg-emerald-50/50' : eff === 'past_due' ? 'bg-red-50/50' : ''
                   }`}
                 >
                   <div className="min-w-0 flex-1">
@@ -770,7 +772,7 @@ export default function Transactions() {
                     <tr
                       key={t.id}
                       className={`border-b border-slate-100 transition-colors duration-150 ${
-                        t.amount < 0
+                        t.amount < 0 || effective === 'paid'
                           ? 'bg-emerald-50/70 hover:bg-emerald-50'
                           : isPastDue
                             ? 'bg-red-50/70 hover:bg-red-50'

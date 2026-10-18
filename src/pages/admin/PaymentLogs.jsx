@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useApp } from '../../context/AppContext'
 import { useNotifications } from '../../context/NotificationsContext'
+import PaymentAdjustmentActivity from '../../components/PaymentAdjustmentActivity'
 import { PageHeader } from '../../components/AppShell'
 import Icon from '../../components/Icon'
 import RefreshButton from '../../components/RefreshButton'
@@ -226,11 +227,12 @@ export default function PaymentLogs() {
           </div>
         }
       />
+      <PaymentAdjustmentActivity />
 
       <Card className="mb-5">
         <CardHeader title="Posted payments & account credit" subtitle={`Net cash in shown entries: ${formatPeso(shownCash)} · ${postedRows.length} accounting entries`}/>
         <p className="px-5 pb-3 text-xs text-slate-500">Cash received, amounts applied to dues and credit changes are shown separately. Reversals retain the original entry. Receipt balances are snapshots and are not added together.</p>
-        {postedRows.length===0?<EmptyState title="No reviewed postings" body="Approved allocations, credit applications and reversals will appear here."/>:<div className="divide-y divide-slate-100">{postedPag.pageItems.map(l=>{const posting=postingFor(l),figures=postingFigures(posting),reversed=reversedIds.has(posting.id);return <article key={l.id} className="px-5 py-4">
+        {postedRows.length===0?<EmptyState title="No reviewed postings" body="Approved allocations, credit applications and reversals will appear here."/>:<div className="divide-y divide-slate-100">{postedPag.pageItems.map(l=>{const posting=postingFor(l),figures=postingFigures(posting),reversed=reversedIds.has(posting.id);return <article key={l.id} className={'px-5 py-4 '+(!posting.reversal_of&&!reversed?'bg-emerald-50/50':'')}>
           <div className="flex flex-wrap items-start justify-between gap-2"><div className="min-w-0"><p className="font-medium text-slate-900">{nameOf(l.userId)}</p><p className="mt-1 break-all text-xs text-slate-500">{formatDate(l.txnDate)} · {l.reference}</p></div><span className={`rounded-full px-2 py-1 text-xs font-semibold ${posting.reversal_of||reversed?'bg-slate-100 text-slate-600':'bg-blue-50 text-blue-700'}`}>{posting.reversal_of?'Reversal':reversed?'Reversed':posting.cash_amount>0?'Payment posted':'Credit applied'}</span></div>
           <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 rounded-xl bg-slate-50 p-3 text-sm"><dt>Cash received</dt><dd className="text-right font-mono">{formatPeso(figures.cash)}</dd><dt>Applied to dues</dt><dd className="text-right font-mono">{formatPeso(figures.allocated)}</dd><dt>Credit change</dt><dd className="text-right font-mono">{formatPeso(figures.creditChange)}</dd></dl>
           {posting.note&&<p className="mt-2 break-words text-xs text-slate-600">{posting.note}</p>}

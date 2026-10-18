@@ -6,7 +6,7 @@ async function validateUpload(req,body){
  const user=await active(req),allowed={ 'payment-proofs':['image/jpeg','image/png','image/webp','application/pdf'],avatars:['image/jpeg','image/png','image/webp'],'mobile-attachments':['image/jpeg','image/png','image/webp','image/gif','image/bmp','image/avif','application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document']};
  if(!allowed[body.bucket]||String(body.path).split('/')[0]!==user.id)throw Error('File ownership mismatch.');
  const object=(await db.query('select id,metadata,updated_at::text as version from storage.objects where bucket_id=$1 and name=$2',[body.bucket,body.path])).rows[0];
- const mime=object?.metadata?.mimetype,limit=body.bucket==='payment-proofs'?10485760:body.bucket==='avatars'?2097152:5242880;
+ const mime=object?.metadata?.mimetype,limit=body.bucket==='avatars'?2097152:5242880;
  if(!object||!allowed[body.bucket].includes(mime)||!object.metadata.size||object.metadata.size>limit)throw Error('Choose a supported file within the size limit.');
  const token=req.headers.authorization,download=await fetch(api+'/storage/v1/object/authenticated/'+body.bucket+'/'+body.path,{headers:{apikey:jwt('anon'),Authorization:token}});
  if(!download.ok)throw Error('Unable to read the uploaded file.');const bytes=Buffer.from(await download.arrayBuffer());if(bytes.length!==Number(object.metadata.size))throw Error('File size mismatch.');

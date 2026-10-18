@@ -3,7 +3,7 @@ import { supabase } from '../supabaseClient'
 
 const fileKinds = { 'payment-submit':['image/jpeg','image/png','image/webp','application/pdf'], 'support-submit':['image/jpeg','image/png','image/webp','image/gif','image/bmp','image/avif'], 'avatar-upload':['image/jpeg','image/png','image/webp'], 'message-send':['image/jpeg','image/png','image/webp','application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document'] }
 export async function validateMobileFile(file, action) {
-  const limit = action==='payment-submit'?10*1024*1024:action==='avatar-upload'?2*1024*1024:5*1024*1024
+  const limit = action==='avatar-upload'?2*1024*1024:5*1024*1024
   if (!fileKinds[action]?.includes(file.type) || !file.size || file.size>limit) throw Error('Choose a supported file within the size limit.')
   const bytes=new Uint8Array(await file.arrayBuffer()),text=new TextDecoder('latin1').decode(bytes)
   const magic=bytes[0]===0xff&&bytes[1]===0xd8?'image/jpeg':bytes.slice(0,8).join(',')==='137,80,78,71,13,10,26,10'?'image/png':text.startsWith('RIFF')&&text.slice(8,12)==='WEBP'?'image/webp':text.startsWith('GIF8')?'image/gif':text.startsWith('BM')?'image/bmp':text.slice(4,12).includes('ftypavif')?'image/avif':text.startsWith('%PDF-')&&text.includes('%%EOF')?'application/pdf':bytes.slice(0,8).join(',')==='208,207,17,224,161,177,26,225'?'application/msword':text.startsWith('PK')?'application/vnd.openxmlformats-officedocument.wordprocessingml.document':null

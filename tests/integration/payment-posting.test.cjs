@@ -14,6 +14,7 @@ before(async()=>{
  await db.query('alter table auth.users add primary key(id);alter table auth.sessions add primary key(id);alter table storage.objects add primary key(id);alter table storage.buckets add primary key(id)');
  await db.query(clean(fs.readFileSync(path.join(workspace,'outputs/staging-baseline/production-public-schema.sql'),'utf8')));
  await db.query('create publication supabase_realtime');
+ await db.query("insert into storage.buckets(id,name,file_size_limit) values('payment-proofs','payment-proofs',10485760)");
  await db.query(fs.readFileSync(path.join(root,'release/option3/forward-candidate.sql'),'utf8'));
  await db.query('set row_security=on;set check_function_bodies=on');
  if(!(await db.query("select to_regprocedure('mobile_private.post_reviewed_payment(jsonb,boolean)') as posting")).rows[0].posting)
@@ -29,7 +30,7 @@ async function fixture(amount=1000){
  await client.query("insert into public.profiles(id,email,name,role,status) values($1,$2,'Synthetic admin','admin','active'),($3,$4,'Synthetic borrower','user','active')",[admin,admin+'@test.invalid',borrower,borrower+'@test.invalid']);
  await client.query('insert into auth.sessions(id,user_id) values($1,$2)',[sid,admin]);
  await client.query("insert into public.loans(id,user_id,label,principal,duration_months,txn_date,first_payment_date) values($1,$2,'Synthetic posting loan',1000,1,current_date,current_date)",[loan,borrower]);
- await client.query("insert into public.transactions(id,loan_id,user_id,n,description,amount,type,txn_date,due_date) values($1,$2,$3,1,'Synthetic due',1000,'Installment',current_date,current_date)",[due,loan,borrower]);
+ await client.query("insert into public.transactions(id,loan_id,user_id,n,description,amount,type,txn_date,due_date) values($1,$2,$3,1,'Synthetic due',1000,'Installment',current_date,(now() at time zone 'Asia/Manila')::date)",[due,loan,borrower]);
  await client.query("insert into public.payments(id,user_id,loan_id,amount,method,reference,file_name,file_type,file_path,paid_date,requested_allocations) values($1,$2,$3,$4,'Bank Transfer',$6,'synthetic.png','image','synthetic-only.png',current_date,$5)",[proof,borrower,loan,amount,JSON.stringify([{id:due,amount:1000}]),proof]);
  await client.query("select set_config('request.jwt.claims',$1,true)",[JSON.stringify({sub:admin,role:'authenticated',session_id:sid})]);
  await client.query('set local role authenticated');
@@ -245,4 +246,18 @@ test('revoked sessions cannot read their profile through the older own-record po
 test('every public table exposed to signed-in clients has a restrictive live-session boundary',async()=>{
  const rows=(await db.query("select distinct p.tablename from pg_policies p where p.schemaname='public' and p.permissive='PERMISSIVE' and (p.roles && array['authenticated','public']::name[]) and not exists(select 1 from pg_policies s where s.schemaname=p.schemaname and s.tablename=p.tablename and s.permissive='RESTRICTIVE' and s.policyname in ('mobile_valid_session','mobile_live_session'))")).rows;
  assert.deepEqual(rows,[]);
+});
+
+test('proof storage and verified submissions cap new files at 5 MB even when an old caller requests 10 MB',async()=>{
+ const f=await fixture();try{
+  await f.client.query('reset role');
+  assert.equal(Number((await f.client.query("select file_size_limit from storage.buckets where id='payment-proofs'")).rows[0].file_size_limit),5242880);
+  const objectId=crypto.randomUUID(),name=f.admin+'/boundary.png';
+  await f.client.query("insert into storage.objects(id,bucket_id,name,metadata) values($1,'payment-proofs',$2,jsonb_build_object('mimetype','image/png','size',5242880))",[objectId,name]);
+  await f.client.query("insert into mobile_private.verified_uploads(object_id,owner_id,bucket,path,updated_at,sha256,mime,size) select id,$2,'payment-proofs',name,updated_at,repeat('a',64),'image/png',5242880 from storage.objects where id=$1",[objectId,f.admin]);
+  await f.client.query("select mobile_private.check_file('payment-proofs',$1,array['image/png'],10485760)",[name]);
+  await f.client.query("update storage.objects set metadata=jsonb_set(metadata,'{size}','5242881') where id=$1",[objectId]);
+  await f.client.query('update mobile_private.verified_uploads set size=5242881 where object_id=$1',[objectId]);
+  await assert.rejects(f.client.query("select mobile_private.check_file('payment-proofs',$1,array['image/png'],10485760)",[name]),/5 MB/);
+ }finally{await release(f)}
 });

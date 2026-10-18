@@ -1,7 +1,7 @@
 import { serviceEndpoint } from '../lib/serviceEndpoint'
 import { guestSupportPayload } from '../lib/guestSupportPayload'
 import {mobileActionError} from '../lib/mobileActionError'
-import {buildCreditActivity} from '../lib/paymentReadModel'
+import {buildCreditActivity,buildPaymentAdjustments} from '../lib/paymentReadModel'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useApp } from '../context/AppContext'
 import { useMessages } from '../context/MessagesContext'
@@ -74,6 +74,14 @@ export default function VersionedBorrower({ children }) {
     }
   }, [active, app.session, app.authLoading, pathname, destination, navigate])
   const post = (payload) => frame.current?.contentWindow?.postMessage({ channel: 'loanledger-v41224', ...payload }, location.origin)
+  useEffect(()=>{
+    if(!active||!ready)return
+    let queued=0
+    const send=()=>{queued=0;const element=frame.current;if(!element)return;const rect=element.getBoundingClientRect(),v=window.visualViewport,scale=element.clientHeight/Math.max(1,rect.height);element.contentWindow?.postMessage({channel:'loanledger-v41224',type:'visible-viewport',height:(v?.height||innerHeight)*scale,top:Math.max(0,((v?.offsetTop||0)-rect.top)*scale)},location.origin)}
+    const queue=()=>{if(!queued)queued=requestAnimationFrame(send)}
+    send();window.visualViewport?.addEventListener('resize',queue);window.visualViewport?.addEventListener('scroll',queue);window.addEventListener('resize',queue)
+    return()=>{cancelAnimationFrame(queued);window.visualViewport?.removeEventListener('resize',queue);window.visualViewport?.removeEventListener('scroll',queue);window.removeEventListener('resize',queue)}
+  },[active,ready,frameGeneration])
   useEffect(()=>{const changed=()=>frame.current?.contentWindow?.postMessage({channel:'loanledger-v41224',type:'notification-rules-updated'},location.origin);window.addEventListener('loanledger-notification-rules-changed',changed);return()=>window.removeEventListener('loanledger-notification-rules-changed',changed)},[])
   useEffect(() => {
     if (!active) return
@@ -197,6 +205,7 @@ export default function VersionedBorrower({ children }) {
     const extra=extras?.userId===user.id?extras:null
     const data={user, integrationError:extrasError, tickets:extra?.tickets||[],notificationReactions:extra?.notificationReactions||[],ticketEvents:extra?.ticketEvents||[],hiddenMessages:extra?.hiddenMessages||[],statements:extra?.statements||[],requestRates:requests.rates,canRequest:requests.canRequest,requestEvents:own(requests.requests).flatMap(r=>requests.eventsFor(r.id)),preference:preference?.user_id===user.id?preference:null, loans:own(app.loans), transactions:own(app.transactions), payments:ownPayments, paymentLogs:own(app.paymentLogs), overrides:app.paymentDueOverrides.filter(o=>o.borrowerId===user.id), messages:messages.messagesFor(user.id), notifications:notifications.notifications.map(n=>({...n,isRead:notifications.isRead(n.id)})), invoices:own(invoices.invoices), disbursements:own(disbursements.disbursements), requests:own(requests.requests).map(r=>({...r,schedule:buildRequestSchedule(r),monthly:monthlyInstallment(r.amount,r.monthlyRate,r.termMonths)}))}
     data.notificationCategories=notifications.categoriesAll
+    data.paymentAdjustments=buildPaymentAdjustments({ownerId:user.id,postings:app.paymentPostings,transactions:[...app.transactions,...app.archivedTransactions],logs:app.paymentLogs})
     data.creditApplications=buildCreditActivity({ownerId:user.id,postings:app.paymentPostings,transactions:[...app.transactions,...app.archivedTransactions],logs:app.paymentLogs})
     const key=JSON.stringify(data)
     if(lastDelivery.current===key)return

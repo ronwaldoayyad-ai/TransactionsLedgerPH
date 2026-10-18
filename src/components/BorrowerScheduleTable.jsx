@@ -43,7 +43,7 @@ export default function BorrowerScheduleTable({
   // Background tint shared by table rows and mobile cards: emerald for credits
   // (negative amounts), red for past due, transparent otherwise.
   const tintFor = (t, status) =>
-    t.amount < 0
+    t.amount < 0 || status === 'paid'
       ? 'bg-emerald-50/70'
       : status === 'past_due'
         ? 'bg-red-50/70'
@@ -185,7 +185,7 @@ export default function BorrowerScheduleTable({
               <tr
                 key={t.id}
                 className={`border-b border-slate-100 transition-colors duration-150 ${
-                  t.amount < 0
+                  t.amount < 0 || status === 'paid'
                     ? 'bg-emerald-50/70 hover:bg-emerald-50'
                     : status === 'past_due'
                       ? 'bg-red-50/70 hover:bg-red-50'

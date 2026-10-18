@@ -873,6 +873,7 @@ export function AppProvider({ children }) {
             user_id: loan.userId,
             label: loan.label,
             txn_type: loan.txnType ?? 'installment',
+            loan_category: loan.txnType === 'straight' ? null : loan.loanCategory,
             principal: loan.principal,
             monthly_rate: loan.monthlyRate,
             duration_months: loan.durationMonths,
