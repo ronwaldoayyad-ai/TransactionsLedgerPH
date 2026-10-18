@@ -9,6 +9,7 @@ import { MagneticDots } from '../../components/ProcessingFeedback'
 import { borrowerReference } from '../../components/admin/workspaceNavigation'
 import { formatDate, formatPeso } from '../../lib/amortization'
 import { effectiveStatus, isReceivable } from '../../lib/transactions'
+import {collectionEntries} from '../../lib/paymentCollections'
 
 const amountOf = rows => rows.reduce((total, row) => total + Number(row.amount || 0), 0)
 const dateAtManila = date => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila', year: 'numeric', month: '2-digit', day: '2-digit' }).format(date)
@@ -31,10 +32,11 @@ function CollectionTooltip({ active, payload, label }) {
   return <div className="aw-chart-tooltip"><strong>{label}</strong>{payload.map(item => <p key={item.dataKey}><span style={{ color: item.color }}>●</span> {item.name}<b>{formatPeso(item.value)}</b></p>)}</div>
 }
 
-function buildOverviewModel({ transactions, payments, requests, users, today, currentMonth, months }) {
+function buildOverviewModel({ transactions, paymentPostings, payments, requests, users, today, currentMonth, months }) {
     const open = transactions.filter(transaction => isReceivable(transaction, today))
     const overdue = open.filter(transaction => effectiveStatus(transaction, today) === 'past_due')
-    const received = transactions.filter(transaction => transaction.status === 'paid' && transaction.datePaid?.startsWith(currentMonth))
+    const collections=collectionEntries(transactions,paymentPostings)
+    const received = collections.filter(entry=>entry.datePaid?.startsWith(currentMonth))
     const pending = payments.filter(payment => payment.status === 'pending' && !payment.retractedAt).sort((a, b) => String(b.submittedAt || '').localeCompare(String(a.submittedAt || '')))
     const pendingRequests = requests.filter(request => request.status === 'pending')
     const borrowerMap = new Map(users.map(user => [user.id, user]))
@@ -59,25 +61,22 @@ function buildOverviewModel({ transactions, payments, requests, users, today, cu
     transactions.forEach(transaction => {
       if (!['cancelled', 'refunded'].includes(transaction.status)) {
         const due = monthMap.get(transaction.dueDate?.slice(0, 7))
-        if (due) due.scheduled += Number(transaction.amount || 0)
-      }
-      if (transaction.status === 'paid') {
-        const paid = monthMap.get(transaction.datePaid?.slice(0, 7))
-        if (paid) paid.collected += Number(transaction.amount || 0)
+        if (due) due.scheduled += Number(transaction.originalAmount ?? transaction.amount ?? 0)
       }
     })
+    collections.forEach(entry=>{const paid=monthMap.get(entry.datePaid?.slice(0,7));if(paid)paid.collected+=entry.amount})
     return { open, overdue, received, pending, pendingRequests, borrowerMap, scheduled, active, monthsData }
 }
 
 export default function WorkspaceOverview() {
-  const { session, users, payments, transactions, auditLog, refreshing, refreshData, syncError } = useApp()
+  const { session, users, payments, transactions,paymentPostings, auditLog, refreshing, refreshData, syncError } = useApp()
   const { requests = [] } = useLoanRequests()
   const { unreadTotal } = useMessages()
   const [months, setMonths] = useState(6)
   const now = new Date()
   const today = dateAtManila(now)
   const currentMonth = today.slice(0, 7)
-  const model = buildOverviewModel({ transactions, payments, requests, users, today, currentMonth, months })
+  const model = buildOverviewModel({ transactions, paymentPostings, payments, requests, users, today, currentMonth, months })
 
   const date = now.toLocaleDateString('en-PH', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'Asia/Manila' })
   const firstName = session.user.nickname || session.user.name?.split(' ')[0] || 'there'
@@ -92,7 +91,7 @@ export default function WorkspaceOverview() {
     {refreshing && <p className="aw-refresh-feedback" role="status"><MagneticDots />Refreshing account records…</p>}
     <section className="aw-metrics" aria-label="Portfolio summary">
       <Metric title="Outstanding balance" value={formatPeso(amountOf(model.open))} description={`${model.open.length} open ledger entries`} icon="wallet" to="/admin/transactions" tone="aw-metric-primary" />
-      <Metric title="Collected this month" value={formatPeso(amountOf(model.received))} description="Confirmed paid ledger entries" icon="trendingUp" to="/admin/payment-logs" />
+      <Metric title="Collected this month" value={formatPeso(amountOf(model.received))} description="Posted cash and legacy settlements, net of reversals" icon="trendingUp" to="/admin/payment-logs" />
       <Metric title="Past due" value={formatPeso(amountOf(model.overdue))} description={`${new Set(model.overdue.map(row => row.userId)).size} borrower account${new Set(model.overdue.map(row => row.userId)).size === 1 ? '' : 's'}`} icon="clock" to="/admin/payment-due" tone="aw-metric-warning" />
       <Metric title="Active borrowers" value={model.active.toLocaleString('en-PH')} description={`${users.filter(user => user.role === 'user').length} total borrower accounts`} icon="users" to="/admin/users" />
     </section>

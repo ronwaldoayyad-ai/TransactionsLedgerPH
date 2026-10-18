@@ -1,1 +1,5 @@
-export function collectionEntries(transactions) { return transactions.filter(t=>t.status==='paid').map(t=>({amount:t.amount,datePaid:t.datePaid})) }
+export function collectionEntries(transactions,postings=[]) {
+  const legacy=transactions.filter(t=>t.status==='paid'&&!t.paidAmount).map(t=>({id:t.id,amount:t.originalAmount??t.amount,datePaid:t.datePaid}))
+  const cash=postings.filter(p=>Number(p.cash_amount)>0).map(p=>({id:p.id,amount:Number(p.cash_amount)*(p.reversal_of?-1:1),datePaid:p.effective_date}))
+  return [...legacy,...cash]
+}
