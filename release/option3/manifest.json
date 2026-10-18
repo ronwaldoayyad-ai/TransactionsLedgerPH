@@ -1,7 +1,7 @@
 {
   "status": "rehearsal candidate; production approval required",
   "classic_commit": "db08a917120a6455b8d2d0d42ddf981c5b3cbd63",
-  "sha256": "fdcd504f30fb8fc8f3857cdfacbe75e0d9aa3ee79618f41c8efc3462f47cb9de",
+  "sha256": "a0c19d7824bf4021d87d5df760a87a8185e880b11b2aceddcf81b27b3aa3ef10",
   "sources": [
     {
       "file": "release/option3/foundation.sql",
@@ -62,10 +62,6 @@
     {
       "file": "supabase/migrations/20261017215448_restrict_classic_anonymous_rpcs.sql",
       "sha256": "aa4a5f35f3ef03ce6a40da229db72316036a7a628a8e91a77b289b638187182b"
-    },
-    {
-      "file": "supabase/migrations/20261018023949_reviewed_payment_posting.sql",
-      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     }
   ],
   "adaptations": [

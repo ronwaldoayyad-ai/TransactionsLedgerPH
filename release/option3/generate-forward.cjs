@@ -1,7 +1,7 @@
 // Generate the reviewed additive candidate; this script never connects to a database.
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
 const root=path.resolve(__dirname,'../..'),hash=value=>crypto.createHash('sha256').update(value).digest('hex');
-const files=[path.join(__dirname,'foundation.sql'),...fs.readdirSync(path.join(root,'supabase/migrations')).filter(name=>/^202610.*\.sql$/.test(name)).sort().map(name=>path.join(root,'supabase/migrations',name))];
+const files=[path.join(__dirname,'foundation.sql'),...fs.readdirSync(path.join(root,'supabase/migrations')).filter(name=>/^202610.*\.sql$/.test(name)).sort().map(name=>path.join(root,'supabase/migrations',name)).filter(file=>fs.readFileSync(file,'utf8').trim())];
 let sql=files.map((file,index)=>(index?'\n-- '+path.basename(file)+'\n':'')+fs.readFileSync(file,'utf8')).join('');
 // Imported function definitions can omit a visible composite return schema.
 // The candidate must also compile after pg_dump has cleared search_path.

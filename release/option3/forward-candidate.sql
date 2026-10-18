@@ -1344,6 +1344,4 @@ do $$declare routine record;begin
 end $$;
 notify pgrst,'reload schema';
 
--- 20261018023949_reviewed_payment_posting.sql
-
 commit;
