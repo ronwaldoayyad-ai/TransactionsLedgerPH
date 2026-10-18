@@ -25,3 +25,10 @@ test('recovery wraps account mutators before they can optimistically change bala
  const code=patchClassicRecovery('return <AppContext.Provider value={value}>{children}</AppContext.Provider>','/src/context/AppContext.jsx');
  assert.match(code,/recoveryValue/);assert.match(code,/Read-only Classic recovery/);assert.match(code,/recoveryDeny/);
 });
+test('recovery borrower summary shows available credit and retains original transaction totals',()=>{
+ const source=`const { session, loans, payments, transactions, paymentDueOverrides } = useApp()
+const straightTotal = straightTxns.reduce((s, t) => s + t.amount, 0)
+const installmentTotal = installmentTxns.reduce((s, t) => s + t.amount, 0)
+      {/* Featured: Current */}`;
+ const code=patchClassicRecovery(source,'/src/pages/user/UserDashboard.jsx');assert.match(code,/Available account credit/);assert.match(code,/t.originalAmount \?\? t.amount/);assert.match(code,/users.find/);
+});
