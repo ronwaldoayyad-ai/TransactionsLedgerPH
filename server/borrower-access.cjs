@@ -5,11 +5,24 @@ module.exports=({db,active,localAuth})=>{
  async function actor(req){const a=await active(req,true);if(a.role!=='admin'||a.status!=='active')throw fail('An active lender is required.',403);return a}
  function target(body){if(!uuid.test(body.userId||''))throw fail('Choose a borrower account.');return body.userId}
  async function profile(client,id){const p=(await client.query("select id,email,status from public.profiles where id=$1 and role='user'",[id])).rows[0];if(!p)throw fail('Borrower account unavailable.',404);return p}
- async function identity(id){const a=await localAuth('admin/users/'+id,'GET');if(a.id!==id)throw fail('This borrower has no matching sign-in identity.',409);return a}
+ async function identity(id,client=db){
+  // Older invitations deliberately create profiles before Auth accounts. Missing
+  // identity is a supported state, not an Auth-service failure.
+  if(!(await client.query('select id from auth.users where id=$1',[id])).rows.length)return null
+  const a=await localAuth('admin/users/'+id,'GET');if(a.id!==id)throw fail('This borrower has no matching sign-in identity.',409);return a
+ }
+ async function initializeIdentity(client,p){
+  const collision=await client.query('select id from auth.users where lower(email)=lower($1) and id<>$2',[p.email,p.id])
+  if(collision.rows.length)throw fail('This email belongs to another sign-in account. Contact support to reconcile it; no records were moved.',409)
+  // Admin creation sends no invitation email and uses the existing profile ID.
+  const a=await localAuth('admin/users','POST',{id:p.id,email:p.email,email_confirm:false})
+  if(a.id!==p.id||a.email?.toLowerCase()!==p.email.toLowerCase())throw fail('Sign-in setup needs reconciliation. Reload access details before retrying.',409)
+  return a
+ }
  async function view(client,id){
-  const p=await profile(client,id),a=await identity(id)
+  const p=await profile(client,id),a=await identity(id,client)
   const history=(await client.query("select id,action,reason,details,state,created_at,completed_at from mobile_private.borrower_access_events where user_id=$1 and action in ('status','confirm-email') order by created_at desc,id limit 10",[id])).rows
-  return {userId:id,email:p.email,status:p.status,emailConfirmedAt:a.email_confirmed_at||null,pendingEmail:!!a.email_change,history}
+  return {userId:id,email:p.email,status:p.status,hasIdentity:!!a,emailConfirmedAt:a?.email_confirmed_at||null,pendingEmail:!!a?.email_change,history}
  }
  async function details(req,body){await actor(req);return view(db,target(body))}
  async function save(req,body){
@@ -28,21 +41,28 @@ module.exports=({db,active,localAuth})=>{
     if(old.user_id!==id||old.actor_id!==lender.id||old.action!==body.action||old.reason!==body.reason.trim()||Object.keys(details).some(k=>old.details[k]!==details[k]))throw fail('This request reference belongs to another override. Reload before retrying.',409)
     if(old.state==='completed')return {saved:true,...await view(client,id)}
    }
-   const p=await profile(client,id),auth=await identity(id)
-   if(p.email!==body.expectedEmail||auth.email?.toLowerCase()!==p.email.toLowerCase()||p.status!==body.expectedStatus)throw fail('Account details changed. Reload access controls before saving.',409)
-   if(body.action==='confirm-email'&&auth.email_change)throw fail('Resolve the pending email change before confirming this address.',409)
+   const p=await profile(client,id);let auth=await identity(id,client)
+   if(p.email!==body.expectedEmail||(auth&&auth.email?.toLowerCase()!==p.email.toLowerCase())||p.status!==body.expectedStatus)throw fail('Account details changed. Reload access controls before saving.',409)
+   if(body.action==='confirm-email'&&auth?.email_change)throw fail('Resolve the pending email change before confirming this address.',409)
    await actor(req)
+   let intent=!!old
+   const needsIdentity=!auth&&(body.action==='confirm-email'||body.status==='active')
+   if(needsIdentity){
+    if(!intent){await client.query('insert into mobile_private.borrower_access_events(id,user_id,actor_id,action,reason,details) values($1,$2,$3,$4,$5,$6)',[body.key,id,lender.id,body.action,body.reason.trim(),JSON.stringify(details)]);intent=true}
+    auth=await initializeIdentity(client,p)
+   }
    if(body.action==='status'){
-    if(p.status===body.status)return {saved:true,...await view(client,id)}
+    if(p.status===body.status&&!intent)return {saved:true,...await view(client,id)}
     await client.query('begin');transaction=true
-    await client.query("insert into mobile_private.borrower_access_events(id,user_id,actor_id,action,reason,details,state,completed_at) values($1,$2,$3,$4,$5,$6,'completed',now())",[body.key,id,lender.id,body.action,body.reason.trim(),JSON.stringify(details)])
+    if(!intent)await client.query("insert into mobile_private.borrower_access_events(id,user_id,actor_id,action,reason,details,state,completed_at) values($1,$2,$3,$4,$5,$6,'completed',now())",[body.key,id,lender.id,body.action,body.reason.trim(),JSON.stringify(details)])
     const changed=await client.query("update public.profiles set status=$2 where id=$1 and role='user' and status=$3 and email=$4",[id,body.status,p.status,p.email]);if(changed.rowCount!==1)throw fail('Account changed. Reload before saving.',409)
+    if(intent)await client.query("update mobile_private.borrower_access_events set state='completed',completed_at=now() where id=$1",[body.key])
     await client.query('commit');transaction=false
    }else{
     if(!auth.email_confirmed_at){
      // Durable intent precedes the separate Auth service. A failed response stays
      // pending instead of falsely claiming that confirmation did not happen.
-     if(!old)await client.query('insert into mobile_private.borrower_access_events(id,user_id,actor_id,action,reason,details) values($1,$2,$3,$4,$5,$6)',[body.key,id,lender.id,body.action,body.reason.trim(),JSON.stringify(details)])
+     if(!intent)await client.query('insert into mobile_private.borrower_access_events(id,user_id,actor_id,action,reason,details) values($1,$2,$3,$4,$5,$6)',[body.key,id,lender.id,body.action,body.reason.trim(),JSON.stringify(details)])
      const confirmed=await localAuth('admin/users/'+id,'PUT',{email_confirm:true})
      if(!confirmed.email_confirmed_at)throw fail('Confirmation could not be verified. Reload account access before retrying.',503)
     }else if(!old)return {saved:true,...await view(client,id)}
