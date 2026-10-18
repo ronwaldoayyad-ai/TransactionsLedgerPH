@@ -21,5 +21,8 @@ async function request(action, payload) {
 export async function getBorrowerDetails(userId) { return mapProfile((await request('borrower-details', { userId })).profile) }
 export async function saveBorrowerDetails(userId, profile) { return mapProfile((await request('borrower-profile', { userId, profile })).profile) }
 export async function changeBorrowerPassword(userId, password) { return request('borrower-password', { userId, password }) }
+export async function getBorrowerAccess(userId) { return request('borrower-access', { userId }) }
+export async function overrideBorrowerAccess(payload) { return request('borrower-access-save', payload) }
+export async function changeInstallmentCategory(payload) { return request('installment-category', payload) }
 export async function getLoginLocks() { return request('login-locks', {}) }
 export async function unlockLoginAccess(reference) { return request('login-unlock', { reference }) }

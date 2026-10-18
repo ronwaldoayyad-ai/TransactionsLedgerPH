@@ -3,8 +3,9 @@ import { changeBorrowerPassword } from '../../lib/borrowerAdministration'
 import { Button, Field, inputClass } from '../ui'
 import Icon from '../Icon'
 import LocalLenderOperations from '../LocalLenderOperations'
+import BorrowerAccessOverrides from './BorrowerAccessOverrides'
 
-export default function BorrowerLoginControls({ borrower, onBusyChange }) {
+export default function BorrowerLoginControls({ borrower, onBusyChange, onSaved }) {
   const [password, setPassword] = useState('')
   const [confirmation, setConfirmation] = useState('')
   const [visible, setVisible] = useState(false)
@@ -18,7 +19,7 @@ export default function BorrowerLoginControls({ borrower, onBusyChange }) {
     const keyboard = event => {
       if (event.key === 'Escape') { event.preventDefault(); dialog?.querySelector('button[aria-label="Close"]')?.click(); return }
       if (event.key !== 'Tab') return
-      const items = [...dialog.querySelectorAll('button,input,select,a[href]')].filter(item => !item.disabled && item.getClientRects().length)
+      const items = [...dialog.querySelectorAll('button,input,select,textarea,a[href]')].filter(item => !item.disabled && item.getClientRects().length)
       if (!items.length) return
       if (event.shiftKey && document.activeElement === items[0]) { event.preventDefault(); items.at(-1).focus() }
       else if (!event.shiftKey && document.activeElement === items.at(-1)) { event.preventDefault(); items[0].focus() }
@@ -48,6 +49,7 @@ export default function BorrowerLoginControls({ borrower, onBusyChange }) {
       {saved && <p role="status" className="rounded-lg bg-blue-50 p-3 text-xs text-blue-700">Password updated. The borrower can use the new password to sign in.</p>}
       <Button type="submit" disabled={busy || !valid || password !== confirmation}>{busy ? 'Updating password…' : 'Update password'}</Button>
     </form>
+    <BorrowerAccessOverrides borrower={borrower} onBusyChange={onBusyChange} onSaved={onSaved} />
     <LocalLenderOperations borrowers={[borrower]} initialBorrowerId={borrower.id} section="access" />
   </div>
 }

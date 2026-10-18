@@ -19,7 +19,7 @@ const profileForm = user => ({ name: [user.firstName, user.lastName].filter(Bool
 
 // Global user management: invite (create), edit, disable, delete.
 export default function Users() {
-  const { users, loans, transactions, inviteUser, updateUser, deleteUser, resendInvite, startViewAs } =
+  const { users, loans, transactions, inviteUser, updateUser, deleteUser, resendInvite, startViewAs, refreshData } =
     useApp()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -458,7 +458,7 @@ export default function Users() {
       </Modal>
 
       <Modal open={modal === 'access'} title="Borrower login access" onClose={closeEditor}>
-        {target && <BorrowerLoginControls key={target.id} borrower={target} onBusyChange={setBusy} />}
+        {target && <BorrowerLoginControls key={target.id} borrower={target} onBusyChange={setBusy} onSaved={() => refreshData({ preservePageState: true })} />}
       </Modal>
 
       {/* Delete confirmation */}

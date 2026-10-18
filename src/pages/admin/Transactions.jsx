@@ -12,6 +12,7 @@ import { usePagination } from '../../hooks/usePagination'
 import { downloadCSV, formatDate, formatPeso, toISODate } from '../../lib/amortization'
 import { STATUS_LABELS, effectiveStatus } from '../../lib/transactions'
 import { parseCSV, parseCSVAmount, parseCSVDate } from '../../lib/csv'
+import InstallmentGroupEditor from '../../components/admin/InstallmentGroupEditor'
 
 const IMPORT_HEADERS = ['Borrower', 'Txn Date', 'Item Description', 'Amount', 'Type', 'Due Date', 'Date Paid', 'Status']
 // Loan-level columns (repeat per row; first non-empty value per loan wins).
@@ -489,6 +490,7 @@ export default function Transactions() {
         subtitle="Every amortization installment across all borrowers. Status changes here update each borrower's dashboard instantly."
         action={
           <div className="flex flex-wrap gap-2">
+            <InstallmentGroupEditor />
             <RefreshButton />
             <input
               ref={importInputRef}

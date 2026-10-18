@@ -330,3 +330,26 @@ test('a retry key cannot change its reviewed fees and a 100 percent description 
 test('an older monthly assessment does not block a new reviewed calendar month',async()=>{
  const f=await fixture();try{const p=await feePayload(f);await f.client.query('reset role');await f.client.query("insert into public.fee_assessments(user_id,actor_id,operation_key,source_due_date,assessment_month,charge_due_date,finance_enabled,finance_rate,late_enabled,base_amount,finance_amount,late_amount,total_amount,source_rows) values($1,$2,$3,$4,($5::date-interval '1 month')::date,$4,true,3,false,1000,30,0,30,'[]')",[f.borrower,f.admin,crypto.randomUUID(),p.sourceDueDate,p.assessmentMonth]);await f.client.query('set local role authenticated');const r=await assessFee(f,p);assert.equal(r.saved,true);assert.equal(Number((await f.client.query('select count(*) n from public.fee_assessments where user_id=$1',[f.borrower])).rows[0].n),2);}finally{await release(f)}
 });
+
+
+test('disabled accounts lose existing session access and cannot mint or refresh tokens',async()=>{
+ const f=await fixture();try{
+  assert.equal((await f.client.query('select mobile_private.valid_session() ok')).rows[0].ok,true);
+  await f.client.query("update public.profiles set status='disabled' where id=$1",[f.admin]);
+  assert.equal((await f.client.query('select mobile_private.valid_session() ok')).rows[0].ok,false);
+  await f.client.query('reset role');
+  assert.equal((await f.client.query("select has_function_privilege('supabase_auth_admin','mobile_private.account_disabled(uuid)','EXECUTE') ok")).rows[0].ok,true);
+  for(const authentication_method of ['password','token_refresh','otp']){
+   const r=(await f.client.query('select mobile_private.login_access_token($1) r',[{user_id:f.admin,authentication_method,claims:{sub:f.admin}}])).rows[0].r;
+   assert.equal(r.error.message,'LOGIN_ACCOUNT_DISABLED');
+  }
+  await f.client.query('reset role');
+  await f.client.query("update public.profiles set status='active' where id=$1",[f.admin]);
+  assert.equal((await f.client.query('select mobile_private.valid_session() ok')).rows[0].ok,true);
+ }finally{await release(f)}
+});
+
+test('override history is not readable or writable by browser roles',async()=>{
+ const r=(await db.query("select has_table_privilege('anon','mobile_private.borrower_access_events','SELECT') a,has_table_privilege('authenticated','mobile_private.borrower_access_events','SELECT') b,has_table_privilege('authenticated','mobile_private.borrower_access_events','INSERT') c")).rows[0];
+ assert.deepEqual(r,{a:false,b:false,c:false});
+});

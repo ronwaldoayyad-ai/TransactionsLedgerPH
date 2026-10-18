@@ -1,5 +1,5 @@
 const {Readable}=require('node:stream'),crypto=require('node:crypto');
-const routes=new Set(['/issue','/revoke','/redeem','/login-password','/login-status','/login-locks','/login-unlock','/borrower-details','/borrower-profile','/borrower-password','/validate-upload','/guest-support']);
+const routes=new Set(['/issue','/revoke','/redeem','/login-password','/login-status','/login-locks','/login-unlock','/borrower-details','/borrower-profile','/borrower-password','/borrower-access','/borrower-access-save','/installment-category','/validate-upload','/guest-support']);
 module.exports=function createApiHandler(getRuntime){return async function handle(request){
  const url=new URL(request.url),route=url.pathname==='/api'?'/'+(url.searchParams.get('__route')||''):url.pathname.slice('/api'.length);
  const json=(status,value)=>Response.json(value,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
