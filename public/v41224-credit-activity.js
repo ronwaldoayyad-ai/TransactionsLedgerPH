@@ -1,0 +1,22 @@
+// Credit activity is a read-only view of reviewed postings, never a new due.
+function creditActivitySection(rows,{search='',sort='Newest',filter='All',language='English'}={}){
+ if(!['All','Payments','Account credit'].includes(filter))return '';
+ const fil=language==='Filipino',copy=fil?{
+  title:'Paglalapat ng kredito',intro:'Ibinawas ang naipong kredito sa mga dapat bayaran. Hindi ito bagong perang natanggap.',applied:'Kreditong inilapat',reversal:'Ibinalik na paglalapat ng kredito',reversed:'Binawi',breakdown:'Detalye ng paglalapat',before:'Balanse bago ang entry',amount:'Inilapat sa dapat bayaran',undo:'Ibinalik na halaga',after:'Balanse pagkatapos ng entry',cash:'Kasamang bagong bayad',total:'Kabuuang inilapat',due:'Takdang bayaran',fallback:'Dating naitalang dapat bayaran',missing:'Hindi available ang detalye ng paglalapat.'
+ }:{title:'Account credit activity',intro:'Credit applied to your dues. These entries use existing credit, not new cash payments.',applied:'Account credit applied',reversal:'Credit application reversed',reversed:'Reversed',breakdown:'Allocation breakdown',before:'Balance before',amount:'Applied to due',undo:'Allocation reversed',after:'Balance after this entry',cash:'Cash included in this posting',total:'Total applied',due:'Due',fallback:'Previously recorded due',missing:'Allocation details are unavailable.'};
+ const q=search.trim().toLowerCase(),items=rows.filter(r=>!q||[r.reference,r.note,r.date,copy.applied,...r.allocations.map(a=>a.description)].join(' ').toLowerCase().includes(q)).slice();
+ items.sort((a,b)=>(sort==='Amount: high to low'?b.creditUsed-a.creditUsed:sort==='Amount: low to high'?a.creditUsed-b.creditUsed:0)||(sort==='Oldest'?1:-1)*String(a.date).localeCompare(String(b.date))||String(b.recordedAt).localeCompare(String(a.recordedAt))||String(a.id).localeCompare(String(b.id)));
+ if(!items.length)return '';
+ const entries=items.map(row=>'<article class="credit-entry'+(row.status==='applied'?'':' is-reversed')+'" data-credit-id="'+htmlSafe(row.id)+'"><header><strong>'+copy[row.status==='reversal'?'reversal':'applied']+'</strong><b>'+cash(row.creditUsed)+'</b></header><p class="credit-entry-meta">'+htmlSafe(stagingDate(row.date))+(row.status==='reversed'?' · '+copy.reversed:'')+(row.reference?' · '+htmlSafe(row.reference):'')+'</p>'+(row.cashIncluded>0?'<p>'+copy.cash+': '+cash(row.cashIncluded)+' · '+copy.total+': '+cash(row.totalApplied)+'</p>':'')+'<details><summary>'+copy.breakdown+' ('+row.allocations.length+')</summary><ul>'+row.allocations.map(a=>'<li><strong>'+htmlSafe(a.description==='Previously recorded due'?copy.fallback:a.description)+'</strong>'+(a.dueDate?'<small>'+copy.due+' '+htmlSafe(stagingDate(a.dueDate))+'</small>':'')+'<dl><dt>'+copy.before+'</dt><dd>'+cash(a.beforeBalance)+'</dd><dt>'+copy[row.status==='reversal'?'undo':'amount']+'</dt><dd>'+cash(a.amount)+'</dd><dt>'+copy.after+'</dt><dd><b>'+cash(a.afterBalance)+'</b></dd></dl></li>').join('')+'</ul>'+(!row.allocations.length?'<p>'+copy.missing+'</p>':'')+'</details>'+(row.note?'<p class="credit-entry-note">'+htmlSafe(row.note)+'</p>':'')+'</article>').join('');
+ return '<section class="section borrower-credit-activity" aria-label="'+copy.title+'" data-no-translate><div class="sectiontitle"><div><h2>'+copy.title+'</h2><small class="muted">'+copy.intro+'</small></div><span class="count">'+items.length+'</span></div>'+entries+'</section>';
+}
+function insertCreditActivity(html,section){const index=html.indexOf('<section');return index<0?html+section:html.slice(0,index)+section+html.slice(index);}
+const transactionsBeforeCreditActivity=transactions;
+transactions=()=>insertCreditActivity(transactionsBeforeCreditActivity(),creditActivitySection(stagingData?.creditApplications||[],{search:txSearch,sort:txSort,language:preferredLanguage}));
+const historyBeforeCreditActivity=history;
+history=()=>{
+ let html=historyBeforeCreditActivity();const rows=stagingData?.creditApplications||[];
+ if(rows.length)html=html.replace(/(<div class="filter">)([\s\S]*?)(<\/div>)/,(_,open,buttons,close)=>open+buttons+'<button type="button" data-no-translate class="'+(hf==='Account credit'?'sel':'')+'" onclick="hf=\'Account credit\';render()">'+(preferredLanguage==='Filipino'?'Kredito sa account':'Account credit')+'</button>'+close);
+ return insertCreditActivity(html,creditActivitySection(rows,{filter:hf,language:preferredLanguage}));
+};
+if(['transactions','history'].includes(page))render();

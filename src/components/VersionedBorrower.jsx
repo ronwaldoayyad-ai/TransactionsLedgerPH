@@ -1,6 +1,7 @@
 import { serviceEndpoint } from '../lib/serviceEndpoint'
 import { guestSupportPayload } from '../lib/guestSupportPayload'
 import {mobileActionError} from '../lib/mobileActionError'
+import {buildCreditActivity} from '../lib/paymentReadModel'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useApp } from '../context/AppContext'
 import { useMessages } from '../context/MessagesContext'
@@ -196,6 +197,7 @@ export default function VersionedBorrower({ children }) {
     const extra=extras?.userId===user.id?extras:null
     const data={user, integrationError:extrasError, tickets:extra?.tickets||[],notificationReactions:extra?.notificationReactions||[],ticketEvents:extra?.ticketEvents||[],hiddenMessages:extra?.hiddenMessages||[],statements:extra?.statements||[],requestRates:requests.rates,canRequest:requests.canRequest,requestEvents:own(requests.requests).flatMap(r=>requests.eventsFor(r.id)),preference:preference?.user_id===user.id?preference:null, loans:own(app.loans), transactions:own(app.transactions), payments:ownPayments, paymentLogs:own(app.paymentLogs), overrides:app.paymentDueOverrides.filter(o=>o.borrowerId===user.id), messages:messages.messagesFor(user.id), notifications:notifications.notifications.map(n=>({...n,isRead:notifications.isRead(n.id)})), invoices:own(invoices.invoices), disbursements:own(disbursements.disbursements), requests:own(requests.requests).map(r=>({...r,schedule:buildRequestSchedule(r),monthly:monthlyInstallment(r.amount,r.monthlyRate,r.termMonths)}))}
     data.notificationCategories=notifications.categoriesAll
+    data.creditApplications=buildCreditActivity({ownerId:user.id,postings:app.paymentPostings,transactions:[...app.transactions,...app.archivedTransactions],logs:app.paymentLogs})
     const key=JSON.stringify(data)
     if(lastDelivery.current===key)return
     if(!lastDelivery.current||lastDelivery.current.startsWith('session:')){
@@ -204,7 +206,7 @@ export default function VersionedBorrower({ children }) {
     // Group closely arriving provider updates and skip identical snapshots.
     const timer=setTimeout(()=>{lastDelivery.current=key;post({type:'snapshot',data})},80)
     return ()=>clearTimeout(timer)
-  }, [active, ready, releaseEnabled, borrower.ready, frameGeneration, preference, extras,extrasError,app.users,app.session, app.authLoading, app.dataReady, app.syncError, app.loans, app.transactions, app.payments, app.paymentLogs, app.paymentDueOverrides, messages, notifications, invoices.invoices, disbursements.disbursements, requests])
+  }, [active, ready, releaseEnabled, borrower.ready, frameGeneration, preference, extras,extrasError,app.users,app.session, app.authLoading, app.dataReady, app.syncError, app.loans, app.transactions, app.archivedTransactions,app.paymentPostings,app.payments, app.paymentLogs, app.paymentDueOverrides, messages, notifications, invoices.invoices, disbursements.disbursements, requests])
   if (!active) return children
   return <iframe ref={frame} onLoad={()=>setReady(true)} title="LoanLedger PH · v4.12.24" allow="web-share" src="/borrower-v4.12.24.html" style={{position:'fixed',inset:0,width:'100%',height:'100%',border:0,background:'#101a31',zIndex:100}} />
 }

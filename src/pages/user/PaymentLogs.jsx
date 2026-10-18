@@ -3,6 +3,7 @@ import { useApp } from '../../context/AppContext'
 import { PageHeader } from '../../components/AppShell'
 import { Badge, Card, CardHeader, EmptyState, inputClass } from '../../components/ui'
 import { formatDate, formatPeso } from '../../lib/amortization'
+import BorrowerCreditActivity from '../../components/BorrowerCreditActivity'
 
 const allocBadge = {
   Settled: 'paid',
@@ -66,6 +67,7 @@ export default function PaymentLogs() {
         title="Payment Logs"
         subtitle="Acknowledgements of payments received, recorded by the administrator. Read-only."
       />
+      <BorrowerCreditActivity />
       <Card>
         <CardHeader
           title="My payment acknowledgements"

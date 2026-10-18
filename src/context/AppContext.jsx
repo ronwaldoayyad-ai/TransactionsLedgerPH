@@ -240,7 +240,7 @@ export function AppProvider({ children }) {
           ),
           borrowerInitial ? empty : supabase.from('audit_log').select('*').order('at', { ascending: false }).limit(500),
         supabase.from('payment_due_overrides').select('*'),
-        fetchAllRows(() => supabase.from('payment_postings').select('*').order('created_at').order('id')),
+        fetchAllRows(() => supabase.from('payment_postings').select('*, allocation_rows:payment_allocations(transaction_id,user_id,amount,before_balance)').order('created_at').order('id')),
         ])
 
       if (generation !== loadGeneration.current) return

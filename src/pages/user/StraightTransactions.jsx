@@ -3,6 +3,7 @@ import { useApp } from '../../context/AppContext'
 import { PageHeader } from '../../components/AppShell'
 import BorrowerScheduleTable from '../../components/BorrowerScheduleTable'
 import RefreshButton from '../../components/RefreshButton'
+import BorrowerCreditActivity from '../../components/BorrowerCreditActivity'
 import { Card, CardHeader, EmptyState, MultiSelect, Switch } from '../../components/ui'
 import { usePersistedState } from '../../hooks/usePersistedState'
 import { formatPeso, toISODate } from '../../lib/amortization'
@@ -66,6 +67,7 @@ export default function StraightTransactions() {
         action={<RefreshButton />}
       />
 
+      <BorrowerCreditActivity />
       <Card>
         <CardHeader
           title="My Straight Transactions"
