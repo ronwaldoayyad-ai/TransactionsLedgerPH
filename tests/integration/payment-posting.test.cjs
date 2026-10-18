@@ -105,3 +105,57 @@ test('direct browser updates cannot change applied amounts, credit or posted fin
   ]){await f.client.query('savepoint immutable_record');await assert.rejects(f.client.query(sql,args));await f.client.query('rollback to savepoint immutable_record')}
  }finally{await release(f)}
 });
+
+test('reviewed reversal restores dues and credit without deleting or rewriting the original posting',async()=>{
+ const f=await fixture(1200);try{
+  await post(f,{allocations:[{id:f.due,amount:'1000',expectedBalance:'1000'}]});
+  const original=(await f.client.query('select id from public.payment_postings where payment_id=$1',[f.proof])).rows[0].id;
+  const payload={key:crypto.randomUUID(),id:original,reviewed:true,expectedCredit:'200',reason:'Synthetic duplicate bank receipt correction'};
+  const first=await f.client.query("select public.mobile_action('payment-reverse',$1) as result",[payload]);
+  const repeat=await f.client.query("select public.mobile_action('payment-reverse',$1) as result",[payload]);assert.deepEqual(first.rows,repeat.rows);
+  const row=(await f.client.query('select status,amount_applied from public.transactions where id=$1',[f.due])).rows[0];assert.equal(Number(row.amount_applied),0);assert.equal(row.status,'unpaid');
+  assert.equal(Number((await f.client.query('select credit_balance from public.profiles where id=$1',[f.borrower])).rows[0].credit_balance),0);
+  assert.equal((await f.client.query('select count(*)::int as n from public.payment_postings where user_id=$1',[f.borrower])).rows[0].n,2);
+  assert.equal((await f.client.query('select count(*)::int as n from public.payment_logs where user_id=$1',[f.borrower])).rows[0].n,2);
+  assert.equal((await f.client.query('select status from public.payments where id=$1',[f.proof])).rows[0].status,'rejected');
+  await f.client.query('savepoint twice');await assert.rejects(f.client.query("select public.mobile_action('payment-reverse',$1)",[{...payload,key:crypto.randomUUID()}]),/already.*revers|revers.*already/i);await f.client.query('rollback to savepoint twice');
+ }finally{await release(f)}
+});
+
+test('reversal cannot remove surplus credit already spent by a later posting',async()=>{
+ const f=await fixture(1200);try{
+  await post(f,{allocations:[{id:f.due,amount:'1000',expectedBalance:'1000'}]});
+  const original=(await f.client.query('select id from public.payment_postings where payment_id=$1',[f.proof])).rows[0].id,id=await addDue(f,200);
+  await f.client.query("select public.mobile_action('credit-apply',$1)",[{key:crypto.randomUUID(),reviewed:true,userId:f.borrower,paidDate:new Date().toISOString().slice(0,10),creditUsed:'200',expectedCredit:'200',allocations:[{id,amount:'200',expectedBalance:'200'}]}]);
+  await f.client.query('savepoint spent_credit');await assert.rejects(f.client.query("select public.mobile_action('payment-reverse',$1)",[{key:crypto.randomUUID(),id:original,reviewed:true,expectedCredit:'0',reason:'Synthetic correction after credit already used'}]),/credit.*(used|spent|insufficient)|insufficient.*credit/i);await f.client.query('rollback to savepoint spent_credit');
+  assert.equal((await f.client.query('select status from public.transactions where id=$1',[f.due])).rows[0].status,'paid');
+ }finally{await release(f)}
+});
+
+test('borrower sessions cannot approve, spend credit, reverse or read another account posting',async()=>{
+ const f=await fixture();try{
+  await post(f);await f.client.query('reset role');
+  const sid=crypto.randomUUID();await f.client.query('insert into auth.sessions(id,user_id) values($1,$2)',[sid,f.borrower]);
+  await f.client.query("select set_config('request.jwt.claims',$1,true)",[JSON.stringify({sub:f.borrower,role:'authenticated',session_id:sid})]);await f.client.query('set local role authenticated');
+  assert.equal((await f.client.query('select count(*)::int n from public.payment_postings')).rows[0].n,1);
+  for(const action of ['payment-review','credit-apply','payment-reverse']){await f.client.query('savepoint denied');await assert.rejects(f.client.query('select public.mobile_action($1,$2)',[action,f.payload]));await f.client.query('rollback to savepoint denied')}
+  await f.client.query('reset role');const other=crypto.randomUUID(),otherSid=crypto.randomUUID();await f.client.query('insert into auth.users(id,email) values($1,$2)',[other,other+'@test.invalid']);await f.client.query("insert into public.profiles(id,email,name,role,status) values($1,$2,'Other borrower','user','active')",[other,other+'@test.invalid']);await f.client.query('insert into auth.sessions(id,user_id) values($1,$2)',[otherSid,other]);await f.client.query("select set_config('request.jwt.claims',$1,true)",[JSON.stringify({sub:other,role:'authenticated',session_id:otherSid})]);await f.client.query('set local role authenticated');
+  assert.equal((await f.client.query('select count(*)::int n from public.payment_postings')).rows[0].n,0);assert.equal((await f.client.query('select count(*)::int n from public.payment_allocations')).rows[0].n,0);
+ }finally{await release(f)}
+});
+
+test('inactive accounts and revoked sessions cannot post or read accounting records',async()=>{
+ for(const mode of ['inactive','revoked']){const f=await fixture();try{
+  await post(f);await f.client.query('reset role');
+  if(mode==='inactive')await f.client.query("update public.profiles set status='disabled' where id=$1",[f.admin]);else await f.client.query('delete from auth.sessions where id=$1',[f.sid]);
+  await f.client.query('set local role authenticated');assert.equal((await f.client.query('select count(*)::int n from public.payment_postings')).rows[0].n,0);
+  await assert.rejects(post(f,{key:crypto.randomUUID()}),/active sign-in/i);
+ }finally{await release(f)}}
+});
+
+test('concurrent approvals of one proof commit exactly one posting and acknowledgement',async()=>{
+ const f=await fixture();await f.client.query('commit');f.client.release();
+ const run=async()=>{const client=await db.connect();try{await client.query('begin');await client.query("select set_config('request.jwt.claims',$1,true)",[JSON.stringify({sub:f.admin,role:'authenticated',session_id:f.sid})]);await client.query('set local role authenticated');const r=await client.query("select public.mobile_action('payment-review',$1)",[{...f.payload,key:crypto.randomUUID()}]);await client.query('commit');return r}catch(e){await client.query('rollback');throw e}finally{client.release()}};
+ const result=await Promise.allSettled([run(),run()]);assert.equal(result.filter(r=>r.status==='fulfilled').length,1);assert.equal(result.filter(r=>r.status==='rejected').length,1);
+ const row=(await db.query('select (select count(*) from public.payment_postings where user_id=$1)::int postings,(select count(*) from public.payment_logs where user_id=$1)::int logs',[f.borrower])).rows[0];assert.deepEqual(row,{postings:1,logs:1});
+});
