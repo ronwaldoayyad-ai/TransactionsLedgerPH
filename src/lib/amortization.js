@@ -32,11 +32,14 @@ export function parseAmount(text) {
 
 export function formatDate(date) {
   if (!date) return '—'
-  const d = typeof date === 'string' ? parseISODate(date) : date
+  const timestamp = typeof date === 'string' && !/^\d{4}-\d{2}-\d{2}$/.test(date)
+  const d = typeof date === 'string' ? timestamp ? new Date(date) : parseISODate(date) : date
+  if (!(d instanceof Date) || !Number.isFinite(d.getTime())) return '—'
   return d.toLocaleDateString('en-PH', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
+    ...(timestamp ? { timeZone: 'Asia/Manila' } : {}),
   })
 }
 
