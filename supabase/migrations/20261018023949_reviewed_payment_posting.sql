@@ -173,7 +173,7 @@ begin
   (case when selected_due>total then 'Underpayment' when added>0 then 'Overpayment' when p_credit_only then 'Credited' else 'Settled' end)::public.pay_log_alloc,
   used,left(coalesce(p_payload->>'note',''),2000),posting);
  if not p_credit_only then
-  update public.payments set status='approved',note=left(coalesce(p_payload->>'note',''),2000),reviewed_at=effective,posted_at=clock_timestamp(),
+  update public.payments set status='approved',note=left(coalesce(p_payload->>'note',''),2000),reviewed_at=(now() at time zone 'Asia/Manila')::date,posted_at=clock_timestamp(),
    posted_allocations=(select coalesce(jsonb_agg(jsonb_build_object('id',a.transaction_id,'description',t.description,'dueDate',t.due_date,'amount',a.amount,'remainingAmount',t.amount-t.amount_applied) order by t.due_date,t.id),'[]'::jsonb) from public.payment_allocations a join public.transactions t on t.id=a.transaction_id where a.posting_id=posting)
    where id=proof.id returning * into proof;
  end if;
