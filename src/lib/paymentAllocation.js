@@ -23,6 +23,12 @@ export function outstandingCents(due) {
   return ['paid', 'cancelled', 'refunded'].includes(due.status) ? 0 : original - paid
 }
 
+export function suggestAllocationAmount({due,amounts,cashAmount,availableCredit,useCredit}) {
+  const funds=moneyCents(cashAmount)+(useCredit?moneyCents(availableCredit):0)
+  const assigned=Object.entries(amounts).filter(([id])=>id!==due.id).reduce((sum,[,amount])=>sum+moneyCents(amount),0)
+  return centsAmount(Math.min(outstandingCents(due),Math.max(funds-assigned,0)))
+}
+
 export function reviewPaymentAllocation({borrowerId, cashAmount, availableCredit, creditUsed, dues, allocations}) {
   const cashCents = moneyCents(cashAmount), availableCreditCents = moneyCents(availableCredit), creditUsedCents = moneyCents(creditUsed)
   if (!borrowerId || !Array.isArray(dues) || !Array.isArray(allocations) || allocations.length > 100) throw Error('Choose available borrower dues and allocations.')

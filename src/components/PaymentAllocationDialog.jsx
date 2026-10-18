@@ -1,6 +1,6 @@
 import {useRef,useState} from 'react'
 import {Button,Field,Modal,inputClass} from './ui'
-import {centsAmount,moneyCents,outstandingCents,reviewPaymentAllocation} from '../lib/paymentAllocation'
+import {centsAmount,moneyCents,outstandingCents,reviewPaymentAllocation,suggestAllocationAmount} from '../lib/paymentAllocation'
 import {formatDate,formatPeso,toISODate} from '../lib/amortization'
 
 export default function PaymentAllocationDialog({proof,borrower,transactions,onSubmit,onClose}) {
@@ -12,13 +12,22 @@ export default function PaymentAllocationDialog({proof,borrower,transactions,onS
     return values
   })
   const [useCredit,setUseCredit]=useState(creditOnly),[confirmed,setConfirmed]=useState(false),[note,setNote]=useState(''),[date,setDate]=useState(toISODate(new Date()))
-  const [busy,setBusy]=useState(false),[error,setError]=useState(''),[frozen,setFrozen]=useState(false)
+  const [busy,setBusy]=useState(false),[error,setError]=useState(''),[selectionError,setSelectionError]=useState(''),[frozen,setFrozen]=useState(false)
   const retry=useRef(null)
   let review,validation=''
   try{
     const allocations=Object.entries(amounts).map(([id,amount])=>({id,amount})),allocated=allocations.reduce((sum,a)=>sum+moneyCents(a.amount),0)
     review=reviewPaymentAllocation({borrowerId:borrower.id,cashAmount:cash,availableCredit:borrower.creditBalance??0,creditUsed:useCredit?centsAmount(Math.max(allocated-moneyCents(cash),0)):'0',dues,allocations})
-  }catch(e){validation=e.message}
+  }catch(e){validation=creditOnly&&e.message==='The available credit is insufficient.'?`The selected total exceeds your available credit of ${formatPeso(borrower.creditBalance??0)}. Reduce the apply amounts; partial payments are allowed.`:e.message}
+  const selectDue=(due,checked)=>{
+    setSelectionError('')
+    if(!checked){setAmounts(prev=>{const next={...prev};delete next[due.id];return next});return}
+    try{
+      const amount=suggestAllocationAmount({due,amounts,cashAmount:cash,availableCredit:borrower.creditBalance??0,useCredit})
+      if(moneyCents(amount)===0){setSelectionError('No funds remain to allocate. Reduce another apply amount or deselect a due first.');return}
+      setAmounts(prev=>({...prev,[due.id]:amount}))
+    }catch{setSelectionError('Correct the existing apply amounts before selecting another due.')}
+  }
   const save=async()=>{
     if(!review||!confirmed||busy)return
     if(!retry.current)retry.current={key:crypto.randomUUID(),reviewed:true,expectedCredit:String(borrower.creditBalance??0),creditUsed:centsAmount(review.creditUsedCents),allocations:review.allocations.map(({id,amount,expectedBalance})=>({id,amount,expectedBalance})),note,paidDate:date,userId:borrower.id}
@@ -30,15 +39,16 @@ export default function PaymentAllocationDialog({proof,borrower,transactions,onS
     <p className="font-semibold text-slate-900">{borrower.name}</p>
     <dl className="mt-3 grid grid-cols-2 gap-2 rounded-xl bg-slate-50 p-3 text-sm"><dt>Cash received</dt><dd className="text-right font-mono">{formatPeso(cash)}</dd><dt>Available credit</dt><dd className="text-right font-mono">{formatPeso(borrower.creditBalance??0)}</dd></dl>
     {proof&&<p className="mt-2 break-words text-xs text-slate-500">Ref {proof.reference} · Paid {formatDate(proof.paidDate)}</p>}
-    <p className="my-3 text-sm text-slate-600">Choose the dues and amount to apply to each. Any unapplied cash stays as account credit.</p>
+    <p className="my-3 text-sm text-slate-600">{creditOnly?'Choose a due to suggest an amount within your available credit. Partial payments are allowed; you can adjust the amount before applying. Unused credit stays on the account.':'Choose the dues and amount to apply to each. Suggestions stay within the available funds. Any unapplied cash stays as account credit.'}</p>
     <fieldset disabled={busy||frozen} className="space-y-3 disabled:opacity-70">
-      {creditOnly&&<Field label="Credit application date" htmlFor="credit-date"><input id="credit-date" type="date" value={date} max={toISODate(new Date())} onChange={e=>setDate(e.target.value)} className={inputClass}/></Field>}
-      {dues.length===0&&<p className="text-sm">There are no open dues. Cash can be retained as account credit.</p>}
-      {dues.map(t=><div key={t.id} className="rounded-xl border border-slate-200 p-3"><label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={Object.hasOwn(amounts,t.id)} onChange={e=>setAmounts(prev=>{const next={...prev};if(e.target.checked)next[t.id]=centsAmount(outstandingCents(t));else delete next[t.id];return next})} className="mt-1"/><span className="min-w-0 break-words font-medium">{t.description}<small className="mt-1 block font-normal text-slate-500">Due {formatDate(t.dueDate)} · Remaining {formatPeso(t.amount)}{t.paidAmount>0&&` · Applied ${formatPeso(t.paidAmount)} of ${formatPeso(t.originalAmount)}`}</small></span></label>{Object.hasOwn(amounts,t.id)&&<Field label="Apply amount" htmlFor={`allocate-${t.id}`}><input id={`allocate-${t.id}`} aria-label={`Apply amount to ${t.description}`} type="number" inputMode="decimal" min="0.01" step="0.01" value={amounts[t.id]} onChange={e=>setAmounts(prev=>({...prev,[t.id]:e.target.value}))} className={inputClass}/></Field>}</div>)}
-      {!creditOnly&&<label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={useCredit} onChange={e=>setUseCredit(e.target.checked)}/>Use available credit for any amount above the cash received</label>}
+      {creditOnly&&<Field label="Credit application date" htmlFor="credit-date" hint="Use the date the credit is applied, not the due date."><input id="credit-date" type="date" value={date} max={toISODate(new Date())} onChange={e=>setDate(e.target.value)} className={inputClass}/></Field>}
+      {dues.length===0&&<p className="text-sm">{creditOnly?'There are no open dues to apply credit to. Your credit remains available on the account.':'There are no open dues. Cash can be retained as account credit.'}</p>}
+      {dues.map(t=><div key={t.id} className="rounded-xl border border-slate-200 p-3"><label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={Object.hasOwn(amounts,t.id)} onChange={e=>selectDue(t,e.target.checked)} className="mt-1"/><span className="min-w-0 break-words font-medium">{t.description}<small className="mt-1 block font-normal text-slate-500">Due {formatDate(t.dueDate)} · Remaining {formatPeso(t.amount)}{t.paidAmount>0&&` · Applied ${formatPeso(t.paidAmount)} of ${formatPeso(t.originalAmount)}`}</small></span></label>{Object.hasOwn(amounts,t.id)&&<Field label="Apply amount" htmlFor={`allocate-${t.id}`}><input id={`allocate-${t.id}`} aria-label={`Apply amount to ${t.description}`} type="number" inputMode="decimal" min="0.01" step="0.01" value={amounts[t.id]} onChange={e=>{setSelectionError('');setAmounts(prev=>({...prev,[t.id]:e.target.value}))}} className={inputClass}/></Field>}</div>)}
+      {!creditOnly&&<label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={useCredit} onChange={e=>{setSelectionError('');setUseCredit(e.target.checked)}}/>Use available credit for any amount above the cash received</label>}
       <Field label="Lender note (optional)" htmlFor="posting-note"><textarea id="posting-note" maxLength={2000} value={note} onChange={e=>setNote(e.target.value)} rows={2} className={inputClass}/></Field>
     </fieldset>
-    {review&&<dl className="my-4 grid grid-cols-2 gap-2 rounded-xl border border-blue-100 bg-blue-50 p-3 text-sm"><dt>Apply to dues</dt><dd className="text-right font-mono">{formatPeso(review.allocatedCents/100)}</dd><dt>Use prior credit</dt><dd className="text-right font-mono">{formatPeso(review.creditUsedCents/100)}</dd><dt>Add to credit</dt><dd className="text-right font-mono">{formatPeso(review.creditAddedCents/100)}</dd><dt>Credit after posting</dt><dd className="text-right font-mono font-semibold">{formatPeso(review.creditAfterCents/100)}</dd></dl>}
+    {review&&<dl aria-label="Allocation summary" className="my-4 grid grid-cols-2 gap-2 rounded-xl border border-blue-100 bg-blue-50 p-3 text-sm"><dt>Apply to dues</dt><dd className="text-right font-mono">{formatPeso(review.allocatedCents/100)}</dd><dt>Use prior credit</dt><dd className="text-right font-mono">{formatPeso(review.creditUsedCents/100)}</dd>{!creditOnly&&<><dt>Add to credit</dt><dd className="text-right font-mono">{formatPeso(review.creditAddedCents/100)}</dd></>}<dt>Credit after posting</dt><dd className="text-right font-mono font-semibold">{formatPeso(review.creditAfterCents/100)}</dd><dt>Remaining on selected dues</dt><dd className="text-right font-mono">{formatPeso((review.selectedDueCents-review.allocatedCents)/100)}</dd></dl>}
+    {selectionError&&<p role="alert" className="my-3 rounded-lg bg-amber-50 p-3 text-sm text-amber-800">{selectionError}</p>}
     {creditOnly&&!Object.keys(amounts).length&&!error?<p className="my-3 text-sm text-slate-600">Select a due and enter how much credit to apply.</p>:(error||validation)&&<p role="alert" className="my-3 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error||validation}</p>}
     {frozen&&error&&<p className="mb-3 text-xs text-slate-600">Retry uses the same review to prevent duplicates. If the balances changed, close this window, refresh records and review again.</p>}
     <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={confirmed} disabled={busy||frozen} onChange={e=>setConfirmed(e.target.checked)} className="mt-1"/>{creditOnly?'I reviewed every allocation and the account credit to use.':'I verified the proof and every allocation, including any credit retained or used.'}</label>
