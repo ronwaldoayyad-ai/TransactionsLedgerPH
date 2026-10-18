@@ -261,3 +261,49 @@ test('proof storage and verified submissions cap new files at 5 MB even when an 
   await assert.rejects(f.client.query("select mobile_private.check_file('payment-proofs',$1,array['image/png'],10485760)",[name]),/5 MB/);
  }finally{await release(f)}
 });
+
+async function feePayload(f,patch={}){const date=(await f.client.query("select to_char(due_date,'YYYY-MM-DD') as day from public.transactions where id=$1",[f.due])).rows[0].day;return {key:crypto.randomUUID(),borrowerId:f.borrower,sourceDueDate:date,chargeDueDate:date,financeEnabled:true,rate:'3',lateEnabled:true,lateAmount:'1500',reviewed:true,selections:[{id:f.due,expectedBalance:'1000'}],...patch}}
+const assessFee=async(f,payload)=>((await f.client.query("select public.mobile_action('fee-assess',$1) result",[payload])).rows[0].result)
+
+test('fee assessment posts both positive fee dues atomically with immutable calculation snapshots',async()=>{
+ const f=await fixture();try{const p=await feePayload(f),result=await assessFee(f,p);assert.equal(Number(result.total),1530);
+ const rows=(await f.client.query('select * from public.transactions where fee_assessment_id=$1 order by fee_kind',[result.id])).rows;
+ assert.equal(rows.length,2);assert.deepEqual(rows.map(r=>Number(r.amount)),[30,1500]);assert.ok(rows.every(r=>r.type==='Straight'&&!r.loan_id&&r.user_id===f.borrower));assert.match(rows[0].description,/3% Finance Charge.*₱1,000.00/);assert.equal(rows[0].due_date.toISOString().slice(0,10),p.chargeDueDate);
+ const header=(await f.client.query('select * from public.fee_assessments where id=$1',[result.id])).rows[0];assert.equal(Number(header.base_amount),1000);assert.equal(header.source_rows[0].id,f.due);
+ assert.equal(Number((await f.client.query('select amount from public.transactions where id=$1',[f.due])).rows[0].amount),1000);
+ }finally{await release(f)}
+});
+test('fee assessment retries are idempotent and a different key cannot assess the same cycle twice',async()=>{
+ const f=await fixture();try{const p=await feePayload(f),a=await assessFee(f,p),b=await assessFee(f,p);assert.deepEqual(a,b);
+ await assert.rejects(assessFee(f,{...p,key:crypto.randomUUID()}),/already assessed/i);
+ }finally{await release(f)}
+});
+test('fee calculation includes selected unpaid prior fees and uses only the remaining balance',async()=>{
+ const f=await fixture();try{await f.client.query('reset role');await f.client.query('update public.transactions set amount_applied=400 where id=$1',[f.due]);
+ const oldFee='legacy-fee-'+crypto.randomUUID();await f.client.query("insert into public.transactions(id,user_id,n,description,amount,type,txn_date,due_date) select $1,user_id,0,'Late Payment fee for earlier period',1500,'Straight',txn_date,due_date from public.transactions where id=$2",[oldFee,f.due]);await f.client.query('set local role authenticated');
+ const result=await assessFee(f,await feePayload(f,{lateEnabled:false,lateAmount:'',selections:[{id:f.due,expectedBalance:'600'},{id:oldFee,expectedBalance:'1500'}]}));assert.equal(Number(result.base),2100);assert.equal(Number(result.finance),63);assert.equal(Number(result.late),0);
+ }finally{await release(f)}
+});
+test('fee posting rejects changed balances, foreign ownership and missing review',async()=>{
+ for(const change of ['stale','foreign','unconfirmed']){const f=await fixture();try{const p=await feePayload(f);if(change==='stale')p.selections[0].expectedBalance='999';if(change==='foreign')p.borrowerId=f.admin;if(change==='unconfirmed')p.reviewed=false;await assert.rejects(assessFee(f,p),/changed|unavailable|borrower|confirm/i);}finally{await release(f)}}
+});
+test('borrowers and revoked lender sessions cannot assess or read another borrower fee history',async()=>{
+ const f=await fixture();try{const p=await feePayload(f);await f.client.query('reset role');await f.client.query("update public.profiles set role='user' where id=$1",[f.admin]);await f.client.query('set local role authenticated');await assert.rejects(assessFee(f,p),/lender/i);}finally{await release(f)}
+ const revoked=await fixture();try{const p=await feePayload(revoked);await revokeSession(revoked);await assert.rejects(assessFee(revoked,p),/active sign-in/i);}finally{await release(revoked)}
+});
+test('switches and decimal rate rounding are enforced by the fee server independently',async()=>{
+ const f=await fixture();try{const p=await feePayload(f,{financeEnabled:false,rate:'',lateAmount:'500'});const r=await assessFee(f,p);assert.equal(Number(r.finance),0);assert.equal(Number(r.total),500);}finally{await release(f)}
+ const other=await fixture();try{const p=await feePayload(other,{rate:'3.25',lateEnabled:false,lateAmount:''});const r=await assessFee(other,p);assert.equal(Number(r.finance),32.5);}finally{await release(other)}
+});
+test('an unpaid fee assessment can be voided with a reason and corrected without losing its audit history',async()=>{
+ const f=await fixture();try{const p=await feePayload(f),r=await assessFee(f,p);await f.client.query("select public.mobile_action('fee-void',$1)",[{id:r.id,reason:'Synthetic assessment correction',key:crypto.randomUUID(),reviewed:true}]);
+ assert.equal(Number((await f.client.query("select count(*) n from public.transactions where fee_assessment_id=$1 and status='cancelled'",[r.id])).rows[0].n),2);
+ const header=(await f.client.query('select void_reason from public.fee_assessments where id=$1',[r.id])).rows[0];assert.equal(header.void_reason,'Synthetic assessment correction');assert.notEqual((await assessFee(f,{...p,key:crypto.randomUUID()})).id,r.id);
+ }finally{await release(f)}
+});
+test('assessed fees accept reviewed payments and cannot be voided after allocation',async()=>{
+ const f=await fixture(30);try{const r=await assessFee(f,await feePayload(f,{lateEnabled:false}));const fee=(await f.client.query("select id from public.transactions where fee_assessment_id=$1",[r.id])).rows[0].id;
+ await post(f,{allocations:[{id:fee,amount:'30',expectedBalance:'30'}]});assert.equal((await f.client.query('select status from public.transactions where id=$1',[fee])).rows[0].status,'paid');
+ await assert.rejects(f.client.query("select public.mobile_action('fee-void',$1)",[{id:r.id,key:crypto.randomUUID(),reason:'Must reverse allocated payment first',reviewed:true}]),/payment|allocated/i);
+ }finally{await release(f)}
+});
