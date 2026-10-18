@@ -198,3 +198,7 @@ test('review date records the lender action separately from the earlier bank pay
   assert.equal((await f.client.query("select reviewed_at=(now() at time zone 'Asia/Manila')::date as today,paid_date<reviewed_at as separate from public.payments where id=$1",[f.proof])).rows[0].today,true);
  }finally{await release(f)}
 });
+
+test('borrower allocation reads have a covering ownership index',async()=>{
+ assert.match((await db.query("select indexdef from pg_indexes where schemaname='public' and indexname='payment_allocations_user'")).rows[0]?.indexdef??'',/user_id, posting_id/);
+});

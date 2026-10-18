@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {collectionEntries} from '../../src/lib/paymentCollections.js'
+import {collectionEntries,postingFigures} from '../../src/lib/paymentCollections.js'
 test('partial payments count as collected cash before an installment is fully paid',()=>{
  const rows=collectionEntries([{id:'due',amount:600,originalAmount:1000,paidAmount:400,status:'unpaid'}],[{id:'post',cash_amount:'400',effective_date:'2026-10-18',reversal_of:null}])
  assert.deepEqual(rows,[{id:'post',amount:400,datePaid:'2026-10-18'}])
@@ -11,4 +11,10 @@ test('credit-only application does not count as additional cash and reversals su
 })
 test('legacy settled transactions are retained without inferring cash from older approved proofs',()=>{
  assert.deepEqual(collectionEntries([{id:'old',amount:2000,status:'paid',datePaid:'2026-09-10'}],[]),[{id:'old',amount:2000,datePaid:'2026-09-10'}])
+})
+test('posting history distinguishes cash received, dues allocated and the signed credit movement',()=>{
+ const p={cash_amount:'800',allocated_amount:'600',credit_used:'0',credit_added:'200'}
+ assert.deepEqual(postingFigures(p),{cash:800,allocated:600,creditChange:200})
+ assert.deepEqual(postingFigures({...p,reversal_of:'original'}),{cash:-800,allocated:-600,creditChange:-200})
+ assert.deepEqual(postingFigures({cash_amount:'0',allocated_amount:'200',credit_used:'200',credit_added:'0'}),{cash:0,allocated:200,creditChange:-200})
 })
