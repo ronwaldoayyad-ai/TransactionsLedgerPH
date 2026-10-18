@@ -4,8 +4,8 @@
 // own tile and don't belong to a repayment schedule.
 //
 // Mirror of mobile/src/lib/duesBreakdown.ts. Keep the two in sync.
-import { effectiveStatus } from './transactions'
-import { parseISODate, toISODate } from './amortization'
+import { effectiveStatus } from './transactions.js'
+import { parseISODate, toISODate } from './amortization.js'
 
 // Fixed segment order + palette (mirrors the app's navy/gold/emerald brand).
 const SEGMENT_META = [
