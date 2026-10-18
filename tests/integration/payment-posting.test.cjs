@@ -14,7 +14,8 @@ before(async()=>{
  await db.query('create publication supabase_realtime');
  await db.query(fs.readFileSync(path.join(root,'release/option3/forward-candidate.sql'),'utf8'));
  await db.query('set row_security=on;set check_function_bodies=on');
- await db.query(fs.readFileSync(path.join(root,'supabase/migrations/20261018023949_reviewed_payment_posting.sql'),'utf8'));
+ if(!(await db.query("select to_regprocedure('mobile_private.post_reviewed_payment(jsonb,boolean)') as posting")).rows[0].posting)
+  await db.query(fs.readFileSync(path.join(root,'supabase/migrations/20261018023949_reviewed_payment_posting.sql'),'utf8'));
 });
 after(async()=>{await db?.end();if(created&&/^payment_posting_test_[a-f0-9]{12}$/.test(database))await control.query('drop database '+database);await control.end()});
 
@@ -189,4 +190,11 @@ test('two simultaneous credit reviews cannot spend the same credit twice',async(
  const run=async id=>{const client=await db.connect();try{await client.query('begin');await client.query("select set_config('request.jwt.claims',$1,true)",[JSON.stringify({sub:f.admin,role:'authenticated',session_id:f.sid})]);await client.query('set local role authenticated');await client.query("select public.mobile_action('credit-apply',$1)",[{key:crypto.randomUUID(),reviewed:true,userId:f.borrower,paidDate:new Date().toISOString().slice(0,10),creditUsed:'600',expectedCredit:'1000',allocations:[{id,amount:'600',expectedBalance:'600'}]}]);await client.query('commit')}catch(e){await client.query('rollback');throw e}finally{client.release()}};
  const results=await Promise.allSettled([run(a),run(b)]);assert.equal(results.filter(r=>r.status==='fulfilled').length,1);assert.match(results.find(r=>r.status==='rejected').reason.message,/credit changed/);
  assert.equal(Number((await db.query('select credit_balance from public.profiles where id=$1',[f.borrower])).rows[0].credit_balance),400);
+});
+
+test('review date records the lender action separately from the earlier bank payment date',async()=>{
+ const f=await fixture();try{
+  await f.client.query('reset role');await f.client.query('update public.payments set paid_date=current_date-10 where id=$1',[f.proof]);await f.client.query('set local role authenticated');await post(f);
+  assert.equal((await f.client.query("select reviewed_at=(now() at time zone 'Asia/Manila')::date as today,paid_date<reviewed_at as separate from public.payments where id=$1",[f.proof])).rows[0].today,true);
+ }finally{await release(f)}
 });
