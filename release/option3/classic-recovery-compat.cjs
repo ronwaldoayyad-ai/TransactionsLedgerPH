@@ -31,5 +31,15 @@ exports.patchClassicRecovery=(code,id)=>{
   return prefix+replaceRequired(code,'return <AppContext.Provider value={value}>{children}</AppContext.Provider>',`const recoveryValue=useMemo(()=>{const next={...value};for(const name of Object.keys(next)){if(/^(invite|update|delete|resend|submit|review|assign|unassign|set|archive|restore|purge|import|create|save|clear|add|complete)/.test(name)&&typeof next[name]==='function')next[name]=recoveryDeny;}return next},[value]);
    return <AppContext.Provider value={recoveryValue}><aside role="status" style={{position:'fixed',bottom:0,left:0,right:0,zIndex:10000,padding:'10px 14px',textAlign:'center',fontSize:'12px',background:'#fff4d6',color:'#493400'}}>Read-only Classic recovery · Payments and account changes are disabled.</aside>{children}</AppContext.Provider>`);
  }
+ if(id.endsWith('/src/pages/user/UserDashboard.jsx')){
+  code=replaceRequired(code,'const { session, loans, payments, transactions, paymentDueOverrides } = useApp()','const { session, users, loans, payments, transactions, paymentDueOverrides } = useApp()');
+  code=replaceRequired(code,'straightTxns.reduce((s, t) => s + t.amount, 0)','straightTxns.reduce((s, t) => s + (t.originalAmount ?? t.amount), 0)');
+  code=replaceRequired(code,'installmentTxns.reduce((s, t) => s + t.amount, 0)','installmentTxns.reduce((s, t) => s + (t.originalAmount ?? t.amount), 0)');
+  return replaceRequired(code,'      {/* Featured:',`      <div className="mb-4 rounded-xl bg-blue-50 p-4 text-sm">Available account credit <strong>{formatPeso(users.find(u=>u.id===session.user.id)?.creditBalance??0)}</strong> · Shown separately from outstanding dues.</div>\n      {/* Featured:`);
+ }
+ if(id.endsWith('/src/components/BorrowerScheduleTable.jsx')){
+  code=replaceRequired(code,'transactions.reduce((s, t) => s + t.amount, 0)','transactions.reduce((s, t) => s + (t.originalAmount ?? t.amount), 0)');
+  return code.replaceAll('formatPeso(t.amount)','formatPeso(t.originalAmount ?? t.amount)');
+ }
  return code;
 };
