@@ -4,7 +4,7 @@
 begin;
 alter type public.audit_action add value if not exists 'PAYMENT_REVERSED';
 alter table public.transactions add column amount_applied numeric(12,2) not null default 0
- check(amount_applied>=0 and amount_applied<=amount);
+ check(amount_applied>=0 and(amount_applied=0 or amount_applied<=amount));
 alter table public.profiles add column credit_balance numeric(12,2) not null default 0 check(credit_balance>=0);
 alter table public.payments add column posted_at timestamptz;
 
