@@ -1,5 +1,6 @@
 import { serviceEndpoint } from '../lib/serviceEndpoint'
 import { guestSupportPayload } from '../lib/guestSupportPayload'
+import {mobileActionError} from '../lib/mobileActionError'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useApp } from '../context/AppContext'
 import { useMessages } from '../context/MessagesContext'
@@ -153,7 +154,7 @@ export default function VersionedBorrower({ children }) {
           }
           if(action!=='token-login'&&current.current.app.session?.user.id!==owner?.id)throw Error('The account changed before this request completed.')
           post({type:'mobile-result',requestId,ok:true,result})
-        }catch(error){post({type:'mobile-result',requestId,ok:false,error:error.message||'Unable to save. Please retry.',login:error.login})}
+        }catch(error){post({type:'mobile-result',requestId,ok:false,error:mobileActionError(action,error),login:error.login})}
         return
       }
       if (type === 'avatar') {
