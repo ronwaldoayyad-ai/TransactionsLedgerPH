@@ -1055,7 +1055,7 @@ $function$
 ;
 
 CREATE OR REPLACE FUNCTION public.acknowledge_loan_disbursement(p_id uuid)
- RETURNS loan_disbursements
+ RETURNS public.loan_disbursements
  LANGUAGE plpgsql
  SECURITY DEFINER
  SET search_path TO 'public'
@@ -1343,5 +1343,7 @@ do $$declare routine record;begin
  end loop;
 end $$;
 notify pgrst,'reload schema';
+
+-- 20261018023949_reviewed_payment_posting.sql
 
 commit;
