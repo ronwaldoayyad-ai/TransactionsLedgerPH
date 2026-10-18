@@ -1276,7 +1276,7 @@ export function AppProvider({ children }) {
       )
       return map.size
     },
-    [isLive, log, actor],
+    [isLive, log, actor, transactions],
   )
 
   // Edit a loan's disclosure-statement fields (admin only, via view-as). The

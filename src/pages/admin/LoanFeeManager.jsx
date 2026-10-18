@@ -4,7 +4,7 @@ import {usePersistedState} from '../../hooks/usePersistedState'
 import {supabase} from '../../supabaseClient'
 import {mobileAction} from '../../lib/mobileLocalFlow'
 import {useRecordRefresh} from '../../lib/recordRefresh'
-import {eligibleFeeTransactions,calculateFeeAssessment,feeDescriptions,assessmentMonth} from '../../lib/feeAssessment'
+import {eligibleFeeTransactions,calculateFeeAssessment,feeDescriptions,assessmentMonth,feeReviewTransition} from '../../lib/feeAssessment'
 import {centsAmount} from '../../lib/paymentAllocation'
 import {formatDate,formatPeso} from '../../lib/amortization'
 import {PageHeader} from '../../components/AppShell'
@@ -66,12 +66,14 @@ export default function LoanFeeManager(){
 function FeeAssessmentForm({borrower,sourceDate,cycle,today,transactions,duplicate,onBusy,onPosted}){
  const rows=useMemo(()=>eligibleFeeTransactions(transactions,borrower.id,sourceDate),[transactions,borrower.id,sourceDate])
  const [selected,setSelected]=useState(()=>new Set(rows.map(t=>t.id))),[rate,setRate]=useState('3'),[financeEnabled,setFinanceEnabled]=useState(true),[lateEnabled,setLateEnabled]=useState(true),[lateAmount,setLateAmount]=useState('1500'),[dueDate,setDueDate]=useState(sourceDate>today?sourceDate:today)
- const [reviewed,setReviewed]=useState(''),[saving,setSaving]=useState(false),[posted,setPosted]=useState(false),[error,setError]=useState(''),[shown,setShown]=useState(25)
+ const [reviewed,setReviewed]=useState({fingerprint:'',confirmed:false}),[saving,setSaving]=useState(false),[posted,setPosted]=useState(false),[error,setError]=useState(''),[shown,setShown]=useState(25)
  const operation=useRef(null),chosen=rows.filter(t=>selected.has(t.id))
  let summary,validation='';try{summary=calculateFeeAssessment({rows:chosen,rate,financeEnabled,lateEnabled,lateAmount});if(dueDate){assessmentMonth(dueDate);if(dueDate<sourceDate)validation='New charges cannot be due before the selected original due date.'}else validation='Choose a due date for the new charges.'}catch(e){validation=e.message}
  const titles=summary?feeDescriptions(summary,sourceDate):null
  const fingerprint=JSON.stringify({borrower:borrower.id,sourceDate,cycle,rate,financeEnabled,lateEnabled,lateAmount,dueDate,rows:chosen.map(r=>[r.id,r.remainingCents])})
- const confirmed=reviewed===fingerprint,disabled=saving||posted||!!duplicate
+ const review=feeReviewTransition(reviewed,fingerprint)
+ if(review!==reviewed)setReviewed(review)
+ const confirmed=review.confirmed,disabled=saving||posted||!!duplicate
  const total=summary?.totalCents||0
  async function post(){
   if(!confirmed||validation||!total||disabled)return
@@ -96,7 +98,7 @@ function FeeAssessmentForm({borrower,sourceDate,cycle,today,transactions,duplica
    <div className="flex flex-wrap justify-between gap-2 border-t border-slate-200 pt-3 font-semibold"><span>Total new charges</span><span className="font-mono text-red-700">{formatPeso(total/100)}</span></div>
    {duplicate&&<p role="status" className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900">Already assessed for this due date this month. View the record below. A new monthly assessment becomes available next month.</p>}
    {(validation||error)&&<p role="alert" className="rounded-xl bg-red-50 p-3 text-sm text-red-800">{validation||error}</p>}
-   <label className="flex items-start gap-2 rounded-xl border border-slate-200 p-3 text-sm"><input type="checkbox" id="fee-confirm" className="mt-0.5 h-4 w-4 shrink-0 accent-blue-600" disabled={disabled||!!validation||!total||chosen.length>1000} checked={confirmed} onChange={e=>setReviewed(e.target.checked?fingerprint:'')}/><span>I reviewed the selected balances, fee amounts and new due date. Post these charges to <b>{borrower.name}</b>.</span></label>
+   <label className="flex items-start gap-2 rounded-xl border border-slate-200 p-3 text-sm"><input type="checkbox" id="fee-confirm" className="mt-0.5 h-4 w-4 shrink-0 accent-blue-600" disabled={disabled||!!validation||!total||chosen.length>1000} checked={confirmed} onChange={e=>setReviewed({fingerprint,confirmed:e.target.checked})}/><span>I reviewed the selected balances, fee amounts and new due date. Post these charges to <b>{borrower.name}</b>.</span></label>
    <Button className="w-full justify-center" variant="danger" disabled={disabled||!confirmed||!!validation||!total||chosen.length>1000} onClick={post}><Icon name={saving?'refresh':'send'} className={`h-4 w-4 ${saving?'animate-spin':''}`}/>{saving?'Posting charges…':posted?'Charges posted':'Confirm & post charges'}</Button>
    <p className="text-xs leading-relaxed text-slate-500">One confirmed assessment per borrower and original due date each calendar month. Charges create new amounts due, not a received payment.</p>
   </div></Card>

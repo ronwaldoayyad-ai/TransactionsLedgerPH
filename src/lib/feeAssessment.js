@@ -1,5 +1,7 @@
 import {moneyCents,outstandingCents,centsAmount} from './paymentAllocation.js'
 
+export function feeReviewTransition(review,fingerprint){return review.fingerprint===fingerprint?review:{fingerprint,confirmed:false}}
+
 export function eligibleFeeTransactions(transactions,borrowerId,dueDate){
  return transactions.filter(t=>t.userId===borrowerId&&t.dueDate===dueDate&&!t.archivedAt&&['unpaid','past_due'].includes(t.status)&&Number(t.originalAmount??t.amount)>0)
   .map(t=>({...t,remainingCents:outstandingCents(t)})).filter(t=>t.remainingCents>0)
