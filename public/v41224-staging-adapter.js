@@ -88,6 +88,7 @@ render=()=>{
     const value=$('.balance-amount-value');if(value)value.textContent=cash(stagingTotal());
     const count=$('.balance-count b');if(count)count.textContent=stagingDue().length;
     const foot=$('.balance-foot>span:first-child');if(foot)foot.innerHTML=borrowerAccountDisplayHTML();
+    const card=$('.balance-card')||$('.balance-amount-value')?.parentElement?.parentElement;if(card){const credit=document.createElement('p');credit.className='account-credit-summary';credit.style.cssText='font-size:12px;padding:10px 14px;margin:10px 0 0;border-radius:12px;background:rgba(126,171,255,.12);line-height:1.5';credit.textContent='Available account credit: '+cash(stagingData.user.creditBalance||0)+' · Applied to dues after lender review.';card.append(credit);}
   }
   if(page==='profile'&&stagingData){const next=$('.profile-overview div b');if(next)next.textContent=stagingDue(1).length?stagingDate(stagingDue(1)[0].dueDate)+' · '+cash(stagingTotal(1)):'No next due dates set';}
 };

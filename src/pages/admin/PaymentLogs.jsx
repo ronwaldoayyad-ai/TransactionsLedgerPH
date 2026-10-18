@@ -8,7 +8,7 @@ import { Badge, Button, Card, CardHeader, CurrencyInput, EmptyState, Field, Moda
 import Pagination from '../../components/Pagination'
 import { usePagination } from '../../hooks/usePagination'
 import { formatDate, formatPeso, toISODate } from '../../lib/amortization'
-import { isReceivable } from '../../lib/transactions'
+import PaymentAllocationDialog from '../../components/PaymentAllocationDialog'
 import {
   PAY_LOG_METHODS,
   PAY_LOG_STATUSES,
@@ -38,7 +38,7 @@ export default function PaymentLogs() {
     createPaymentLog,
     updatePaymentLog,
     deletePaymentLog,
-    setTransactionStatus,
+    paymentPostings,postCredit,reversePayment,
   } = useApp()
   const { createNotification } = useNotifications()
   const borrowers = useMemo(() => users.filter((u) => u.role === 'user'), [users])
@@ -52,6 +52,12 @@ export default function PaymentLogs() {
   const [editingId, setEditingId] = useState(null) // null = creating
   const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(null) // log id
+  const [creditPicker,setCreditPicker]=useState(false),[creditBorrower,setCreditBorrower]=useState(''),[creditReview,setCreditReview]=useState(null)
+  const [reversing,setReversing]=useState(null),[reverseReason,setReverseReason]=useState(''),[reverseConfirmed,setReverseConfirmed]=useState(false),[reverseError,setReverseError]=useState('')
+  const openReversal=posting=>{setReversing({posting,key:crypto.randomUUID(),credit:users.find(u=>u.id===posting.user_id)?.creditBalance??0});setReverseReason('');setReverseConfirmed(false);setReverseError('')}
+  const submitReversal=async()=>{setSaving(true);const r=await reversePayment({key:reversing.key,id:reversing.posting.id,reviewed:true,expectedCredit:String(reversing.credit),reason:reverseReason});setSaving(false);if(r.error)setReverseError(r.error);else setReversing(null)}
+  const postingFor=log=>paymentPostings.find(p=>p.id===log.sourcePostingId)
+  const canReverse=posting=>posting&&!posting.reversal_of&&!paymentPostings.some(p=>p.reversal_of===posting.id)
   const blank = {
     userId: '',
     txnDate: today,
@@ -153,19 +159,8 @@ export default function PaymentLogs() {
           console.error('[payment-logs] payment notification failed:', e?.message ?? e)
         }
       }
-      // A Settled / Overpayment recording also marks the borrower's outstanding
-      // installments (up to this Due Date) as Paid with today's date.
-      if (created && (effectiveStatus === 'Settled' || effectiveStatus === 'Overpayment')) {
-        const ids = transactions
-          .filter(
-            (t) =>
-              t.userId === form.userId &&
-              isReceivable(t, today) &&
-              (!form.dueDate || t.dueDate <= form.dueDate),
-          )
-          .map((t) => t.id)
-        if (ids.length) setTransactionStatus(ids, 'paid')
-      }
+      // Historical acknowledgements do not settle dues. Reviewed postings own
+      // the atomic financial changes and their linked immutable history.
     }
     setSaving(false)
     setOpen(false)
@@ -211,13 +206,14 @@ export default function PaymentLogs() {
     <>
       <PageHeader
         title="Payment Logs"
-        subtitle="Record payments received from borrowers. Over/underpayments carry forward to the next log. This ledger is separate from the amortization schedule."
+        subtitle="Review posted payments and account credit. Manual acknowledgements do not allocate funds or settle dues."
         action={
           <div className="flex flex-wrap gap-2">
             <RefreshButton />
+            <Button variant="secondary" onClick={()=>setCreditPicker(true)}>Apply account credit</Button>
             <Button variant="gold" onClick={openForm}>
               <Icon name="plus" className="h-4 w-4" />
-              Record Payment
+              Manual acknowledgement
             </Button>
           </div>
         }
@@ -303,7 +299,7 @@ export default function PaymentLogs() {
                       <span className="font-mono font-semibold text-slate-900">{formatPeso(l.remainingBalance)}</span>
                     </div>
                     <div className="flex shrink-0 items-center gap-1">
-                      {!isCarry && (
+                      {!isCarry && !l.sourcePostingId && (
                         <button
                           onClick={() => openEdit(l)}
                           aria-label="Edit log"
@@ -312,13 +308,14 @@ export default function PaymentLogs() {
                           <Icon name="pencil" className="h-4 w-4" />
                         </button>
                       )}
-                      <button
+                      {!l.sourcePostingId&&<button
                         onClick={() => setConfirmDelete(l.id)}
                         aria-label="Delete log"
                         className="cursor-pointer rounded-md p-1.5 text-slate-400 transition-colors duration-200 hover:bg-red-50 hover:text-red-600"
                       >
                         <Icon name="trash" className="h-4 w-4" />
-                      </button>
+                      </button>}
+                      {canReverse(postingFor(l))&&<Button variant="danger" onClick={()=>openReversal(postingFor(l))}>Reverse</Button>}
                     </div>
                   </div>
                 </div>
@@ -375,7 +372,7 @@ export default function PaymentLogs() {
                         <Badge status={allocBadge[l.allocStatus] ?? 'upcoming'}>{l.allocStatus}</Badge>
                       </td>
                       <td className="px-3 py-2 text-right whitespace-nowrap">
-                        {!isCarry && (
+                        {!isCarry && !l.sourcePostingId && (
                           <button
                             onClick={() => openEdit(l)}
                             aria-label="Edit log"
@@ -384,13 +381,14 @@ export default function PaymentLogs() {
                             <Icon name="pencil" className="h-4 w-4" />
                           </button>
                         )}
-                        <button
+                        {!l.sourcePostingId&&<button
                           onClick={() => setConfirmDelete(l.id)}
                           aria-label="Delete log"
                           className="cursor-pointer rounded-md p-1.5 text-slate-400 transition-colors duration-200 hover:bg-red-50 hover:text-red-600"
                         >
                           <Icon name="trash" className="h-4 w-4" />
-                        </button>
+                        </button>}
+                        {canReverse(postingFor(l))&&<Button variant="danger" onClick={()=>openReversal(postingFor(l))}>Reverse</Button>}
                       </td>
                     </tr>
                   )
@@ -426,6 +424,18 @@ export default function PaymentLogs() {
         )}
       </Card>
 
+      <Modal open={creditPicker} title="Choose a borrower for account credit" onClose={()=>setCreditPicker(false)} footer={<Button disabled={!creditBorrower} onClick={()=>{setCreditReview(borrowers.find(b=>b.id===creditBorrower));setCreditPicker(false)}}>Review allocation</Button>}>
+        <Field label="Borrower" htmlFor="credit-borrower"><select id="credit-borrower" value={creditBorrower} onChange={e=>setCreditBorrower(e.target.value)} className={inputClass}><option value="">Select borrower</option>{borrowers.filter(b=>b.creditBalance>0).map(b=><option key={b.id} value={b.id}>{b.name} · {formatPeso(b.creditBalance)} credit</option>)}</select></Field>
+        {!borrowers.some(b=>b.creditBalance>0)&&<p className="mt-3 text-sm text-slate-500">No borrower currently has unapplied account credit.</p>}
+      </Modal>
+      {creditReview&&<PaymentAllocationDialog key={creditReview.id} borrower={creditReview} transactions={transactions} onSubmit={postCredit} onClose={()=>setCreditReview(null)}/>}
+      <Modal open={!!reversing} title="Reverse payment posting" onClose={()=>!saving&&setReversing(null)} footer={<><Button variant="secondary" disabled={saving} onClick={()=>setReversing(null)}>Cancel</Button><Button variant="danger" disabled={saving||!reverseConfirmed||reverseReason.trim().length<10} onClick={submitReversal}>{saving?'Reversing…':'Confirm reversal'}</Button></>}>
+        <p className="text-sm text-slate-600">This restores the allocated dues and reverses the credit movement. The original proof and history remain visible. It does not issue a refund.</p>
+        <p className="my-3 text-sm font-medium">Posting amount: {formatPeso(Number(reversing?.posting.cash_amount||0)+Number(reversing?.posting.credit_used||0))} · Current credit: {formatPeso(reversing?.credit||0)}</p>
+        <Field label="Reason (10–2000 characters)" htmlFor="reversal-reason"><textarea id="reversal-reason" rows={3} maxLength={2000} disabled={saving||!!reverseError} value={reverseReason} onChange={e=>setReverseReason(e.target.value)} className={inputClass}/></Field>
+        <label className="mt-3 flex items-start gap-2 text-sm"><input type="checkbox" checked={reverseConfirmed} disabled={saving||!!reverseError} onChange={e=>setReverseConfirmed(e.target.checked)}/>I reviewed the original allocation and its credit movement.</label>
+        {reverseError&&<p role="alert" className="mt-3 text-sm text-red-700">{reverseError} Retry keeps the same request. If balances changed, cancel, refresh and review again.</p>}
+      </Modal>
       <Modal
         open={open}
         title={editingId ? 'Edit Payment Log' : 'Record Payment'}

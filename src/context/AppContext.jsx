@@ -131,6 +131,7 @@ export function AppProvider({ children }) {
   const [transactions, setTransactions] = useState([])
   const [archivedTransactions, setArchivedTransactions] = useState([])
   const [paymentLogs, setPaymentLogs] = useState([])
+  const [paymentPostings, setPaymentPostings] = useState([])
   const [arbitrageLoans, setArbitrageLoans] = useState([])
   const [interestRates, setInterestRates] = useState([])
   const [trackedLoans, setTrackedLoans] = useState([])
@@ -184,6 +185,7 @@ export function AppProvider({ children }) {
     setTransactions(buildTransactions(mockLoans))
     setArchivedTransactions([])
     setPaymentLogs([])
+    setPaymentPostings([])
     setArbitrageLoans([])
     setInterestRates([])
     setTrackedLoans([])
@@ -212,6 +214,7 @@ export function AppProvider({ children }) {
         trackedRes,
         auditRes,
         overridesRes,
+        postingsRes,
       ] = await Promise.all([
           // Secondary .order('id') makes paging deterministic (a non-unique
           // primary sort key could otherwise shift rows across page boundaries).
@@ -237,6 +240,7 @@ export function AppProvider({ children }) {
           ),
           borrowerInitial ? empty : supabase.from('audit_log').select('*').order('at', { ascending: false }).limit(500),
         supabase.from('payment_due_overrides').select('*'),
+        fetchAllRows(() => supabase.from('payment_postings').select('*').order('created_at').order('id')),
         ])
 
       if (generation !== loadGeneration.current) return
@@ -255,6 +259,8 @@ export function AppProvider({ children }) {
 
       if (paymentLogsRes.error) failures.push(`payment logs (${paymentLogsRes.error.message})`)
       else setPaymentLogs((paymentLogsRes.data ?? []).map(mapPaymentLog))
+      if(postingsRes.error)failures.push(`payment postings (${postingsRes.error.message})`)
+      else setPaymentPostings(postingsRes.data ?? [])
 
       // Arbitrage + interest rates are admin-only; RLS returns an empty set for
       // borrowers (not an error), so these stay empty for them.
@@ -794,9 +800,9 @@ export function AppProvider({ children }) {
   )
 
   const reviewPayment = useCallback(
-    async (id, status, note = '') => {
-      if (isLive && companionEnabled) {
-        try { const row=await mobileAction('payment-review',{key:crypto.randomUUID(),id,status,note});setPayments(prev=>prev.map(p=>p.id===id?mapPayment(row):p));return {error:null}; }
+    async (id, status, note = '', allocation = {}) => {
+      if (isLive) {
+        try { const row=await mobileAction('payment-review',{...allocation,key:allocation.key||crypto.randomUUID(),id,status,note});setPayments(prev=>prev.map(p=>p.id===id?mapPayment(row):p));if(status==='approved')await loadLiveData();return {error:null}; }
         catch(e) {return {error:e.message};}
       }
       const today = toISODate(new Date())
@@ -817,13 +823,23 @@ export function AppProvider({ children }) {
         `${payment?.reference ?? id} ${status}${note ? ` — ${note}` : ''}`,
       )
     },
-    [isLive, log, actor, payments],
+    [isLive, log, actor, payments,loadLiveData],
   )
+
+  const postCredit = useCallback(async payload => {
+    if(!isLive)return {error:'Reviewed credit posting requires a connected lender account.'}
+    try{await mobileAction('credit-apply',payload);await loadLiveData();return {error:null}}catch(e){return {error:e.message}}
+  },[isLive,loadLiveData])
+  const reversePayment = useCallback(async payload => {
+    if(!isLive)return {error:'Reviewed reversals require a connected lender account.'}
+    try{await mobileAction('payment-reverse',payload);await loadLiveData();return {error:null}}catch(e){return {error:e.message}}
+  },[isLive,loadLiveData])
 
   // Permanently delete a proof of payment: removes the storage object and the
   // payment row. RLS lets borrowers delete their own and admins delete any.
   const deletePayment = useCallback(
     async (payment) => {
+      if(payment.postedAt)return {error:'Posted proofs are retained for audit. Use a reviewed reversal.'}
       if (isLive) {
         if (payment.filePath) {
           const { error: rmErr } = await supabase.storage
@@ -926,6 +942,7 @@ export function AppProvider({ children }) {
   const setTransactionStatus = useCallback(
     (ids, status) => {
       const idSet = new Set(ids)
+      if(transactions.some(t=>idSet.has(t.id)&&t.paidAmount>0)){reportDbError?.('Use a reviewed reversal to change the status of an allocated due.');return false}
       const today = toISODate(new Date())
       const resultingDatePaid = (t) =>
         status === 'paid' ? (t.datePaid ?? today) : status === 'refunded' ? t.datePaid : null
@@ -968,6 +985,7 @@ export function AppProvider({ children }) {
   const archiveTransactions = useCallback(
     (ids) => {
       const idSet = new Set(ids)
+      if(transactions.some(t=>idSet.has(t.id)&&t.paidAmount>0&&['unpaid','past_due'].includes(t.status))){reportDbError?.('An allocated due with an unpaid remainder cannot be archived.');return false}
       const archivedAt = toISODate(new Date())
       if (isLive) {
         supabase
@@ -1186,7 +1204,9 @@ export function AppProvider({ children }) {
     (id, patch) => {
       const current = transactions.find((t) => t.id === id)
       if (!current) return
+      if(current.paidAmount>0&&['amount','status','datePaid','loanId','userId'].some(key=>Object.hasOwn(patch,key))){reportDbError?.('Use a reviewed reversal before changing an allocated due’s financial details.');return false}
       const next = { ...current, ...patch }
+      if(Object.hasOwn(patch,'amount'))next.originalAmount=patch.amount
       if ('datePaid' in patch) {
         if (patch.datePaid && (next.status === 'unpaid' || next.status === 'past_due'))
           next.status = 'paid'
@@ -1207,7 +1227,7 @@ export function AppProvider({ children }) {
             due_date: next.dueDate,
             date_paid: next.datePaid,
             status: next.status,
-            amount: next.amount,
+            amount: next.originalAmount ?? next.amount,
             description: next.description,
           })
           .eq('id', id)
@@ -1680,6 +1700,9 @@ export function AppProvider({ children }) {
       loans,
       payments,
       paymentLogs,
+      paymentPostings,
+      postCredit,
+      reversePayment,
       createPaymentLog,
       updatePaymentLog,
       deletePaymentLog,
@@ -1726,7 +1749,7 @@ export function AppProvider({ children }) {
     [
       session, effectiveSession, isViewingAs, startViewAs, stopViewAs, authLoading,
       dataReady, refreshing, refreshData, refreshOwnProfile, syncError, getProofUrl, importLoans, updateMyProfile, setMyAvatar,
-      users, loans, payments, paymentLogs, createPaymentLog, updatePaymentLog, deletePaymentLog,
+      users, loans, payments, paymentLogs,paymentPostings,postCredit,reversePayment, createPaymentLog, updatePaymentLog, deletePaymentLog,
       arbitrageLoans, interestRates, createArbitrageLoan, deleteArbitrageLoan,
       addInterestRate, deleteInterestRate,
       trackedLoans, createTrackedLoan, deleteTrackedLoan,

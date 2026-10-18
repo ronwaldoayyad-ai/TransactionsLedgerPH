@@ -7,6 +7,7 @@ import { Badge, Button, EmptyState, Field, Modal, inputClass } from './ui'
 import { formatDate, formatPeso } from '../lib/amortization'
 import Pagination from './Pagination'
 import { usePagination } from '../hooks/usePagination'
+import PaymentAllocationDialog from './PaymentAllocationDialog'
 
 const TABS = ['pending', 'approved', 'rejected', 'all']
 
@@ -34,14 +35,15 @@ export default function PaymentList({
   emptyBody = 'No submissions yet.',
   pageSize = 0, // 0 = no pagination (default); >0 paginates the list
 }) {
-  const { users, loans, reviewPayment, getProofUrl, deletePayment } = useApp()
+  const { users, loans,transactions, reviewPayment, getProofUrl, deletePayment } = useApp()
   const { triggerTemplateToast } = useAnnouncements()
 
   // Approve / reject, then push the matching one-time toast to that borrower.
-  const approve = async (p) => {
-    setBusy(true);setReviewError('');const result=await reviewPayment(p.id,'approved');setBusy(false);
-    if(result?.error){setReviewError(result.error);return;}
+  const approve = async (p,allocation) => {
+    const result=await reviewPayment(p.id,'approved',allocation.note,allocation);
+    if(result?.error)return result;
     if(!companionEnabled)triggerTemplateToast({ ...APPROVE_TOAST, userId:p.userId });
+    return result;
   }
   const reject = async (p, note) => {
     setBusy(true);setReviewError('');const result=await reviewPayment(p.id,'rejected',note);setBusy(false);
@@ -52,6 +54,7 @@ export default function PaymentList({
   // defaults to "all" so approved/rejected proofs aren't hidden.
   const [filter, setFilter] = useState(defaultTab ?? (showTabs ? 'pending' : 'all'))
   const [rejecting, setRejecting] = useState(null)
+  const [allocating,setAllocating]=useState(null)
   const [note, setNote] = useState('')
   const [viewing, setViewing] = useState(null)
   const [deleting, setDeleting] = useState(null) // payment pending delete confirm
@@ -250,7 +253,8 @@ export default function PaymentList({
                     <p className="text-[11px] leading-snug text-slate-500 md:truncate md:text-xs md:leading-normal">
                       {loan?.label ?? p.loanId ?? 'Payment'} · {p.method} · Ref {p.reference}
                     </p>
-                    {p.allocations?.length>0&&<details className="text-xs text-slate-600"><summary>Requested allocation · {p.allocations.length} items</summary>{p.allocations.map(x=><p key={x.id}>{x.description} · {x.dueDate} · {formatPeso(x.amount)}</p>)}<p>Requested allocations; verification does not settle the ledger.</p></details>}
+                    {p.allocations?.length>0&&<details className="text-xs text-slate-600"><summary>{p.postedAt?'Posted':'Requested'} allocation · {p.allocations.length} items</summary>{p.allocations.map(x=><p key={x.id}>{x.description} · {x.dueDate} · {formatPeso(x.amount)}</p>)}{!p.postedAt&&<p>The lender reviews the final allocation before posting.</p>}</details>}
+                    {p.postedAt&&<p className="text-xs font-medium text-emerald-700">Posted to account · retained for audit</p>}
                     {p.submissionNotes&&<p className="text-xs text-slate-500">Borrower notes: {p.submissionNotes}</p>}
                     <p className="text-[11px] leading-snug text-slate-400 md:truncate md:text-xs md:leading-normal">
                       {p.fileName} · submitted {formatDate(p.submittedAt)}
@@ -280,7 +284,7 @@ export default function PaymentList({
                         </button>
                       </>
                     )}
-                    {canReview&&<button
+                    {canReview&&!p.postedAt&&<button
                       onClick={() => setDeleting(p)}
                       aria-label={`Delete proof ${p.fileName}`}
                       title="Delete proof permanently"
@@ -295,10 +299,10 @@ export default function PaymentList({
                           <Button
                             variant="primary"
                             className="!min-h-9 !px-3"
-                            disabled={busy} onClick={() => approve(p)}
+                            disabled={busy} onClick={() => setAllocating(p)}
                           >
                             <Icon name="check" className="h-4 w-4" />
-                            Approve
+                            Review & post
                           </Button>
                           <Button
                             variant="danger"
@@ -309,7 +313,7 @@ export default function PaymentList({
                             Reject
                           </Button>
                         </>
-                      ) : (
+                      ) : !p.postedAt&&(
                         <Button
                           variant="ghost"
                           className="!min-h-9 !px-3"
@@ -347,6 +351,7 @@ export default function PaymentList({
       )}
 
       {/* Reject reason (admin only) */}
+      {allocating&&<PaymentAllocationDialog key={allocating.id} proof={allocating} borrower={users.find(u=>u.id===allocating.userId)} transactions={transactions} onSubmit={allocation=>approve(allocating,allocation)} onClose={()=>setAllocating(null)}/>}
       <Modal
         open={!!rejecting}
         title="Reject payment proof"
