@@ -7,6 +7,7 @@ alter table public.transactions add column amount_applied numeric(12,2) not null
  check(amount_applied>=0 and(amount_applied=0 or amount_applied<=amount));
 alter table public.profiles add column credit_balance numeric(12,2) not null default 0 check(credit_balance>=0);
 alter table public.payments add column posted_at timestamptz;
+alter table public.payments add column posted_allocations jsonb;
 
 create table public.payment_postings(
  id uuid primary key default gen_random_uuid(),
@@ -77,7 +78,7 @@ begin
  end if;
  if TG_TABLE_NAME='transactions' then
   if TG_OP='INSERT' and NEW.amount_applied<>0 then raise exception 'Applied funds are managed by reviewed postings.';end if;
-  if TG_OP='UPDATE' and(NEW.amount_applied<>OLD.amount_applied or(OLD.amount_applied>0 and(NEW.amount<>OLD.amount or NEW.status<>OLD.status or NEW.user_id<>OLD.user_id or NEW.loan_id<>OLD.loan_id or NEW.date_paid is distinct from OLD.date_paid))) then
+  if TG_OP='UPDATE' and(NEW.amount_applied<>OLD.amount_applied or(OLD.amount_applied>0 and(NEW.amount<>OLD.amount or NEW.status<>OLD.status or NEW.user_id<>OLD.user_id or NEW.loan_id<>OLD.loan_id or NEW.date_paid is distinct from OLD.date_paid or(OLD.status in ('unpaid','past_due') and NEW.archived_at is not null)))) then
    raise exception 'Allocated dues require a reviewed reversal before changing their financial details.';
   end if;
  elsif TG_TABLE_NAME='profiles' then
@@ -88,7 +89,7 @@ begin
   end if;
   if NEW.status='approved' and(TG_OP='INSERT' or OLD.status<>'approved') then raise exception 'Review the allocation and post this payment before approving it.';end if;
   if TG_OP='UPDATE' and OLD.posted_at is not null then raise exception 'A posted proof requires a reviewed reversal.';end if;
-  if NEW.posted_at is not null then raise exception 'Posting timestamps are managed by the server.';end if;
+  if NEW.posted_at is not null or NEW.posted_allocations is not null then raise exception 'Posting details are managed by the server.';end if;
  elsif TG_TABLE_NAME='payment_logs' then
   if TG_OP='DELETE' and OLD.source_posting_id is not null then raise exception 'Posted payment history cannot be deleted.';end if;
   if TG_OP='UPDATE' and(OLD.source_posting_id is not null or NEW.source_posting_id is not null) or TG_OP='INSERT' and NEW.source_posting_id is not null then raise exception 'Posted payment history is managed by reviewed postings.';end if;
@@ -172,7 +173,9 @@ begin
   (case when selected_due>total then 'Underpayment' when added>0 then 'Overpayment' when p_credit_only then 'Credited' else 'Settled' end)::public.pay_log_alloc,
   used,left(coalesce(p_payload->>'note',''),2000),posting);
  if not p_credit_only then
-  update public.payments set status='approved',note=left(coalesce(p_payload->>'note',''),2000),reviewed_at=effective,posted_at=clock_timestamp() where id=proof.id returning * into proof;
+  update public.payments set status='approved',note=left(coalesce(p_payload->>'note',''),2000),reviewed_at=effective,posted_at=clock_timestamp(),
+   posted_allocations=(select coalesce(jsonb_agg(jsonb_build_object('id',a.transaction_id,'description',t.description,'dueDate',t.due_date,'amount',a.amount,'remainingAmount',t.amount-t.amount_applied) order by t.due_date,t.id),'[]'::jsonb) from public.payment_allocations a join public.transactions t on t.id=a.transaction_id where a.posting_id=posting)
+   where id=proof.id returning * into proof;
  end if;
  perform set_config('app.notification_event',jsonb_build_object('event_type',case when p_credit_only then 'payment.recorded' else 'payment.proof_approved' end,'payload',jsonb_build_object('amount',cash,'funds_applied',total,'remaining_balance',selected_due-total,'status','approved','source_id',coalesce(proof.id,posting),'reference',proof.reference))::text,true);
  insert into public.notifications(category,title,body,audience,target_user_ids,created_by)
@@ -245,6 +248,9 @@ begin
 end $$;
 revoke all on function mobile_private.reverse_reviewed_payment(jsonb) from public,anon;
 grant execute on function mobile_private.reverse_reviewed_payment(jsonb) to authenticated;
+create policy keep_posted_proof_file on storage.objects as restrictive for delete to authenticated using(
+ bucket_id<>'payment-proofs' or not exists(select 1 from public.payments p where p.file_path=storage.objects.name and p.posted_at is not null)
+);
 create or replace function public.mobile_action(p_action text,p_payload jsonb) returns jsonb
 language sql security invoker set search_path='' as $$select case
  when p_action='statement-create' then mobile_private.statement(p_payload)
