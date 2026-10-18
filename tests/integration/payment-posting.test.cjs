@@ -159,3 +159,7 @@ test('concurrent approvals of one proof commit exactly one posting and acknowled
  const result=await Promise.allSettled([run(),run()]);assert.equal(result.filter(r=>r.status==='fulfilled').length,1);assert.equal(result.filter(r=>r.status==='rejected').length,1);
  const row=(await db.query('select (select count(*) from public.payment_postings where user_id=$1)::int postings,(select count(*) from public.payment_logs where user_id=$1)::int logs',[f.borrower])).rows[0];assert.deepEqual(row,{postings:1,logs:1});
 });
+
+test('legacy negative adjustments remain valid and are not treated as payment allocations',async()=>{
+ const f=await fixture();try{const id=await addDue(f,-50);const row=(await f.client.query('select amount,amount_applied from public.transactions where id=$1',[id])).rows[0];assert.equal(Number(row.amount),-50);assert.equal(Number(row.amount_applied),0)}finally{await release(f)}
+});
