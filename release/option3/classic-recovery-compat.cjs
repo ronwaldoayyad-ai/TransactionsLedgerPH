@@ -31,6 +31,7 @@ exports.patchClassicRecovery=(code,id)=>{
   return replaceRequired(code,'export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLIC_KEY)',reader+'export const supabase = createClient(SUPABASE_URL, SUPABASE_PUBLIC_KEY,{global:{fetch:classicRecoveryFetch}})');
  }
  if(id.endsWith('/src/context/AppContext.jsx')){
+  code=code.replaceAll('supabase.auth.signOut()',"supabase.auth.signOut({ scope: 'local' })");
   const prefix=`const recoveryDeny=()=>{window.alert(${JSON.stringify(notice)});return {error:${JSON.stringify(notice)}}};\n`;
   return prefix+replaceRequired(code,'return <AppContext.Provider value={value}>{children}</AppContext.Provider>',`const recoveryValue=useMemo(()=>{const next={...value};for(const name of Object.keys(next)){if(/^(invite|update|delete|resend|submit|review|assign|unassign|set|archive|restore|purge|import|create|save|clear|add|complete)/.test(name)&&typeof next[name]==='function')next[name]=recoveryDeny;}return next},[value]);
    return <AppContext.Provider value={recoveryValue}><aside role="status" style={{position:'fixed',bottom:0,left:0,right:0,zIndex:10000,padding:'10px 14px',textAlign:'center',fontSize:'12px',background:'#fff4d6',color:'#493400'}}>Read-only Classic recovery · Payments and account changes are disabled.</aside>{children}</AppContext.Provider>`);
@@ -46,5 +47,6 @@ exports.patchClassicRecovery=(code,id)=>{
   return code.replaceAll('formatPeso(t.amount)','formatPeso(t.originalAmount ?? t.amount)');
  }
  if(id.endsWith('/src/components/PaymentList.jsx'))return replaceRequired(code,'  const { users, loans, reviewPayment, getProofUrl, deletePayment } = useApp()', '  canReview = false;\n  const { users, loans, reviewPayment, getProofUrl, deletePayment } = useApp()');
+ if(id.endsWith('/src/components/DuesOverview.jsx'))return replaceRequired(code,'  const goStatus = (key) => {',"  const goStatus = (key) => {\n    if(key==='paid'&&mode==='amount'&&scopedTxns.some(t=>t.paidAmount>0&&['unpaid','past_due'].includes(t.status))){navigate('/portal/payment-logs');return}");
  return code;
 };

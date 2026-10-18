@@ -94,6 +94,7 @@ export default function DuesOverview({
   // Segment → Consolidated ledger, prefiltered by borrower status (same
   // page-state seeding the dashboard tiles already use).
   const goStatus = (key) => {
+    if(key==='paid'&&mode==='amount'&&scopedTxns.some(t=>t.paidAmount>0&&['unpaid','past_due'].includes(t.status))){navigate('/portal/payment-logs');return}
     setPageEntry('consolidated.statusSel', new Set([key]))
     setPageEntry('consolidated.dueDateSel', new Set())
     setPageEntry('consolidated.typeSel', new Set(['Installment']))

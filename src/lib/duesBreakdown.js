@@ -45,6 +45,7 @@ export function buildDuesBreakdown(transactions, today = toISODate(new Date()), 
     if (!key) continue
     totals[key].amount += t.amount
     totals[key].count += 1
+    if(key!=='paid'&&t.paidAmount>0)totals.paid.amount+=t.paidAmount
   }
 
   const segments = SEGMENT_META.map((m) => ({
