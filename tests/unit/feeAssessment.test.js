@@ -28,3 +28,8 @@ test('preview descriptions use the actual configured rate, source due date and b
 test('empty selection has no charges and duplicate selected rows are rejected',()=>{
  assert.equal(fees.calculateFeeAssessment({rows:[]}).totalCents,0);assert.throws(()=>fees.calculateFeeAssessment({rows:[row('a'),row('a')]}));assert.throws(()=>fees.calculateFeeAssessment({rows:[row('a',9999999999.99),row('b')]}))
 })
+test('review never reactivates when edited values return to a previously confirmed fingerprint',()=>{
+ const initial={fingerprint:'A',confirmed:true};assert.equal(fees.feeReviewTransition(initial,'A'),initial)
+ const changed=fees.feeReviewTransition(initial,'B');assert.equal(changed.confirmed,false)
+ assert.equal(fees.feeReviewTransition(changed,'A').confirmed,false)
+})
