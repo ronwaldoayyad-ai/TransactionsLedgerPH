@@ -194,5 +194,12 @@ begin
 end $$;
 revoke all on function mobile_private.review_proof(jsonb) from public,anon;
 grant execute on function mobile_private.review_proof(jsonb) to authenticated;
+create or replace function public.mobile_action(p_action text,p_payload jsonb) returns jsonb
+language sql security invoker set search_path='' as $$select case
+ when p_action='statement-create' then mobile_private.statement(p_payload)
+ when p_action='statement-delete' then mobile_private.delete_statement(p_payload)
+ when p_action='payment-review' then mobile_private.review_proof(p_payload)
+ when p_action='credit-apply' then mobile_private.post_reviewed_payment(p_payload,true)
+ else mobile_private.action(p_action,p_payload) end$$;
 notify pgrst,'reload schema';
 commit;
