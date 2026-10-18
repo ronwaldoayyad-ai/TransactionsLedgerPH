@@ -1,7 +1,7 @@
 {
   "status": "rehearsal candidate; production approval required",
   "classic_commit": "db08a917120a6455b8d2d0d42ddf981c5b3cbd63",
-  "sha256": "47e8a0120e6d7cfa5274c5b176e27f880c0b4eee71276678d227c6487e33a42e",
+  "sha256": "32e99d0a57b3e8e4412316f380c740cd570698dd533bde47f9129b02bcad11ed",
   "sources": [
     {
       "file": "release/option3/foundation.sql",
@@ -70,6 +70,10 @@
     {
       "file": "supabase/migrations/20261018120945_accounting_lookup_index.sql",
       "sha256": "45b7679a683dd3d9c7bc5c26d7524508abef8382d492864bdf9af6518a0f91c0"
+    },
+    {
+      "file": "supabase/migrations/20261018131233_legacy_session_boundaries.sql",
+      "sha256": "7f7d76763d99be079c1a013d4cfc78819519baaae9e66a0145f2daad097ce3a6"
     }
   ],
   "adaptations": [
