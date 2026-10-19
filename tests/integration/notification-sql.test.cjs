@@ -10,7 +10,8 @@ const source=fs.readFileSync(path.join(root,'server/notification-rules.cjs'),'ut
 const factory=require(path.join(root,'server/notification-rules.cjs'));
 const {db}=require(path.join(root,'server/local-flow-service.cjs'));
 const parser=vm.createContext({});
-const literals=[...source.matchAll(/\b(?:db|client)\.query\(\s*((?:'(?:\\.|[^'\\])*')|(?:"(?:\\.|[^"\\])*"))/g)].map(match=>vm.runInContext(match[1],parser,{timeout:5000}));
+const querySources=source+'\n'+fs.readFileSync(path.join(root,'server/sent-notifications.cjs'),'utf8');
+const literals=[...querySources.matchAll(/\b(?:db|client)\.query\(\s*((?:'(?:\\.|[^'\\])*')|(?:"(?:\\.|[^"\\])*"))/g)].map(match=>vm.runInContext(match[1],parser,{timeout:5000}));
 const queries=[...new Set(literals.filter(sql=>/^\s*(select|insert|update|delete)\b/i.test(sql)))];
 const countsQuery=queries.find(sql=>sql.includes('as linked')&&sql.includes('notification_links'));
 after(()=>db.end());

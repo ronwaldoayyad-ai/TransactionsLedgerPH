@@ -22,6 +22,45 @@ before(async()=>{
 });
 after(async()=>{await db?.end();if(created&&/^payment_posting_test_[a-f0-9]{12}$/.test(database))await control.query('drop database '+database);await control.end()});
 
+async function sentFixture(){
+ const f=await fixture();await f.client.query('commit');f.client.release();
+ const service=require('../../server/sent-notifications.cjs')({db,authorize:async()=>({id:f.admin,role:'admin'})}),prefix='QA Sent '+crypto.randomUUID()
+ const insert=async(title,category,targets,audience='targeted',creator=f.admin,event=null)=>(await db.query('insert into public.notifications(category,title,body,audience,target_user_ids,created_by,event_id) values($1,$2,$3,$4,$5,$6,$7) returning id',[category,prefix+' '+title,'Synthetic notification only',audience,targets,creator,event])).rows[0].id
+ return {...f,service,prefix,insert}
+}
+test('sent filters combine borrower recipients, broadcasts, captured borrower identity, categories and subjects',async()=>{
+ const f=await sentFixture();const direct=await f.insert('Direct','payment',[f.borrower]),broadcast=await f.insert('Shared','payment',[],'all'),foreign=await f.insert('Admin only','payment',[f.admin]),general=await f.insert('General','general',[f.borrower])
+ const event=(await db.query("insert into mobile_private.notification_events(event_type,actor_id,payload) values('payment.proof_submitted_admin',$1,$2) returning id",[f.admin,{email:f.borrower+'@test.invalid'}])).rows[0].id
+ const about=await f.insert('About borrower','payment',[f.admin],'targeted',f.admin,event)
+ const filtered=await f.service.sent({}, {borrowerIds:[f.borrower],category:'payment',subject:f.prefix})
+ assert.deepEqual(new Set(filtered.items.map(n=>n.id)),new Set([direct,broadcast,about]));assert.equal(filtered.total,3);assert.ok(filtered.items.every(n=>typeof n.edit_version==='string'))
+ assert.ok(!filtered.items.some(n=>[foreign,general].includes(n.id)))
+ const subject=await f.service.sent({}, {borrowerIds:[f.borrower],subject:f.prefix+' Direct'});assert.equal(subject.total,1);assert.equal(subject.items[0].id,direct)
+});
+test('sent paging counts all matching notifications instead of filtering only a 50-row page',async()=>{
+ const f=await sentFixture();await db.query("insert into public.notifications(category,title,body,audience,target_user_ids,created_by) select 'general',$1||' #'||s,'Synthetic page test','targeted',array[$2::uuid],$3 from generate_series(1,51) s",[f.prefix,f.borrower,f.admin])
+ const first=await f.service.sent({}, {subject:f.prefix,borrowerIds:[f.borrower]}),second=await f.service.sent({}, {subject:f.prefix,borrowerIds:[f.borrower],offset:50})
+ assert.equal(first.total,51);assert.equal(first.items.length,50);assert.equal(second.total,51);assert.equal(second.items.length,1);assert.ok(!first.items.some(n=>n.id===second.items[0].id))
+});
+test('sent bulk deletion retains reads and rule links, disappears from active filters and retries once',async()=>{
+ const f=await sentFixture(),ids=[await f.insert('A','payment',[f.borrower]),await f.insert('B','payment',[f.borrower])]
+ await db.query('insert into public.notification_reads(notification_id,user_id) values($1,$2)',[ids[0],f.borrower])
+ const rule=(await db.query('select id,version from mobile_private.notification_rules limit 1')).rows[0]
+ await db.query("insert into mobile_private.notification_links(notification_id,rule_id,rule_version,node_id,event_type,payload) values($1,$2,$3,'qa-node','payment.recorded','{}')",[ids[0],rule.id,rule.version])
+ const rows=await f.service.sent({}, {subject:f.prefix}),payload={key:crypto.randomUUID(),ids,expected:rows.items.map(n=>({id:n.id,version:n.edit_version})),reviewed:true}
+ assert.deepEqual(await f.service.deleteSent({},payload),{deleted:2});assert.deepEqual(await f.service.deleteSent({},payload),{deleted:2})
+ assert.equal((await f.service.sent({}, {subject:f.prefix})).total,0);assert.equal((await f.service.sent({}, {subject:f.prefix,includeArchived:true})).total,2)
+ assert.equal((await db.query('select count(*)::int n from public.notification_reads where notification_id=$1',[ids[0]])).rows[0].n,1)
+ assert.equal((await db.query('select count(*)::int n from mobile_private.notification_links where notification_id=$1',[ids[0]])).rows[0].n,1)
+ assert.equal((await db.query("select count(*)::int n from mobile_private.notification_rule_audit where operation='notification.deleted' and notification_id=any($1::uuid[])",[ids])).rows[0].n,2)
+});
+test('a changed notification aborts the entire deletion batch',async()=>{
+ const f=await sentFixture(),ids=[await f.insert('First','general',[f.borrower]),await f.insert('Second','general',[f.borrower])],rows=await f.service.sent({}, {subject:f.prefix})
+ await db.query("update public.notifications set title=title||' edited' where id=$1",[ids[1]])
+ await assert.rejects(f.service.deleteSent({}, {key:crypto.randomUUID(),ids,expected:rows.items.map(n=>({id:n.id,version:n.edit_version})),reviewed:true}),/changed/)
+ assert.equal((await db.query('select count(*)::int n from public.notifications where id=any($1::uuid[]) and archived_at is null',[ids])).rows[0].n,2)
+});
+
 async function fixture(amount=1000){
  const client=await db.connect();await client.query('begin');
  try{
