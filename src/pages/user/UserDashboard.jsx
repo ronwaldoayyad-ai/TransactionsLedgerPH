@@ -24,6 +24,7 @@ export default function UserDashboard() {
   const navigate = useNavigate()
   const [hidePaid, setHidePaid] = usePersistedState('dashboard.hidePaid', true)
   const myPayments = payments.filter((p) => p.userId === session.user.id)
+  const accountCredit = Number(users.find(u=>u.id===session.user.id)?.creditBalance??0)
   // Balances and progress derive from the shared transactions store, which the
   // admin updates from the Overall Transactions ledger.
   const myTxns = transactions.filter((t) => t.userId === session.user.id)
@@ -198,7 +199,7 @@ export default function UserDashboard() {
         }
       />
 
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-navy-900"><span>Available account credit <strong className="ml-2 font-mono">{formatPeso(users.find(u=>u.id===session.user.id)?.creditBalance??0)}</strong></span><span className="text-xs text-slate-600">Your lender reviews how credit is applied to dues.</span></div>
+      {Number.isFinite(accountCredit)&&Math.round(accountCredit*100)>0&&<div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-navy-900"><span>Available account credit <strong className="ml-2 font-mono">{formatPeso(accountCredit)}</strong></span><span className="text-xs text-slate-600">Your lender reviews how credit is applied to dues.</span></div>}
 
       {/* Featured: Current / Next Payment Due. When the admin has pinned a Next
           set, the two cards stack (swipe / arrow keys / dots to switch) and the

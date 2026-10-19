@@ -25,6 +25,7 @@ import { supabase } from '../supabaseClient'
 import { mobileAction } from '../lib/mobileLocalFlow'
 import { refreshRecords } from '../lib/recordRefresh'
 import { saveBorrowerDetails } from '../lib/borrowerAdministration'
+import { subscribeToInvalidations } from '../lib/realtimeInvalidation'
 
 // Map a payment_due_overrides row (one per borrower) to the app's shape.
 const mapPaymentDueOverride = (r) => ({
@@ -139,6 +140,7 @@ export function AppProvider({ children }) {
   // Per-borrower admin overrides for the "Next Payment Due" tile. Loaded from
   // Supabase in live mode; the localStorage seed keeps the demo/dev flow alive.
   const [paymentDueOverrides, setPaymentDueOverrides] = useState([])
+  const overrideGeneration=useRef(0)
 
   const isLive = session?.source === 'supabase'
   const actor = session?.user?.name ?? adminUser.name
@@ -1568,7 +1570,9 @@ export function AppProvider({ children }) {
 
   // Re-read every override row (used by the writers and the realtime sub).
   const refreshPaymentDueOverrides = useCallback(async () => {
+    const owner=authenticatedOwner.current,generation=++overrideGeneration.current
     const { data, error } = await supabase.from('payment_due_overrides').select('*')
+    if(owner!==authenticatedOwner.current||generation!==overrideGeneration.current)return
     if (error) {
       console.warn('[supabase] payment_due_overrides refresh failed:', error.message)
       return
@@ -1669,20 +1673,13 @@ export function AppProvider({ children }) {
   // client (each borrower's device included) re-reads them, so the Next
   // Payment Due tile updates without a manual refresh.
   const pdoListenerId = session?.user?.id ?? 'anon'
+  const pdoIsAdmin=session?.user?.role==='admin'
   useEffect(() => {
     if (!isLive) return undefined
-    const channel = supabase
-      .channel(`payment-due-overrides-rt-${pdoListenerId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'payment_due_overrides' },
-        () => refreshPaymentDueOverrides(),
-      )
-      .subscribe()
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [isLive, pdoListenerId, refreshPaymentDueOverrides])
+    const generationRef=overrideGeneration
+    const stop=subscribeToInvalidations({client:supabase,name:`payment-due-overrides-rt-${pdoListenerId}`,table:'payment_due_change_signals',ownerId:pdoListenerId,isAdmin:pdoIsAdmin,onChange:refreshPaymentDueOverrides,onError:error=>console.warn('[payment due]',error.message)})
+    return ()=>{++generationRef.current;stop()}
+  }, [isLive, pdoListenerId,pdoIsAdmin, refreshPaymentDueOverrides])
 
   const value = useMemo(
     () => ({

@@ -3,6 +3,7 @@ import { useApp } from './AppContext'
 import { supabase } from '../supabaseClient'
 import { playReaction, playReceive } from '../lib/chatSounds'
 import { useRecordRefresh } from '../lib/recordRefresh'
+import { subscribeToInvalidations } from '../lib/realtimeInvalidation'
 
 // Isolated data layer for in-app messaging (borrower ⇄ lender). Mirrors the
 // app's dual-mode pattern: live sessions read/write the `messages` table and
@@ -47,6 +48,7 @@ export function MessagesProvider({ children }) {
   const [liveMessages, setLiveMessages] = useState([])
   const [demoVersion, setDemoVersion] = useState(0)
   const [loading, setLoading] = useState(isLive)
+  const fetchGeneration = useRef(0)
 
   // Messages visible to the current identity (admin: all; borrower: own).
   const messages = useMemo(() => {
@@ -60,9 +62,11 @@ export function MessagesProvider({ children }) {
 
   const fetchMessages = useCallback(async () => {
     if (!isLive || !meId) return
+    const generation=++fetchGeneration.current
     let q = supabase.from('messages').select('*').order('created_at')
     if (!isAdmin) q = q.eq('borrower_id', meId)
     const { data, error } = await q
+    if(generation!==fetchGeneration.current)return
     if (error) {
       console.error('[messages] load failed:', error.message)
       return
@@ -76,28 +80,22 @@ export function MessagesProvider({ children }) {
   useEffect(() => {
     if (!isLive || !meId) return undefined
     let active = true
+    const generationRef=fetchGeneration
     ;(async () => {
       await fetchMessages()
       if (active) setLoading(false)
     })()
     return () => {
       active = false
+      ++generationRef.current
     }
   }, [isLive, meId, fetchMessages])
 
   // Realtime: refetch on any change the current user is allowed to see.
   useEffect(() => {
     if (!isLive || !meId) return undefined
-    const channel = supabase
-      .channel(`messages-rt-${meId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, () => {
-        fetchMessages()
-      })
-      .subscribe()
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [isLive, meId, fetchMessages])
+    return subscribeToInvalidations({client:supabase,name:`messages-rt-${meId}`,table:'message_change_signals',ownerId:meId,isAdmin,onChange:fetchMessages,onError:error=>console.warn('[messages]',error.message)})
+  }, [isLive, meId, isAdmin, fetchMessages])
 
   // Notification sounds for INCOMING activity: messages received from the other
   // party, and reactions they add. My own send/reaction sounds play locally in

@@ -3,13 +3,15 @@ function finderViewportLayout({screenTop,screenHeight,scale,viewportTop,viewport
  const resultsTop=top+barHeight+8;
  return {top,resultsTop,resultsHeight:Math.max(0,bottom-resultsTop)};
 }
+function finderCenteredLeft(screenWidth,barWidth){return Math.max(12,(screenWidth-barWidth)/2);}
 // Browser integration: use the visible viewport, which shrinks with a mobile keyboard.
 let parentFinderViewport=null;
 function fitExpandedFinder(){
  const bar=$('#accountFinder'),screen=bar?.closest('.phone-screen');if(!bar||!screen||finderCompact)return;
  const frame=screen.getBoundingClientRect(),scale=frame.height/Math.max(1,screen.clientHeight)||1,v=window.visualViewport;
  const layout=finderViewportLayout({screenTop:frame.top,screenHeight:screen.clientHeight,scale,viewportTop:parentFinderViewport?.top??v?.offsetTop??0,viewportHeight:parentFinderViewport?.height??v?.height??innerHeight,barHeight:bar.offsetHeight});
- Object.assign(bar.style,{top:layout.top+'px',bottom:'auto',left:'12px',right:'12px',width:'auto',zIndex:'31'});
+ Object.assign(bar.style,{top:layout.top+'px',bottom:'auto',right:'auto',width:'calc(100% - 24px)',zIndex:'31'});
+ bar.style.left=finderCenteredLeft(screen.clientWidth,bar.offsetWidth)+'px';
  const overlay=$('.finder-results-overlay');if(overlay){Object.assign(overlay.style,{top:layout.resultsTop+'px',bottom:'auto',height:layout.resultsHeight+'px',padding:'0 12px',alignItems:'stretch'});const dialog=overlay.querySelector('.finder-results-dialog');if(dialog){dialog.style.maxHeight='100%';dialog.style.overflowY='auto';}}
 }
 let finderViewportFrame=0;function queueFinderViewport(){if(finderViewportFrame)return;finderViewportFrame=requestAnimationFrame(()=>{finderViewportFrame=0;fitExpandedFinder();});}

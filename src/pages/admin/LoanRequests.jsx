@@ -19,17 +19,17 @@ function AccessRow({ userId, initialEnabled, onSave }) {
   const [enabled, setEnabled] = useState(initialEnabled)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [error,setError]=useState('')
   const dirty = enabled !== initialEnabled
 
   const save = async () => {
     setSaving(true)
-    await onSave(userId, enabled)
-    setSaving(false)
-    setSaved(true)
+    setError('');setSaved(false)
+    try{const result=await onSave(userId, enabled);if(result?.error)setError(result.error);else setSaved(true)}catch(e){setError(e.message)}finally{setSaving(false)}
   }
 
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex flex-wrap items-center gap-3">
       <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
         <Switch checked={enabled} onChange={(v) => { setEnabled(v); setSaved(false) }} label="Enable loan requests" />
         {enabled ? 'Enabled' : 'Disabled'}
@@ -37,6 +37,7 @@ function AccessRow({ userId, initialEnabled, onSave }) {
       <Button onClick={save} disabled={saving || (!dirty && saved)}>
         {saving ? 'Saving…' : saved && !dirty ? 'Saved' : 'Save'}
       </Button>
+      {error&&<p role="alert" className="w-full text-sm text-red-700">{error}</p>}
     </div>
   )
 }
@@ -70,27 +71,28 @@ function FeatureVisibility({ borrowers }) {
 }
 
 // --- Rate configuration: per-term monthly add-on rate (4 decimals, in %) ---
-function RateConfig({ initialRates, onSaveRate }) {
+function RateConfig({ initialRates, onSaveRates }) {
+  const signature=JSON.stringify(initialRates)
+  const [source,setSource]=useState(signature)
   const [draft, setDraft] = useState(() =>
-    Object.fromEntries(TERMS.map((t) => [t, ((initialRates[t] ?? 0) * 100).toFixed(4)])),
+    Object.fromEntries(TERMS.map((t) => [t, initialRates[t]===undefined?'':(initialRates[t] * 100).toFixed(4)])),
   )
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [error,setError]=useState('')
+  if(source!==signature){setSource(signature);setDraft(Object.fromEntries(TERMS.map(t=>[t,initialRates[t]===undefined?'':(initialRates[t]*100).toFixed(4)])));setSaved(false)}
 
   const save = async () => {
     setSaving(true)
-    for (const t of TERMS) {
-      const pct = Number(draft[t])
-      if (!Number.isNaN(pct)) await onSaveRate(t, pct / 100)
-    }
-    setSaving(false)
-    setSaved(true)
+    setError('');setSaved(false)
+    try{const result=await onSaveRates(draft);if(result?.error)setError(result.error);else setSaved(true)}catch(e){setError(e.message)}finally{setSaving(false)}
   }
 
   return (
     <Card>
       <CardHeader title="Loan Rate Configuration" subtitle="Monthly add-on rate per term (4 decimal places)." />
       <div className="space-y-3 px-5 py-4">
+        {!Object.keys(initialRates).length&&<p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">No rates have been configured yet. Enter a rate for each term and save. Blank fields are not treated as zero interest.</p>}
         {TERMS.map((t) => (
           <div key={t} className="flex items-center gap-3">
             <label htmlFor={`rate-${t}`} className="w-24 text-sm font-medium text-slate-700">
@@ -101,6 +103,9 @@ function RateConfig({ initialRates, onSaveRate }) {
               type="number"
               step="0.0001"
               min="0"
+              max="100"
+              disabled={saving}
+              placeholder="Not configured"
               className={`${inputClass} w-32`}
               value={draft[t]}
               onChange={(e) => { setDraft((d) => ({ ...d, [t]: e.target.value })); setSaved(false) }}
@@ -111,6 +116,8 @@ function RateConfig({ initialRates, onSaveRate }) {
         <Button onClick={save} disabled={saving}>
           {saving ? 'Saving…' : saved ? 'Saved' : 'Save Rates'}
         </Button>
+        {error&&<p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+        {saved&&<p role="status" className="text-sm text-emerald-700">All loan rates saved.</p>}
       </div>
     </Card>
   )
@@ -118,7 +125,7 @@ function RateConfig({ initialRates, onSaveRate }) {
 
 export default function LoanRequests() {
   const { users } = useApp()
-  const { requests, rates, ratesByTerm, eventsFor, updateStatus, updateFees, deleteRequests, setRate } =
+  const { requests, ratesByTerm,ratesError,loading,refreshRequests,saveRates, eventsFor, updateStatus, updateFees, deleteRequests } =
     useLoanRequests()
   const { createNotification } = useNotifications()
   const borrowers = useMemo(() => users.filter((u) => u.role === 'user'), [users])
@@ -191,14 +198,15 @@ export default function LoanRequests() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <FeatureVisibility borrowers={borrowers} />
-        {rates.length > 0 ? (
-          <RateConfig initialRates={ratesByTerm} onSaveRate={setRate} />
+        {!loading&&!ratesError ? (
+          <RateConfig initialRates={ratesByTerm} onSaveRates={saveRates} />
         ) : (
           <Card>
             <CardHeader title="Loan Rate Configuration" />
             <p className="px-5 py-8 text-center text-sm text-slate-500">
-              Rate configuration loads once the loan-requests schema is set up.
+              {loading?'Loading loan rates…':ratesError}
             </p>
+            {!loading&&<div className="px-5 pb-5"><Button variant="secondary" onClick={refreshRequests}>Retry loading rates</Button></div>}
           </Card>
         )}
       </div>

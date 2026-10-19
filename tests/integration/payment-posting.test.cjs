@@ -353,3 +353,42 @@ test('override history is not readable or writable by browser roles',async()=>{
  const r=(await db.query("select has_table_privilege('anon','mobile_private.borrower_access_events','SELECT') a,has_table_privilege('authenticated','mobile_private.borrower_access_events','SELECT') b,has_table_privilege('authenticated','mobile_private.borrower_access_events','INSERT') c")).rows[0];
  assert.deepEqual(r,{a:false,b:false,c:false});
 });
+
+test('chat and due-date changes publish scoped metadata even when the source is deleted',async()=>{
+ const f=await fixture();try{
+  await f.client.query('reset role');
+  const m=(await f.client.query("insert into public.messages(borrower_id,sender_id,from_admin,body) values($1,$2,true,'Synthetic realtime fixture') returning id",[f.borrower,f.admin])).rows[0].id;
+  const version=async table=>Number((await f.client.query('select version from public.'+table+' where borrower_id=$1',[f.borrower])).rows[0]?.version);
+  assert.equal(await version('message_change_signals'),1);
+  await f.client.query("update public.messages set body='Synthetic changed message' where id=$1",[m]);assert.equal(await version('message_change_signals'),2);
+  await f.client.query('delete from public.messages where id=$1',[m]);assert.equal(await version('message_change_signals'),3);
+  await f.client.query("insert into public.payment_due_overrides(borrower_id,due_dates,updated_by) values($1,array['2026-10-26'],$2)",[f.borrower,f.admin]);assert.equal(await version('payment_due_change_signals'),1);
+  await f.client.query("update public.payment_due_overrides set next_due_dates=array['2026-11-26'] where borrower_id=$1",[f.borrower]);assert.equal(await version('payment_due_change_signals'),2);
+  await f.client.query('delete from public.payment_due_overrides where borrower_id=$1',[f.borrower]);assert.equal(await version('payment_due_change_signals'),3);
+  assert.equal((await f.client.query("select count(*)::int n from pg_publication_tables where pubname='supabase_realtime' and tablename in ('message_change_signals','payment_due_change_signals')")).rows[0].n,2);
+ }finally{await release(f)}
+});
+
+test('borrowers cannot read other change signals or forge invalidations',async()=>{
+ const f=await fixture();try{
+  await f.client.query('reset role');const sid=crypto.randomUUID();await f.client.query('insert into auth.sessions(id,user_id) values($1,$2)',[sid,f.borrower]);
+  for(const table of ['message_change_signals','payment_due_change_signals'])await f.client.query('insert into public.'+table+'(borrower_id) values($1),($2)',[f.borrower,f.admin]);
+  await f.client.query("select set_config('request.jwt.claims',$1,true)",[JSON.stringify({sub:f.borrower,role:'authenticated',session_id:sid})]);await f.client.query('set local role authenticated');
+  for(const table of ['message_change_signals','payment_due_change_signals']){
+   assert.deepEqual((await f.client.query('select borrower_id from public.'+table)).rows.map(r=>r.borrower_id),[f.borrower]);
+   assert.equal((await f.client.query("select has_table_privilege('authenticated',$1,'INSERT') p",['public.'+table])).rows[0].p,false);
+  }
+ }finally{await release(f)}
+});
+
+test('loan rate configuration supports an initially empty table and one atomic admin batch',async()=>{
+ const f=await fixture();try{
+  await f.client.query('delete from public.loan_request_rates');
+  await f.client.query("insert into public.loan_request_rates(term_months,monthly_rate) values(3,0.012),(6,0.0145),(12,0.017),(24,0.0195),(36,0.022) on conflict(term_months) do update set monthly_rate=excluded.monthly_rate");
+  assert.equal((await f.client.query('select count(*)::int n from public.loan_request_rates')).rows[0].n,5);
+  await f.client.query('savepoint invalid_rate');
+  await assert.rejects(f.client.query('insert into public.loan_request_rates(term_months,monthly_rate) values(3,0.03),(99,0.02) on conflict(term_months) do update set monthly_rate=excluded.monthly_rate'),/constraint/);
+  await f.client.query('rollback to savepoint invalid_rate');
+  assert.equal(Number((await f.client.query('select monthly_rate from public.loan_request_rates where term_months=3')).rows[0].monthly_rate),0.012);
+ }finally{await release(f)}
+});

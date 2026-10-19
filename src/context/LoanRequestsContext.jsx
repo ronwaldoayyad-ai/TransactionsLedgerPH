@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { useApp } from './AppContext'
 import { useRecordRefresh } from '../lib/recordRefresh'
 import { supabase } from '../supabaseClient'
+import { parseLoanRateDraft } from '../lib/loanRateConfiguration'
 
 // Data layer for the borrower Loan Request feature. Live sessions read/write
 // Supabase (RLS-scoped) and subscribe to Realtime; the module tolerates a
@@ -79,6 +80,7 @@ export function LoanRequestsProvider({ children }) {
   const [requests, setRequests] = useState(isLive ? [] : DEMO_REQUESTS)
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(isLive)
+  const [ratesError,setRatesError]=useState('')
 
   const fetchAll = useCallback(async () => {
     if (!isLive || !meId) return
@@ -92,8 +94,9 @@ export function LoanRequestsProvider({ children }) {
     // Degrade gracefully if the schema isn't present yet (migration not run).
     if (ratesRes.status === 'fulfilled' && !ratesRes.value.error) {
       setRates((ratesRes.value.data ?? []).map(mapRate))
+      setRatesError('')
     } else {
-      console.warn('[loan-requests] rates unavailable (run the migration?)')
+      setRatesError('Loan rates could not be loaded. Retry before editing the configuration.')
     }
     if (accessRes.status === 'fulfilled' && !accessRes.value.error) {
       setAccessList((accessRes.value.data ?? []).map(mapAccess))
@@ -271,6 +274,16 @@ export function LoanRequestsProvider({ children }) {
     [isLive, fetchAll],
   )
 
+  const saveRates=useCallback(async draft=>{
+    if(!isLive||!isAdmin)return {error:'An active lender is required.'}
+    try{
+      const rows=parseLoanRateDraft(draft).map(row=>({...row,updated_at:new Date().toISOString()}))
+      const {error}=await supabase.from('loan_request_rates').upsert(rows,{onConflict:'term_months'})
+      if(error)return {error:error.message}
+      await fetchAll();return {}
+    }catch(error){return {error:error.message}}
+  },[isLive,isAdmin,fetchAll])
+
   const setAccess = useCallback(
     async (userId, enabled) => {
       if (!isLive) return { error: 'Live session required.' }
@@ -314,6 +327,7 @@ export function LoanRequestsProvider({ children }) {
       loading,
       refreshRequests: fetchAll,
       rates,
+      ratesError,saveRates,
       ratesByTerm,
       canRequest,
       myRequests,
@@ -330,7 +344,7 @@ export function LoanRequestsProvider({ children }) {
       setAccess,
     }),
     [
-      loading, fetchAll, rates, ratesByTerm, canRequest, myRequests, requests, eventsFor, accessFor,
+      loading, fetchAll, rates,ratesError,saveRates, ratesByTerm, canRequest, myRequests, requests, eventsFor, accessFor,
       submitRequest, cancelRequest, updateMyBank, updateStatus, updateFees, deleteRequests, setRate, setAccess,
     ],
   )

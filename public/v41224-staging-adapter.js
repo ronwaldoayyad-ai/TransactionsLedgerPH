@@ -1,6 +1,7 @@
 // Presentation adapter for the approved v4.12.24 document. Auth stays in React.
 let stagingData=null,stagingBusy=false,stagingSnapshotKey=null;
 const stagingSend=payload=>parent.postMessage({channel:'loanledger-v41224',...payload},location.origin);
+function hasAvailableAccountCredit(value){const amount=Number(value);return Number.isFinite(amount)&&Math.round(amount*100)>0;}
 const stagingDateFormat=new Intl.DateTimeFormat('en-US',{month:'short',day:'numeric',year:'numeric'}),stagingDateCache=new Map();
 const stagingDate=value=>{if(!value)return '—';const key=String(value).slice(0,10);if(!stagingDateCache.has(key))stagingDateCache.set(key,stagingDateFormat.format(new Date(key+'T00:00:00')));return stagingDateCache.get(key);};
 const stagingOwed=t=>!['paid','refunded','cancelled'].includes(t.status);
@@ -88,7 +89,7 @@ render=()=>{
     const value=$('.balance-amount-value');if(value)value.textContent=cash(stagingTotal());
     const count=$('.balance-count b');if(count)count.textContent=stagingDue().length;
     const foot=$('.balance-foot>span:first-child');if(foot)foot.innerHTML=borrowerAccountDisplayHTML();
-    const card=$('.balance-card')||$('.balance-amount-value')?.parentElement?.parentElement;if(card){const credit=document.createElement('p');credit.className='account-credit-summary';credit.style.cssText='font-size:12px;padding:10px 14px;margin:10px 0 0;border-radius:12px;background:rgba(126,171,255,.12);line-height:1.5';credit.textContent='Available account credit: '+cash(stagingData.user.creditBalance||0)+' · Applied to dues after lender review.';card.append(credit);}
+    const card=$('.balance-card')||$('.balance-amount-value')?.parentElement?.parentElement;if(card&&hasAvailableAccountCredit(stagingData.user.creditBalance)){const credit=document.createElement('p');credit.className='account-credit-summary';credit.style.cssText='font-size:12px;padding:10px 14px;margin:10px 0 0;border-radius:12px;background:rgba(126,171,255,.12);line-height:1.5';credit.textContent='Available account credit: '+cash(stagingData.user.creditBalance)+' · Applied to dues after lender review.';card.append(credit);}
   }
   if(page==='profile'&&stagingData){const next=$('.profile-overview div b');if(next)next.textContent=stagingDue(1).length?stagingDate(stagingDue(1)[0].dueDate)+' · '+cash(stagingTotal(1)):'No next due dates set';}
 };

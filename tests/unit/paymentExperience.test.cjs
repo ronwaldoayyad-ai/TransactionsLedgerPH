@@ -12,6 +12,20 @@ test('expanded Finder fits above a keyboard and accounts for a scrolled visual v
  const layout=context.finderViewportLayout({screenTop:0,screenHeight:844,scale:1,viewportTop:0,viewportHeight:390,barHeight:50});assert.equal(layout.top,12);assert.equal(layout.resultsTop,70);assert.equal(layout.resultsHeight,308);
  assert.equal(context.finderViewportLayout({screenTop:-80,screenHeight:844,scale:1,viewportTop:20,viewportHeight:390,barHeight:50}).top,112);
 });
+
+test('expanded Finder is centered when its maximum width is smaller than the screen',()=>{
+ const code=read('public/v41224-finder-viewport.js'),context={};vm.createContext(context);vm.runInContext(code.slice(0,code.indexOf('// Browser integration')),context);
+ for(const [screen,bar] of [[390,292],[430,292],[320,292],[280,256]])assert.equal(context.finderCenteredLeft(screen,bar)+bar/2,screen/2);
+ assert.match(code,/right:'auto',width:'calc\(100% - 24px\)'/);
+});
+
+test('Dashboard credit advisory appears only for a positive available credit amount',()=>{
+ const code=read('public/v41224-staging-adapter.js'),context={};vm.createContext(context);vm.runInContext(code.match(/function hasAvailableAccountCredit\(value\)\{[^\n]+/)[0],context);
+ for(const value of [0,'0.00',null,undefined,-1,NaN,Infinity,'invalid',0.001])assert.equal(context.hasAvailableAccountCredit(value),false);
+ for(const value of [0.01,1500,'2209.96'])assert.equal(context.hasAvailableAccountCredit(value),true);
+ assert.match(code,/if\(card&&hasAvailableAccountCredit\(stagingData.user.creditBalance\)\)/);
+ assert.match(read('src/pages/user/UserDashboard.jsx'),/Number.isFinite\(accountCredit\)&&Math.round\(accountCredit\*100\)>0&&/);
+});
 test('all upload boundaries enforce the same 5 MB cap and assigned installment categories are persisted',()=>{
  assert.doesNotMatch(read('src/lib/mobileLocalFlow.js'),/payment-submit'\?10\*/);
  assert.doesNotMatch(read('server/flow-service.cjs'),/payment-proofs'\?10485760/);
