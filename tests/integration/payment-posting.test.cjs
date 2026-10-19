@@ -39,6 +39,67 @@ async function fixture(amount=1000){
 }
 async function release(f){await f.client.query('rollback');f.client.release()}
 
+async function correctionPayload(f,patch){
+ const row=(await f.client.query('select to_jsonb(t) row from public.transactions t where id=$1',[f.due])).rows[0].row;
+ const keys=['user_id','loan_id','n','description','amount','amount_applied','type','txn_date','due_date','date_paid','status','fee_assessment_id','archived_at'];
+ return {key:crypto.randomUUID(),id:f.due,patch,expected:Object.fromEntries(keys.map(k=>[k,row[k]])),reason:'Synthetic QA correction for accounting regression',reviewed:true};
+}
+const correct=(f,payload)=>f.client.query('select public.admin_correct_transaction($1) result',[payload]);
+
+test('reviewed admin correction returns only excess applied funds to credit and retries exactly once',async()=>{
+ const f=await fixture(400);try{
+  await post(f);const payload=await correctionPayload(f,{amount:'100.00'}),result=(await correct(f,payload)).rows[0].result;
+  assert.equal(result.creditReturned,300);assert.equal(result.transaction.amount_applied,100);assert.equal(result.creditBalance,300);
+  assert.deepEqual((await correct(f,payload)).rows[0].result,result);
+  assert.equal((await f.client.query('select count(*)::int n from public.transaction_corrections where transaction_id=$1',[f.due])).rows[0].n,1);
+  assert.equal(Number((await f.client.query('select sum(amount) n from public.payment_allocation_releases where transaction_id=$1',[f.due])).rows[0].n),300);
+  assert.equal((await f.client.query('select count(*)::int n from public.payment_logs where correction_id=$1',[result.correctionId])).rows[0].n,1);
+  const posting=(await f.client.query('select id,cash_amount,allocated_amount from public.payment_postings where payment_id=$1',[f.proof])).rows[0];
+  assert.equal(Number(posting.allocated_amount),400,'original posting is immutable');
+  await f.client.query("select public.mobile_action('payment-reverse',$1)",[{key:crypto.randomUUID(),id:posting.id,expectedCredit:'300',reviewed:true,reason:'Synthetic reversal after correction test'}]);
+  const reversal=(await f.client.query('select correction_credit_reclaimed,note from public.payment_postings where reversal_of=$1',[posting.id])).rows[0];assert.equal(Number(reversal.correction_credit_reclaimed),300);assert.match(reversal.note,/Reclaimed PHP 300/);
+  assert.equal(Number((await f.client.query('select credit_balance from public.profiles where id=$1',[f.borrower])).rows[0].credit_balance),0);
+  assert.equal(Number((await f.client.query('select amount_applied from public.transactions where id=$1',[f.due])).rows[0].amount_applied),0);
+ }finally{await release(f)}
+});
+test('increasing a fully allocated amount keeps payments and reopens only the unpaid remainder',async()=>{
+ const f=await fixture();try{await post(f);const r=(await correct(f,await correctionPayload(f,{amount:1200,type:'Straight',description:'Corrected full paid due',txnDate:'2026-10-01',dueDate:'2026-12-01'}))).rows[0].result;
+  assert.equal(r.transaction.amount_applied,1000);assert.equal(r.transaction.status,'unpaid');assert.equal(r.transaction.date_paid,null);assert.equal(r.transaction.type,'Straight');assert.equal(r.creditReturned,0);
+ }finally{await release(f)}
+});
+test('cancelled and negative corrections return all applied funds without inventing cash',async()=>{
+ for(const patch of [{status:'cancelled'},{amount:-25}]){const f=await fixture(400);try{
+  await post(f);const r=(await correct(f,await correctionPayload(f,patch))).rows[0].result;
+  assert.equal(r.creditReturned,400);assert.equal(r.transaction.amount_applied,0);
+  assert.equal((await f.client.query('select count(*)::int n from public.payment_postings where user_id=$1',[f.borrower])).rows[0].n,1);
+ }finally{await release(f)}}
+});
+test('borrower reassignment detaches unpaid schedules and requires reversal for reviewed payments',async()=>{
+ const f=await fixture(400);try{
+  const other=crypto.randomUUID();await f.client.query('reset role');await f.client.query("insert into auth.users(id,email) values($1,$2)",[other,other+'@test.invalid']);await f.client.query("insert into public.profiles(id,email,name,role,status) values($1,$2,'Other QA borrower','user','active')",[other,other+'@test.invalid']);await f.client.query('set local role authenticated');
+  await post(f);await f.client.query('savepoint no_move');await assert.rejects(correct(f,await correctionPayload(f,{userId:other})),/Reverse the reviewed payments/);await f.client.query('rollback to savepoint no_move');
+  const posting=(await f.client.query('select id from public.payment_postings where payment_id=$1',[f.proof])).rows[0].id;
+  await f.client.query("select public.mobile_action('payment-reverse',$1)",[{key:crypto.randomUUID(),id:posting,expectedCredit:'0',reviewed:true,reason:'Synthetic reassignment reversal test'}]);
+  const r=(await correct(f,await correctionPayload(f,{userId:other}))).rows[0].result;
+  assert.equal(r.transaction.user_id,other);assert.equal(r.transaction.loan_id,null);assert.equal(r.transaction.n,1);
+ }finally{await release(f)}
+});
+test('invalid, stale and unauthorized overrides fail atomically; correction history stays immutable',async()=>{
+ const f=await fixture(400);try{await post(f);
+  const payload=await correctionPayload(f,{amount:100});
+  for(const bad of [{reviewed:false},{reason:'short'},{patch:{amount:0}},{patch:{amount:'1.001'}},{patch:{amount_applied:0}},{expected:{}}]){
+   await f.client.query('savepoint invalid_correction');await assert.rejects(correct(f,{...payload,...bad}));await f.client.query('rollback to savepoint invalid_correction');
+  }
+  assert.equal(Number((await f.client.query('select credit_balance from public.profiles where id=$1',[f.borrower])).rows[0].credit_balance),0);
+  const r=(await correct(f,payload)).rows[0].result;
+  for(const statement of ['update public.transaction_corrections set reason=\'mutated reason\' where id=$1','delete from public.payment_allocation_releases where correction_id=$1','update public.payment_logs set note=\'mutated\' where correction_id=$1']){
+   await f.client.query('savepoint immutable_correction');await assert.rejects(f.client.query(statement,[r.correctionId]));await f.client.query('rollback to savepoint immutable_correction');
+  }
+  await f.client.query('reset role');const sid=crypto.randomUUID();await f.client.query('insert into auth.sessions(id,user_id) values($1,$2)',[sid,f.borrower]);await f.client.query("select set_config('request.jwt.claims',$1,true)",[JSON.stringify({sub:f.borrower,role:'authenticated',session_id:sid})]);await f.client.query('set local role authenticated');
+  await f.client.query('savepoint denied');await assert.rejects(correct(f,await correctionPayload(f,{description:'Borrower must not edit this'})),/Only an active lender/);await f.client.query('rollback to savepoint denied');
+ }finally{await release(f)}
+});
+
 test('reviewed approval atomically posts the proof to its selected installment',async()=>{
  const f=await fixture();try{
   await f.client.query("select public.mobile_action('payment-review',$1)",[f.payload]);
@@ -264,6 +325,32 @@ test('proof storage and verified submissions cap new files at 5 MB even when an 
 
 async function feePayload(f,patch={}){const dates=(await f.client.query("select to_char(due_date,'YYYY-MM-DD') as day,to_char(now() at time zone 'Asia/Manila','YYYY-MM-01') as cycle from public.transactions where id=$1",[f.due])).rows[0];return {key:crypto.randomUUID(),borrowerId:f.borrower,assessmentMonth:dates.cycle,sourceDueDate:dates.day,chargeDueDate:dates.day,financeEnabled:true,rate:'3',lateEnabled:true,lateAmount:'1500',reviewed:true,selections:[{id:f.due,expectedBalance:'1000'}],...patch}}
 const assessFee=async(f,payload)=>((await f.client.query("select public.mobile_action('fee-assess',$1) result",[payload])).rows[0].result)
+
+test('admin can correct assessed fee fields while retaining the original assessment snapshot',async()=>{
+ const f=await fixture();try{
+  const assessment=await assessFee(f,await feePayload(f));const before=(await f.client.query('select to_jsonb(a) row from public.fee_assessments a where id=$1',[assessment.id])).rows[0].row;
+  const fee=(await f.client.query("select id from public.transactions where fee_assessment_id=$1 and fee_kind='finance_charge'",[assessment.id])).rows[0].id;
+  const r=(await correct({...f,due:fee},await correctionPayload({...f,due:fee},{amount:'25.50',description:'Corrected finance charge',type:'Installment',txnDate:'2026-10-01',dueDate:'2026-12-10',status:'paid',datePaid:'2026-10-19'}))).rows[0].result;
+  assert.equal(r.transaction.amount,25.5);assert.equal(r.transaction.type,'Installment');assert.equal(r.transaction.status,'paid');assert.equal(r.transaction.date_paid,'2026-10-19');assert.equal(r.transaction.fee_assessment_id,assessment.id);
+  assert.deepEqual((await f.client.query('select to_jsonb(a) row from public.fee_assessments a where id=$1',[assessment.id])).rows[0].row,before);
+ }finally{await release(f)}
+});
+test('reversal cannot spend correction credit that was already applied elsewhere',async()=>{
+ const f=await fixture(400);try{
+  await post(f);await correct(f,await correctionPayload(f,{amount:100}));const due=await addDue(f,200);
+  await f.client.query("select public.mobile_action('credit-apply',$1)",[{userId:f.borrower,key:crypto.randomUUID(),paidDate:(await f.client.query("select to_char(current_date,'YYYY-MM-DD') as day")).rows[0].day,reviewed:true,expectedCredit:'300',creditUsed:'200',allocations:[{id:due,amount:'200',expectedBalance:'200'}]}]);
+  const posting=(await f.client.query('select id from public.payment_postings where payment_id=$1',[f.proof])).rows[0].id;
+  await f.client.query('savepoint credit_already_used');await assert.rejects(f.client.query("select public.mobile_action('payment-reverse',$1)",[{key:crypto.randomUUID(),id:posting,reviewed:true,reason:'Synthetic reversal must reject spent correction credit',expectedCredit:'100'}]),/already used/);await f.client.query('rollback to savepoint credit_already_used');
+  assert.equal(Number((await f.client.query('select credit_balance from public.profiles where id=$1',[f.borrower])).rows[0].credit_balance),100);
+ }finally{await release(f)}
+});
+test('a stale correction and a changed retry cannot overwrite later edits',async()=>{
+ const f=await fixture();try{
+  const stale=await correctionPayload(f,{description:'Stale correction must fail'}),first=await correctionPayload(f,{description:'First saved correction'});await correct(f,first);
+  for(const payload of [stale,{...first,reason:'Changed retry must not save'}]){await f.client.query('savepoint stale_correction');await assert.rejects(correct(f,payload),/changed/i);await f.client.query('rollback to savepoint stale_correction')}
+  assert.equal((await f.client.query('select description from public.transactions where id=$1',[f.due])).rows[0].description,'First saved correction');
+ }finally{await release(f)}
+});
 
 test('fee assessment posts both positive fee dues atomically with immutable calculation snapshots',async()=>{
  const f=await fixture();try{const p=await feePayload(f),result=await assessFee(f,p);assert.equal(Number(result.total),1530);

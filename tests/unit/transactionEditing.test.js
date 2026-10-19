@@ -2,7 +2,7 @@ import {test} from 'node:test'
 import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
 import vm from 'node:vm'
-import {signedTransactionAmount,prepareManualTransaction,prepareTransactionEdit,persistTransactionEdit} from '../../src/lib/transactionEditing.js'
+import {signedTransactionAmount,prepareManualTransaction,prepareTransactionEdit,persistTransactionEdit,prepareAdminCorrection,transactionCorrectionSnapshot} from '../../src/lib/transactionEditing.js'
 
 const today='2026-10-19',current={id:'qa-entry',userId:'qa',loanId:null,n:1,description:'QA ledger entry',amount:100,originalAmount:100,paidAmount:0,type:'Straight',txnDate:today,dueDate:today,status:'unpaid',datePaid:null}
 const entry={...current,id:'manual-12345678-1234-4234-8234-123456789abc'},borrowers=[{id:'qa',role:'user'},{id:'admin',role:'admin'}]
@@ -33,6 +33,26 @@ test('fee assessments and reviewed payment allocations retain their edit protect
   for(const patch of [{amount:-25},{type:'Installment'},{status:'unpaid'},{datePaid:null}])assert.throws(()=>prepareTransactionEdit({...current,paidAmount:50},patch,today),/reviewed payment/)
   assert.throws(()=>prepareTransactionEdit({...current,feeAssessmentId:'assessment'},{description:'changed'},today),/assessed fees/)
   assert.equal(prepareTransactionEdit({...current,paidAmount:50},{description:'Updated note'},today).next.description,'Updated note')
+})
+test('reviewed admin corrections validate all grid columns without ordinary row locks',()=>{
+ const paid={...current,status:'paid',datePaid:today,paidAmount:100,feeAssessmentId:'assessment'}
+ const reduced=prepareAdminCorrection(paid,{amount:50},today,borrowers)
+ assert.equal(reduced.creditReturned,50);assert.equal(reduced.retained,50)
+ assert.equal(prepareAdminCorrection(paid,{status:'cancelled'},today,borrowers).creditReturned,100)
+ const increased=prepareAdminCorrection(paid,{amount:150},today,borrowers)
+ assert.equal(increased.next.status,'unpaid');assert.equal(increased.next.datePaid,null)
+ assert.equal(prepareAdminCorrection(paid,{description:'Corrected assessed fee',type:'Installment',dueDate:'2026-12-01'},today,borrowers).next.type,'Installment')
+ assert.equal(prepareAdminCorrection(current,{userId:'qa'},today,borrowers).next.userId,'qa')
+ assert.throws(()=>prepareAdminCorrection(current,{userId:'admin'},today,borrowers),/borrower/)
+ assert.throws(()=>prepareAdminCorrection(current,{amount_applied:0},today,borrowers),/Unsupported/)
+ assert.equal(transactionCorrectionSnapshot(paid).amount_applied,100)
+})
+test('all admin grid fields use the reviewed correction flow, with ordinary guards retained elsewhere',()=>{
+ const source=readFileSync('src/pages/admin/Transactions.jsx','utf8')
+ assert.match(source,/case 'borrower':return <TransactionFieldCell/)
+ assert.match(source,/TransactionAmountCell transaction=\{t\} allowOverride/)
+ assert.match(source,/TransactionCorrectionReview/)
+ assert.doesNotMatch(source,/disabled=\{!!t.feeAssessmentId/)
 })
 function mockClient(result){const calls=[],query={};for(const method of ['update','eq','is','select'])query[method]=(...args)=>{calls.push([method,...args]);return query};query.single=async()=>result;return {client:{from:table=>{calls.push(['from',table]);return query}},calls}}
 test('confirmed edits check stale fields and allocated funds, and return the saved server record',async()=>{

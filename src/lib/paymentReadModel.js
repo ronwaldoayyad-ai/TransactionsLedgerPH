@@ -45,7 +45,7 @@ export function buildCreditActivity({ownerId,postings=[],transactions=[],logs=[]
   return [...own.values()].filter(p=>moneyCents(p.credit_used??0)>0).map(p=>({
     id:p.id,date:p.effective_date,recordedAt:p.created_at,
     reference:references.get(p.id)||'',note:p.note||'',
-    creditUsed:moneyCents(p.credit_used)/100,cashIncluded:moneyCents(p.cash_amount)/100,totalApplied:moneyCents(p.allocated_amount)/100,
+    creditUsed:moneyCents(p.credit_used)/100,cashIncluded:moneyCents(p.cash_amount)/100,totalApplied:(moneyCents(p.allocated_amount)-moneyCents(p.correction_credit_reclaimed??0))/100,
     status:p.reversal_of?'reversal':reversed.has(p.id)?'reversed':'applied',
     allocations:(p.allocation_rows||[]).filter(a=>a.user_id===ownerId).map(a=>{
       const t=dues.get(a.transaction_id),amount=moneyCents(a.amount),balance=moneyCents(a.before_balance)

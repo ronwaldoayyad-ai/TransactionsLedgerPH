@@ -62,3 +62,20 @@ export async function persistTransactionEdit(client,current,patch,today) {
   if(!data?.id)throw Error('The saved transaction could not be confirmed. Refresh and retry.')
   return data
 }
+
+// Admin corrections use a separate reviewed RPC; ordinary writes keep their guards.
+export function transactionCorrectionSnapshot(t) {
+  return {user_id:t.userId,loan_id:t.loanId??null,n:t.n,description:t.description,amount:t.originalAmount??t.amount,amount_applied:t.paidAmount||0,type:t.type,txn_date:t.txnDate,due_date:t.dueDate,date_paid:t.datePaid??null,status:t.status,fee_assessment_id:t.feeAssessmentId??null,archived_at:t.archivedAt??null}
+}
+export function prepareAdminCorrection(current,patch,today,borrowers) {
+  if(!current)throw Error('This transaction is no longer available. Refresh and retry.')
+  if(Object.hasOwn(patch,'userId')&&!borrowers.some(u=>u.id===patch.userId&&u.role==='user'))throw Error('Choose a borrower account.')
+  // Reuse field validation without the ordinary edit locks.
+  const {userId,...fields}=patch
+  const base={...current,feeAssessmentId:null,paidAmount:0}
+  const next=Object.keys(fields).length?prepareTransactionEdit(base,fields,today).next:{...base}
+  next.userId=userId??current.userId
+  if(Object.hasOwn(patch,'amount')&&!Object.hasOwn(patch,'status')&&current.paidAmount>0&&next.originalAmount>current.paidAmount&&next.status==='paid'){next.status='unpaid';next.datePaid=null}
+  const retained=['cancelled','refunded'].includes(next.status)?0:Math.min(current.paidAmount||0,Math.max(next.originalAmount??next.amount,0))
+  return {next,creditReturned:(Math.round((current.paidAmount||0)*100)-Math.round(retained*100))/100,retained,expected:transactionCorrectionSnapshot(current)}
+}

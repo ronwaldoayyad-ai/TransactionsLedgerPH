@@ -6,5 +6,6 @@ export function collectionEntries(transactions,postings=[]) {
 
 export function postingFigures(posting) {
   const sign=posting.reversal_of?-1:1
-  return {cash:sign*Number(posting.cash_amount)||0,allocated:sign*Number(posting.allocated_amount)||0,creditChange:sign*(Number(posting.credit_added)-Number(posting.credit_used))||0}
+  const reclaimed=Number(posting.correction_credit_reclaimed)||0
+  return {cash:sign*Number(posting.cash_amount)||0,allocated:sign*(Number(posting.allocated_amount)-reclaimed)||0,creditChange:sign*(Number(posting.credit_added)-Number(posting.credit_used)+reclaimed)||0}
 }

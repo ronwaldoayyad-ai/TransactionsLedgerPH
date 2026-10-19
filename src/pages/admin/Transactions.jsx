@@ -1,5 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
-import {useNavigate} from 'react-router-dom'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useApp } from '../../context/AppContext'
 import { usePersistedState } from '../../hooks/usePersistedState'
 import PaymentAdjustmentActivity from '../../components/PaymentAdjustmentActivity'
@@ -15,6 +14,8 @@ import { parseCSV, parseCSVAmount, parseCSVDate } from '../../lib/csv'
 import InstallmentGroupEditor from '../../components/admin/InstallmentGroupEditor'
 import TransactionEntryForm from '../../components/admin/TransactionEntryForm'
 import TransactionGrid from '../../components/admin/TransactionGrid'
+import TransactionFieldCell from '../../components/admin/TransactionFieldCell'
+import TransactionCorrectionReview from '../../components/admin/TransactionCorrectionReview'
 import { TransactionAmountCell, TransactionTypeCell, TransactionStatusCell } from '../../components/admin/TransactionValueCells'
 
 const IMPORT_HEADERS = ['Borrower', 'Txn Date', 'Item Description', 'Amount', 'Type', 'Due Date', 'Date Paid', 'Status']
@@ -25,12 +26,6 @@ const LOAN_HEADERS = [
   'Principal Amount', 'Monthly Add-on Rate', 'Duration', 'First Payment Date',
   'DST', 'Processing Fee', 'Notarial Fee', 'Total Deductions', 'Net Proceeds',
 ]
-
-const dateCellClass =
-  'min-h-8 w-[7.2rem] cursor-pointer rounded-md border border-slate-200 bg-transparent px-1.5 py-1 text-[11px] text-slate-700 transition-colors duration-200 hover:border-slate-400 focus:border-navy-600 focus:outline-2 focus:outline-navy-600/20'
-
-const descCellClass =
-  'min-h-8 w-full cursor-text truncate rounded-md border border-slate-200 bg-transparent px-1.5 py-1 text-xs text-slate-700 transition-colors duration-200 hover:border-slate-400 focus:border-navy-600 focus:outline-2 focus:outline-navy-600/20'
 
 // --- Find & Replace (Item Description) helpers ---------------------------
 const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -81,9 +76,8 @@ function computeReplacement(desc, { find, replace, mode, matchCase }) {
 // borrowers, filterable, with editable dates and single/bulk status updates.
 // Status written here is the same store the borrower views read from.
 export default function Transactions() {
-  const navigate=useNavigate()
   const {
-    session, users, transactions, setTransactionStatus, updateTransaction, archiveTransactions,
+    session, users, transactions, setTransactionStatus, correctTransaction, archiveTransactions,
     replaceTransactionDescriptions, importTransactions, importLoans,
   } = useApp()
   const borrowers = users.filter((u) => u.role === 'user')
@@ -113,6 +107,11 @@ export default function Transactions() {
   const [actionTxn, setActionTxn] = useState(null)
   const liveActionTxn=transactions.find(transaction=>transaction.id===actionTxn?.id)||actionTxn
   const [addOpen,setAddOpen]=useState(false)
+  const [correction,setCorrection]=useState(null)
+  const pendingCorrection=useRef(null)
+  useEffect(()=>()=>{pendingCorrection.current?.({error:'Correction cancelled.'});pendingCorrection.current=null},[])
+  const reviewEdit=(current,patch)=>new Promise(resolve=>{if(pendingCorrection.current){resolve({error:'Finish the current correction first.'});return}pendingCorrection.current=resolve;setCorrection({current,patch})})
+  const closeCorrection=result=>{pendingCorrection.current?.(result);pendingCorrection.current=null;setCorrection(null)}
   const importInputRef = useRef(null)
   const [importPreview, setImportPreview] = useState(null) // { rows, errors }
   const [importing, setImporting] = useState(false)
@@ -181,7 +180,7 @@ export default function Transactions() {
   }
 
   // Live aggregate of the Amount column for whatever filters are applied.
-  const filteredTotal = useMemo(() => filtered.reduce((s, t) => s + t.amount, 0), [filtered])
+  const filteredTotal = useMemo(() => filtered.reduce((s, t) => s + (t.originalAmount??t.amount), 0), [filtered])
 
   // Mobile filter sheet is single-select per group, mapped onto the shared
   // multi-select Sets: one selection => a one-item Set, "All" => empty Set.
@@ -414,7 +413,7 @@ export default function Transactions() {
     const header = 'Borrower,Loan,Item Description,Txn Date,Amount,Type,Due Date,Date Paid,Status'
     const rows = filtered.map(
       (t) =>
-        `"${nameOf(t.userId)}",${t.loanId ?? ''},"${t.description}",${t.txnDate},${t.amount.toFixed(2)},${t.type},${t.dueDate},${t.datePaid ?? ''},${STATUS_LABELS[effectiveStatus(t, today)]}`,
+        `"${nameOf(t.userId)}",${t.loanId ?? ''},"${t.description}",${t.txnDate},${(t.originalAmount??t.amount).toFixed(2)},${t.type},${t.dueDate},${t.datePaid ?? ''},${STATUS_LABELS[effectiveStatus(t, today)]}`,
     )
     rows.push(`FILTERED TOTAL,,,,${filteredTotal.toFixed(2)},,,,`)
     downloadCSV(
@@ -673,7 +672,7 @@ export default function Transactions() {
                   key={t.id}
                   data-fee-kind={t.feeKind||undefined}
                   type="button"
-                  onClick={() => t.feeAssessmentId ? navigate('/admin/fee-manager') : setActionTxn(t)}
+                  onClick={() => setActionTxn(t)}
                   className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50 active:bg-slate-100 ${
                     idx > 0 ? 'border-t border-slate-100' : 'border-t border-slate-200'
                   } ${
@@ -687,7 +686,7 @@ export default function Transactions() {
                     </p>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-1">
-                    <span className="font-mono text-[13px] font-semibold text-slate-900">{formatPeso(t.amount)}</span>
+                    <span className="font-mono text-[13px] font-semibold text-slate-900">{formatPeso(t.originalAmount??t.amount)}</span>
                     <Badge status={eff}>{STATUS_LABELS[eff]}</Badge>
                   </div>
                 </button>
@@ -705,12 +704,12 @@ export default function Transactions() {
         )}
         <TransactionGrid key={session?.user?.id||'anonymous'} ownerId={session?.user?.id||'anonymous'} items={pag.pageItems} total={filteredTotal} count={filtered.length} statusCounts={statusCounts} today={today} query={query} onQueryChange={setQuery} hideSettled={hideSettled} onHideSettledChange={setHideSettled} onExport={exportCSV} sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} allSelected={allSelected} onToggleAll={toggleAll} selected={selected} onToggleOne={toggleOne} renderCell={(key,t)=>{
           switch(key){
-            case 'borrower':return <span className="block truncate" title={nameOf(t.userId)}>{nameOf(t.userId)}</span>
-            case 'description':return <DescriptionCell txn={t} onSave={description=>updateTransaction(t.id,{description})}/>
-            case 'amount':return <TransactionAmountCell transaction={t} formatted onSave={patch=>updateTransaction(t.id,patch)}/>
-            case 'type':return <TransactionTypeCell transaction={t} onSave={patch=>updateTransaction(t.id,patch)}/>
-            case 'status':return <TransactionStatusCell transaction={t} onSave={patch=>updateTransaction(t.id,patch)}/>
-            default:return <div className="tg-date-field" data-empty={!t[key]}><input type="date" value={t[key]??''} onChange={event=>updateTransaction(t.id,{[key]:event.target.value||null})} disabled={!!t.feeAssessmentId||(key==='datePaid'&&t.paidAmount>0)} aria-label={(key==='txnDate'?'Transaction date':key==='dueDate'?'Due date':'Date paid')+' for '+t.description} className={dateCellClass}/>{!t[key]&&<span aria-hidden="true">—</span>}</div>
+            case 'borrower':return <TransactionFieldCell transaction={t} field="userId" label="Borrower" options={borrowers.map(b=>({value:b.id,label:b.name}))} onSave={patch=>reviewEdit(t,patch)}/>
+            case 'description':return <TransactionFieldCell transaction={t} field="description" label="Item description" onSave={patch=>reviewEdit(t,patch)}/>
+            case 'amount':return <TransactionAmountCell transaction={t} allowOverride formatted onSave={patch=>reviewEdit(t,patch)}/>
+            case 'type':return <TransactionTypeCell transaction={t} allowOverride onSave={patch=>reviewEdit(t,patch)}/>
+            case 'status':return <TransactionStatusCell transaction={t} allowOverride onSave={patch=>reviewEdit(t,patch)}/>
+            default:return <TransactionFieldCell transaction={t} field={key} label={key==='txnDate'?'Transaction date':key==='dueDate'?'Due date':'Date paid'} onSave={patch=>reviewEdit(t,patch)}/>
           }
         }}/>
         {filtered.length > 0 && (
@@ -1027,25 +1026,11 @@ export default function Transactions() {
             <p className="mb-2 truncate px-2 text-xs text-slate-500">
               Due {formatDate(liveActionTxn.dueDate)}
             </p>
-            <div className="mb-3 px-2">
-              <label htmlFor="edit-desc" className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-400">
-                Item description
-              </label>
-              <DescriptionCell
-                key={liveActionTxn.id}
-                txn={liveActionTxn}
-                inputId="edit-desc"
-                onSave={(desc) => {
-                  updateTransaction(liveActionTxn.id, { description: desc })
-                  setActionTxn((prev) => (prev ? { ...prev, description: desc } : prev))
-                }}
-                className="min-h-10 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-navy-600 focus:outline-2 focus:outline-navy-600/20"
-              />
-            </div>
             <div className="grid grid-cols-2 gap-3 px-2 pb-4">
-              <div><p className="mb-1 text-xs text-slate-500">Amount (₱)</p><TransactionAmountCell transaction={liveActionTxn} wide onSave={patch=>updateTransaction(liveActionTxn.id,patch)}/></div>
-              <div><p className="mb-1 text-xs text-slate-500">Type</p><TransactionTypeCell transaction={liveActionTxn} wide onSave={patch=>updateTransaction(liveActionTxn.id,patch)}/></div>
-              <div className="col-span-2"><p className="mb-1 text-xs text-slate-500">Status</p><TransactionStatusCell transaction={liveActionTxn} wide onSave={patch=>updateTransaction(liveActionTxn.id,patch)}/></div>
+              {[['userId','Borrower'],['description','Item description'],['txnDate','Transaction date'],['dueDate','Due date'],['datePaid','Date paid']].map(([field,label])=><label className={['description','userId'].includes(field)?'col-span-2':''} key={field}><span className="mb-1 block text-xs text-slate-500">{label}</span><TransactionFieldCell transaction={liveActionTxn} field={field} label={label} options={field==='userId'?borrowers.map(b=>({value:b.id,label:b.name})):undefined} onSave={patch=>reviewEdit(liveActionTxn,patch)}/></label>)}
+              <div><p className="mb-1 text-xs text-slate-500">Billed amount (₱)</p><TransactionAmountCell transaction={liveActionTxn} allowOverride wide onSave={patch=>reviewEdit(liveActionTxn,patch)}/></div>
+              <div><p className="mb-1 text-xs text-slate-500">Type</p><TransactionTypeCell transaction={liveActionTxn} allowOverride wide onSave={patch=>reviewEdit(liveActionTxn,patch)}/></div>
+              <div className="col-span-2"><p className="mb-1 text-xs text-slate-500">Status</p><TransactionStatusCell transaction={liveActionTxn} allowOverride wide onSave={patch=>reviewEdit(liveActionTxn,patch)}/></div>
             </div>
             <button
               type="button"
@@ -1061,54 +1046,8 @@ export default function Transactions() {
           </div>
         </div>
       )}
+      {correction&&<TransactionCorrectionReview key={correction.current.id+JSON.stringify(correction.patch)} request={correction} borrowers={borrowers} onSave={correctTransaction} onClose={closeCorrection}/>}
     </>
-  )
-}
-
-// Inline-editable Item Description cell. Commits on blur or Enter, reverts on
-// Escape, and re-syncs if the underlying record changes elsewhere. Editing is
-// held in local state so the shared ledger only updates once, on commit —
-// avoiding per-keystroke re-filtering/re-sorting of the whole grid.
-function DescriptionCell({ txn, onSave, className, inputId }) {
-  const [value, setValue] = useState(txn.description)
-  const [editing, setEditing] = useState(false)
-  // Re-sync to an external change (another edit to this row) while not editing,
-  // using the render-time "reset state on prop change" pattern (no effect).
-  const [lastDesc, setLastDesc] = useState(txn.description)
-  if (txn.description !== lastDesc) {
-    setLastDesc(txn.description)
-    if (!editing) setValue(txn.description)
-  }
-  const commit = () => {
-    setEditing(false)
-    const next = value.trim()
-    if (next && next !== txn.description) onSave(next)
-    else if (!next) setValue(txn.description) // reject empty description
-  }
-  return (
-    <input
-      id={inputId}
-      readOnly={!!txn.feeAssessmentId}
-      title={txn.feeAssessmentId?'Assessed fee · manage in Loan fees & billing':undefined}
-      type="text"
-      value={value}
-      onChange={(e) => setValue(e.target.value)}
-      onFocus={() => setEditing(true)}
-      onBlur={commit}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault()
-          e.currentTarget.blur()
-        } else if (e.key === 'Escape') {
-          setValue(txn.description)
-          setEditing(false)
-          e.currentTarget.blur()
-        }
-      }}
-      title={`${txn.description}${txn.loanId ? ` · ${txn.loanId}` : ''}`}
-      aria-label={`Item description for ${txn.description}`}
-      className={className ?? descCellClass}
-    />
   )
 }
 

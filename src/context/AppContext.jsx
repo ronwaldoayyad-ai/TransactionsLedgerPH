@@ -1,4 +1,4 @@
-import { prepareManualTransaction, prepareTransactionEdit, persistTransactionEdit } from '../lib/transactionEditing'
+import { prepareManualTransaction, prepareTransactionEdit, persistTransactionEdit, prepareAdminCorrection } from '../lib/transactionEditing'
 import { companionEnabled } from '../lib/serviceEndpoint'
 import { authenticatePassword } from '../lib/loginAccess'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
@@ -1239,6 +1239,23 @@ export function AppProvider({ children }) {
     }catch(error){reportDbError?.(error.message);return {error:error.message||'Unable to update this transaction.'}}
   },[isLive,session,transactions,log,actor])
 
+  const correctTransaction = useCallback(async (current,patch,review) => {
+    try {
+      if(session?.user?.role!=='admin')throw Error('Only the lender can override ledger entries.')
+      const prepared=prepareAdminCorrection(current,patch,toISODate(new Date()),users)
+      if(!review?.reviewed||review.reason?.trim().length<10)throw Error('Review the correction and enter a reason of at least 10 characters.')
+      if(!isLive)throw Error('Reviewed overrides require a connected account.')
+      const {data,error}=await supabase.rpc('admin_correct_transaction',{p_payload:{id:current.id,patch,expected:prepared.expected,...review}})
+      if(error)throw Error(error.message)
+      if(!data?.transaction?.id)throw Error('The saved correction could not be confirmed. Retry with this form open.')
+      const saved=mapTransaction(data.transaction)
+      setTransactions(previous=>previous.map(t=>t.id===saved.id?saved:t))
+      setUsers(previous=>previous.map(u=>u.id===data.creditUserId?{...u,creditBalance:Number(data.creditBalance)}:u))
+      if(data.paymentLog)setPaymentLogs(previous=>[...previous.filter(l=>l.id!==data.paymentLog.id),mapPaymentLog(data.paymentLog)])
+      return {error:null,transaction:saved}
+    }catch(error){return {error:error.message||'Unable to save this correction.'}}
+  },[session,isLive,users])
+
   // Bulk find-and-replace of Item Descriptions from the Overall Transactions
   // ledger. `edits` is an array of { id, description } with the already-computed
   // new text. Only the description changes — borrower, amount, dates, and status
@@ -1733,6 +1750,7 @@ export function AppProvider({ children }) {
       unassignLoan,
       setTransactionStatus,
       updateTransaction,
+      correctTransaction,
       createTransaction,
       replaceTransactionDescriptions,
       updateLoan,
@@ -1755,7 +1773,7 @@ export function AppProvider({ children }) {
       transactions, archivedTransactions, auditLog,
       signInWithPassword, signInWithLoginCode, signInDemo, signOut, completePasswordSetup, inviteUser, updateUser,
       deleteUser, resendInvite, submitPayment, reviewPayment, deletePayment, assignLoan, unassignLoan,
-      setTransactionStatus, updateTransaction, createTransaction, replaceTransactionDescriptions, updateLoan,
+      setTransactionStatus, updateTransaction, correctTransaction, createTransaction, replaceTransactionDescriptions, updateLoan,
       archiveTransactions, restoreTransactions,
       purgeArchivedTransactions, purgeAuditEntries, importTransactions,
     ],
