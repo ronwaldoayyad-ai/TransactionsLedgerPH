@@ -13,6 +13,8 @@ import { downloadCSV, formatDate, formatPeso, toISODate } from '../../lib/amorti
 import { STATUS_LABELS, effectiveStatus } from '../../lib/transactions'
 import { parseCSV, parseCSVAmount, parseCSVDate } from '../../lib/csv'
 import InstallmentGroupEditor from '../../components/admin/InstallmentGroupEditor'
+import TransactionEntryForm from '../../components/admin/TransactionEntryForm'
+import { TransactionAmountCell, TransactionTypeCell, TransactionStatusCell } from '../../components/admin/TransactionValueCells'
 
 const IMPORT_HEADERS = ['Borrower', 'Txn Date', 'Item Description', 'Amount', 'Type', 'Due Date', 'Date Paid', 'Status']
 // Loan-level columns (repeat per row; first non-empty value per loan wins).
@@ -108,6 +110,8 @@ export default function Transactions() {
   // (the desktop table's inline controls don't fit a phone width).
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [actionTxn, setActionTxn] = useState(null)
+  const liveActionTxn=transactions.find(transaction=>transaction.id===actionTxn?.id)||actionTxn
+  const [addOpen,setAddOpen]=useState(false)
   const importInputRef = useRef(null)
   const [importPreview, setImportPreview] = useState(null) // { rows, errors }
   const [importing, setImporting] = useState(false)
@@ -490,6 +494,7 @@ export default function Transactions() {
         subtitle="Every amortization installment across all borrowers. Status changes here update each borrower's dashboard instantly."
         action={
           <div className="flex flex-wrap gap-2">
+            <Button onClick={()=>setAddOpen(true)}><Icon name="plus" className="h-4 w-4" />Add transaction</Button>
             <InstallmentGroupEditor />
             <RefreshButton />
             <input
@@ -527,6 +532,7 @@ export default function Transactions() {
         }
       />
       <PaymentAdjustmentActivity />
+      {addOpen&&<TransactionEntryForm onClose={()=>setAddOpen(false)} onSaved={transaction=>{setAddOpen(false);setImportNotice("Added "+transaction.description+" ("+formatPeso(transaction.amount)+").")}}/>}
 
       {importNotice && (
         <p role="status" className="mb-4 flex items-center gap-2 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
@@ -766,7 +772,6 @@ export default function Transactions() {
                   </th>
                   <th scope="col" className="px-2.5 py-3">Date Paid</th>
                   <th scope="col" className="px-2.5 py-3">Status</th>
-                  <th scope="col" className="px-2.5 py-3">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -817,9 +822,9 @@ export default function Transactions() {
                         />
                       </td>
                       <td className="px-2.5 py-2.5 text-right font-mono text-slate-900">
-                        {formatPeso(t.amount)}
+                        <TransactionAmountCell transaction={t} onSave={patch=>updateTransaction(t.id,patch)}/>
                       </td>
-                      <td className="px-2.5 py-2.5 text-slate-600">{t.type}</td>
+                      <td className="px-2.5 py-2.5"><TransactionTypeCell transaction={t} onSave={patch=>updateTransaction(t.id,patch)}/></td>
                       <td className="px-2.5 py-2.5">
                         <input
                           type="date"
@@ -837,33 +842,12 @@ export default function Transactions() {
                           onChange={(e) =>
                             updateTransaction(t.id, { datePaid: e.target.value || null })
                           }
-                          disabled={!!t.feeAssessmentId}
+                          disabled={!!t.feeAssessmentId||t.paidAmount>0}
                           aria-label={`Date paid for ${t.description}`}
                           className={dateCellClass}
                         />
                       </td>
-                      <td className="px-2.5 py-2.5">
-                        <Badge status={effective}>{STATUS_LABELS[effective]}</Badge>
-                      </td>
-                      <td className="px-2.5 py-2.5">
-                        <label className="sr-only" htmlFor={`action-${t.id}`}>
-                          Set status for {t.description}
-                        </label>
-                        <select
-                          id={`action-${t.id}`}
-                          disabled={!!t.feeAssessmentId}
-                          title={t.feeAssessmentId?'Use payment review to settle fees, or Loan fees & billing to void an unpaid assessment.':undefined}
-                          value={t.status}
-                          onChange={(e) => setTransactionStatus([t.id], e.target.value)}
-                          className={`${inputClass} !min-h-8 !w-[6.8rem] !px-1.5 !py-1 !text-[11px]`}
-                        >
-                          {Object.entries(STATUS_LABELS).map(([value, label]) => (
-                            <option key={value} value={value}>
-                              {label}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
+                      <td className="px-2.5 py-2.5"><TransactionStatusCell transaction={t} onSave={patch=>updateTransaction(t.id,patch)}/></td>
                     </tr>
                   )
                 })}
@@ -874,7 +858,7 @@ export default function Transactions() {
                     FILTERED TOTAL ({filtered.length} record{filtered.length === 1 ? '' : 's'})
                   </td>
                   <td className="px-2.5 py-3 text-right font-mono">{formatPeso(filteredTotal)}</td>
-                  <td className="px-2.5 py-3" colSpan={5} />
+                  <td className="px-2.5 py-3" colSpan={4} />
                 </tr>
               </tfoot>
             </table>
@@ -1188,49 +1172,37 @@ export default function Transactions() {
             className="absolute inset-0 cursor-default bg-navy-950/40"
             onClick={() => setActionTxn(null)}
           />
-          <div className="relative w-full rounded-t-3xl bg-white p-4 pb-8">
+          <div className="relative max-h-[88dvh] w-full overflow-y-auto rounded-t-3xl bg-white p-4 pb-8">
             <p className="truncate px-2 pt-1 text-base font-bold text-slate-900">
-              {nameOf(actionTxn.userId)} · {formatPeso(actionTxn.amount)}
+              {nameOf(liveActionTxn.userId)} · {formatPeso(liveActionTxn.amount)}
             </p>
             <p className="mb-2 truncate px-2 text-xs text-slate-500">
-              Due {formatDate(actionTxn.dueDate)}
+              Due {formatDate(liveActionTxn.dueDate)}
             </p>
             <div className="mb-3 px-2">
               <label htmlFor="edit-desc" className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-400">
                 Item description
               </label>
               <DescriptionCell
-                key={actionTxn.id}
-                txn={actionTxn}
+                key={liveActionTxn.id}
+                txn={liveActionTxn}
                 inputId="edit-desc"
                 onSave={(desc) => {
-                  updateTransaction(actionTxn.id, { description: desc })
+                  updateTransaction(liveActionTxn.id, { description: desc })
                   setActionTxn((prev) => (prev ? { ...prev, description: desc } : prev))
                 }}
                 className="min-h-10 w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-navy-600 focus:outline-2 focus:outline-navy-600/20"
               />
             </div>
-            <p className="mb-1 px-2 text-xs font-medium uppercase tracking-wide text-slate-400">
-              Set status
-            </p>
-            {Object.entries(STATUS_LABELS).map(([value, label]) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => {
-                  setTransactionStatus([actionTxn.id], value)
-                  setActionTxn(null)
-                }}
-                className="flex w-full items-center justify-between rounded-xl px-4 py-3 text-left transition-colors hover:bg-slate-50 active:bg-slate-100"
-              >
-                <span className="text-[15px] font-medium text-slate-800">{label}</span>
-                {actionTxn.status === value && <Icon name="check" className="h-4 w-4 text-navy-700" />}
-              </button>
-            ))}
+            <div className="grid grid-cols-2 gap-3 px-2 pb-4">
+              <div><p className="mb-1 text-xs text-slate-500">Amount (₱)</p><TransactionAmountCell transaction={liveActionTxn} wide onSave={patch=>updateTransaction(liveActionTxn.id,patch)}/></div>
+              <div><p className="mb-1 text-xs text-slate-500">Type</p><TransactionTypeCell transaction={liveActionTxn} wide onSave={patch=>updateTransaction(liveActionTxn.id,patch)}/></div>
+              <div className="col-span-2"><p className="mb-1 text-xs text-slate-500">Status</p><TransactionStatusCell transaction={liveActionTxn} wide onSave={patch=>updateTransaction(liveActionTxn.id,patch)}/></div>
+            </div>
             <button
               type="button"
               onClick={() => {
-                archiveTransactions([actionTxn.id])
+                archiveTransactions([liveActionTxn.id])
                 setActionTxn(null)
               }}
               className="mt-1 flex w-full items-center gap-2 rounded-xl px-4 py-3 text-left text-red-600 transition-colors hover:bg-red-50 active:bg-red-100"

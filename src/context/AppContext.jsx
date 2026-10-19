@@ -1,3 +1,4 @@
+import { prepareManualTransaction, prepareTransactionEdit, persistTransactionEdit } from '../lib/transactionEditing'
 import { companionEnabled } from '../lib/serviceEndpoint'
 import { authenticatePassword } from '../lib/loginAccess'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
@@ -1202,48 +1203,41 @@ export function AppProvider({ children }) {
     [isLive, log, actor],
   )
 
-  // Inline edits to a transaction (dates, amount, description, status).
-  // Setting a Date Paid on an unpaid/past-due row marks it paid; clearing the
-  // Date Paid on a paid row reverts it to unpaid.
-  const updateTransaction = useCallback(
-    (id, patch) => {
-      const current = transactions.find((t) => t.id === id)
-      if (!current) return
-        if(current.feeAssessmentId){reportDbError?.('Use Loan fees & billing to manage assessed fees.');return false}
-      if(current.paidAmount>0&&['amount','status','datePaid','loanId','userId'].some(key=>Object.hasOwn(patch,key))){reportDbError?.('Use a reviewed reversal before changing an allocated due’s financial details.');return false}
-      const next = { ...current, ...patch }
-      if(Object.hasOwn(patch,'amount'))next.originalAmount=patch.amount
-      if ('datePaid' in patch) {
-        if (patch.datePaid && (next.status === 'unpaid' || next.status === 'past_due'))
-          next.status = 'paid'
-        if (!patch.datePaid && next.status === 'paid') next.status = 'unpaid'
+  // Manual ledger entries may stand alone or append to an existing loan.
+  const createTransaction = useCallback(async (input) => {
+    try {
+      if(session?.user?.role!=='admin')throw Error('Only the lender can add ledger entries.')
+      const row=prepareManualTransaction(input,users,toISODate(new Date()),loans,[...transactions,...archivedTransactions])
+      let saved=row
+      if(isLive){
+        const dbRow={...toDbTransaction(row),id:row.id}
+        let {data,error}=await supabase.from('transactions').insert(dbRow).select().single()
+        if(error?.code==='23505'){
+          const existing=await supabase.from('transactions').select('*').eq('id',row.id).single()
+          if(!existing.error&&Object.entries(dbRow).every(([key,value])=>key==='n'||(key==='amount'?Number(existing.data[key])===value:existing.data[key]===value))){data=existing.data;error=null}
+        }
+        if(error)throw Error(error.message)
+        if(!data?.id)throw Error('The saved entry could not be confirmed. Keep this form open and retry.')
+        saved=mapTransaction(data)
       }
-      // Keep date_paid consistent with the status (and the DB constraint):
-      //  - setting status to "paid" stamps today if no date yet
-      //  - unpaid / past due / cancelled NEVER carry a date (enforced always,
-      //    so a stale date can't linger after any edit)
-      if ('status' in patch && next.status === 'paid' && !next.datePaid)
-        next.datePaid = toISODate(new Date())
-      if (['unpaid', 'cancelled', 'past_due'].includes(next.status)) next.datePaid = null
-      if (isLive) {
-        supabase
-          .from('transactions')
-          .update({
-            txn_date: next.txnDate,
-            due_date: next.dueDate,
-            date_paid: next.datePaid,
-            status: next.status,
-            amount: next.originalAmount ?? next.amount,
-            description: next.description,
-          })
-          .eq('id', id)
-          .then(logDbError('transaction update'))
-      }
-      setTransactions((prev) => prev.map((t) => (t.id === id ? next : t)))
-      log(actor, 'TXN_UPDATED', `Installment ${id} updated (${Object.keys(patch).join(', ')})`)
-    },
-    [isLive, log, actor, transactions],
-  )
+      setTransactions(previous=>[...previous.filter(t=>t.id!==saved.id),saved])
+      log(actor,'TXN_IMPORTED','Manual entry '+saved.id+': '+saved.description+', PHP '+(saved.originalAmount??saved.amount))
+      return {error:null,transaction:saved}
+    }catch(error){return {error:error.message||'Unable to add this transaction.'}}
+  },[isLive,session,users,loans,transactions,archivedTransactions,log,actor])
+
+  // Commit only the changed columns, and publish state only after confirmation.
+  const updateTransaction = useCallback(async (id,patch) => {
+    try {
+      if(session?.user?.role!=='admin')throw Error('Only the lender can edit ledger entries.')
+      const current=transactions.find(transaction=>transaction.id===id),today=toISODate(new Date())
+      const prepared=prepareTransactionEdit(current,patch,today)
+      const saved=isLive?mapTransaction(await persistTransactionEdit(supabase,current,patch,today)):prepared.next
+      setTransactions(previous=>previous.map(transaction=>transaction.id===id?saved:transaction))
+      log(actor,'TXN_UPDATED','Transaction '+id+' updated ('+Object.keys(patch).join(', ')+')')
+      return {error:null,transaction:saved}
+    }catch(error){reportDbError?.(error.message);return {error:error.message||'Unable to update this transaction.'}}
+  },[isLive,session,transactions,log,actor])
 
   // Bulk find-and-replace of Item Descriptions from the Overall Transactions
   // ledger. `edits` is an array of { id, description } with the already-computed
@@ -1739,6 +1733,7 @@ export function AppProvider({ children }) {
       unassignLoan,
       setTransactionStatus,
       updateTransaction,
+      createTransaction,
       replaceTransactionDescriptions,
       updateLoan,
       archivedTransactions,
@@ -1760,7 +1755,7 @@ export function AppProvider({ children }) {
       transactions, archivedTransactions, auditLog,
       signInWithPassword, signInWithLoginCode, signInDemo, signOut, completePasswordSetup, inviteUser, updateUser,
       deleteUser, resendInvite, submitPayment, reviewPayment, deletePayment, assignLoan, unassignLoan,
-      setTransactionStatus, updateTransaction, replaceTransactionDescriptions, updateLoan,
+      setTransactionStatus, updateTransaction, createTransaction, replaceTransactionDescriptions, updateLoan,
       archiveTransactions, restoreTransactions,
       purgeArchivedTransactions, purgeAuditEntries, importTransactions,
     ],
