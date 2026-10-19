@@ -19,6 +19,7 @@ isDuplicatePaymentReference=reference=>!!stagingData?.payments.some(p=>!p.retrac
 submitproof=async()=>{
  const error=$('#paymentError');error.textContent='';if(mobileProofSubmitting||mobileBusy.has('payment-submit'))return;
  const amount=Number($('#amount').value),paidDate=$('#date').value,reference=$('#ref').value.trim(),method=({'GCASH':'gcash','MAYA':'maya','Bank Transfer':'bank_transfer','Cash Deposit':'cash'})[$('#paymentMethod').value];
+ if([...paymentSelected].some(index=>!paymentItemSelectable(paymentRows[index]))){sanitizePaymentSelection();renderPaymentItems();paymentAllocationChanged();error.textContent='Only items with an amount greater than zero can be selected for payment.';return;}
  if(!paymentSelected.size||!$('#allocationConfirm').checked){error.textContent='Choose payable items and confirm your requested allocation.';return;}
  if(!Number.isFinite(amount)||amount<=0||!paidDate||paidDate>localToday()||!reference||!method||!file||proofScanBusy){error.textContent='Check the amount, date, method, reference and proof file.';return;}
  if(isDuplicatePaymentReference(reference)){error.textContent='This reference already has a pending or approved proof.';return;}
