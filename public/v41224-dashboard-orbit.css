@@ -9,6 +9,10 @@
 .dashboard-orbit .dashboard-orbit-trigger{position:relative;display:grid;place-items:center;width:60px;height:60px;padding:0;border:0;border-radius:50%;background:transparent;cursor:pointer;touch-action:manipulation;isolation:isolate;-webkit-tap-highlight-color:transparent;box-shadow:0 8px 24px #26345c30;transition:transform var(--orbit-feedback) var(--orbit-smooth)}
 .dashboard-orbit-trigger:active{transform:scale(.95)}
 .dashboard-orbit-trigger:focus-visible{outline:3px solid #88baff;outline-offset:6px}
+.dashboard-orbit .orbit-unread-badge{position:absolute;top:-4px;right:-4px;z-index:5;display:grid;place-items:center;min-width:22px;height:22px;box-sizing:border-box;padding:0 5px;border:2px solid #fff;border-radius:999px;background:#e32f53;color:#fff;font:800 11px/1 Inter,system-ui,sans-serif;font-variant-numeric:tabular-nums;box-shadow:0 2px 7px #8f173c38;pointer-events:none}
+.dashboard-orbit .orbit-unread-badge[hidden]{display:none!important}
+.dashboard-orbit .dashboard-orbit-trigger:has(.orbit-unread-badge:not([hidden])) .orbit-idle-spark{opacity:0}
+.dark .dashboard-orbit .orbit-unread-badge{border-color:#172e4e}
 .dashboard-orbit .rainbow-container{position:absolute;inset:0;display:block;width:60px;height:60px;border-radius:50%;pointer-events:none}
 .dashboard-orbit .rainbow-container>span{position:absolute;inset:1px;width:auto;height:auto;border-radius:50%;will-change:transform}
 .dashboard-orbit .rainbow-container .green{background:conic-gradient(from 20deg,transparent 8%,#59eacb22 28%,#64f8e7ed 43%,#8bdfffa6 49%,transparent 64%);animation:finder-light-orbit 5.6s linear infinite}

@@ -1,3 +1,6 @@
+// Only incoming, unread lender messages for the signed-in borrower count.
+function dashboardOrbitUnreadCount(messages,ownerId){return ownerId&&Array.isArray(messages)?messages.filter(message=>message&&message.borrowerId===ownerId&&message.fromAdmin===true&&!message.readAt).length:0;}
+function dashboardOrbitBadgeText(count){return count>99?'99+':String(count);}
 // Dashboard presentation only. Each destination uses its existing UI/actions.
 const dashboardOrbitMotion=Object.freeze({enter:350,feedback:180,exit:220,reduced:80,stagger:60});
 let dashboardOrbitRoot=null,dashboardOrbitDialog=null,dashboardOrbitPhase='closed',dashboardOrbitFrame=0,dashboardOrbitOwner=null;
@@ -16,6 +19,9 @@ function ensureDashboardOrbit(){
  dashboardOrbitRoot=document.createElement('div');dashboardOrbitRoot.id='dashboardOrbit';dashboardOrbitRoot.className='dashboard-orbit';
  dashboardOrbitRoot.style.setProperty('--orbit-enter',dashboardOrbitMotion.enter+'ms');dashboardOrbitRoot.style.setProperty('--orbit-feedback',dashboardOrbitMotion.feedback+'ms');dashboardOrbitRoot.style.setProperty('--orbit-exit',dashboardOrbitMotion.exit+'ms');dashboardOrbitRoot.style.setProperty('--orbit-stagger',dashboardOrbitMotion.stagger+'ms');
  dashboardOrbitRoot.innerHTML='<button type="button" id="dashboardOrbitTrigger" class="finder-orb siri-animation dashboard-orbit-trigger" aria-label="Open Dashboard shortcuts" aria-haspopup="dialog" aria-expanded="false" aria-controls="dashboardOrbitDialog" onclick="toggleDashboardOrbit()"><span class="rainbow-container" aria-hidden="true"><span class="green"></span><span class="pink"></span><span class="blue"></span></span><span id="dashboardOrbitMascot" class="orbit-mascot chat-launcher-companion" aria-hidden="true"></span><span class="orbit-dismiss" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span><span class="orbit-idle-spark" aria-hidden="true">✦</span></button><nav class="dashboard-orbit-actions" aria-label="Quick actions" inert>'+[['finder','Finder'],['assistant','Pawcheebels'],['lender','Message lender']].map(([key,label],index)=>'<button type="button" class="dashboard-orbit-action orbit-'+key+'" data-orbit-action="'+key+'" style="--orbit-index:'+index+'" onclick="selectDashboardOrbit(\''+key+'\',this)"><span class="orbit-action-content"><span class="orbit-action-icon">'+dashboardOrbitSvg(key)+'</span><span>'+label+'</span></span></button>').join('')+'</nav>';
+ for(const [selector,id] of [['#dashboardOrbitTrigger','dashboardOrbitUnread'],['[data-orbit-action="lender"]','dashboardOrbitLenderUnread']]){
+  const badge=document.createElement('span');badge.id=id;badge.className='orbit-unread-badge';badge.hidden=true;badge.setAttribute('aria-hidden','true');dashboardOrbitRoot.querySelector(selector).append(badge);
+ }
  document.body.append(dashboardOrbitDialog,dashboardOrbitRoot);
  dashboardOrbitDialog.addEventListener('cancel',event=>{event.preventDefault();closeDashboardOrbit();});
  dashboardOrbitDialog.addEventListener('click',event=>{if(event.target===dashboardOrbitDialog||event.target.classList.contains('dashboard-orbit-shade'))closeDashboardOrbit();});
@@ -38,12 +44,22 @@ function positionDashboardOrbit(){
  dashboardOrbitRoot.style.setProperty('--orbit-mid-x',-Math.min(100,Math.max(80,room-22))+'px');
  const up=Math.max(90,Math.min(144,y-top-26));dashboardOrbitRoot.style.setProperty('--orbit-up-y',-up+'px');dashboardOrbitRoot.style.setProperty('--orbit-mid-y',-Math.round(up*2/3)+'px');
 }
+function syncDashboardOrbitUnread(){
+ if(!dashboardOrbitRoot)return;
+ const count=dashboardOrbitEligible()?dashboardOrbitUnreadCount(stagingData?.messages,stagingData?.user?.id):0;
+ for(const id of ['#dashboardOrbitUnread','#dashboardOrbitLenderUnread']){const badge=dashboardOrbitRoot.querySelector(id);badge.hidden=count===0;badge.textContent=count?dashboardOrbitBadgeText(count):'';}
+ const filipino=preferredLanguage==='Filipino',expanded=dashboardOrbitPhase!=='closed';
+ const unread=count?(filipino?count+' hindi pa nababasang mensahe mula sa nagpapahiram':count+' unread '+(count===1?'message':'messages')+' from lender'):'';
+ const action=filipino?(expanded?'Isara ang mga shortcut':'Buksan ang mga shortcut'):(expanded?'Close Dashboard shortcuts':'Open Dashboard shortcuts');
+ dashboardOrbitRoot.querySelector('#dashboardOrbitTrigger').setAttribute('aria-label',action+(unread?', '+unread:''));
+ dashboardOrbitRoot.querySelector('[data-orbit-action="lender"]').setAttribute('aria-label',(filipino?'Magpadala ng mensahe sa nagpapahiram':'Message lender')+(unread?', '+unread:''));
+}
 function syncDashboardOrbit(){
  const eligible=dashboardOrbitEligible();document.body.classList.toggle('dashboard-orbit-enabled',eligible);
- if(!eligible){if(dashboardOrbitRoot){closeDashboardOrbit(true);dashboardOrbitRoot.hidden=true;}dashboardOrbitOwner=null;return;}
+ if(!eligible){if(dashboardOrbitRoot){closeDashboardOrbit(true);dashboardOrbitRoot.hidden=true;syncDashboardOrbitUnread();}dashboardOrbitOwner=null;return;}
  ensureDashboardOrbit();
  if(dashboardOrbitOwner&&dashboardOrbitOwner!==stagingData.user.id)closeDashboardOrbit(true);
- dashboardOrbitOwner=stagingData.user.id;dashboardOrbitRoot.hidden=!finderCompact;
+ dashboardOrbitOwner=stagingData.user.id;dashboardOrbitRoot.hidden=!finderCompact;syncDashboardOrbitUnread();
  const mascot=$('#dashboardOrbitMascot');let source=$('#chatWidgetMount .chat-cat-mascot');
  // The orb owns its avatar even when the chat panel is not mounted.
  if(!source&&!mascot.firstElementChild){const template=document.createElement('template');template.innerHTML=floatingMessagesWidget();source=template.content.querySelector('.chat-cat-mascot');}
@@ -67,7 +83,7 @@ function openDashboardOrbit(){
  // Commit the collapsed geometry before starting the fan. No layout animates.
  void dashboardOrbitRoot.offsetWidth;
  requestAnimationFrame(()=>{if(dashboardOrbitPhase!=='opening')return;dashboardOrbitPhase='open';dashboardOrbitDialog.classList.add('is-open');dashboardOrbitRoot.classList.add('is-expanded');dashboardOrbitRoot.querySelector('[data-orbit-action]')?.focus({preventScroll:true});});
- applyBorrowerLanguage();queuePawProactive();
+ applyBorrowerLanguage();syncDashboardOrbitUnread();queuePawProactive();
 }
 function finishDashboardOrbitClose(restoreFocus){
  dashboardOrbitPhase='closed';dashboardOrbitDialog.classList.remove('is-open');dashboardOrbitRoot.classList.remove('is-expanded');document.body.classList.remove('dashboard-orbit-open');
@@ -75,6 +91,7 @@ function finishDashboardOrbitClose(restoreFocus){
  if(dashboardOrbitDialog.open)dashboardOrbitDialog.close();
  document.body.append(dashboardOrbitRoot);
  const trigger=$('#dashboardOrbitTrigger');trigger.setAttribute('aria-expanded','false');trigger.setAttribute('aria-label','Open Dashboard shortcuts');
+ syncDashboardOrbitUnread();
  if(restoreFocus&&dashboardOrbitEligible())trigger.focus({preventScroll:true});
  queuePawProactive();
 }
