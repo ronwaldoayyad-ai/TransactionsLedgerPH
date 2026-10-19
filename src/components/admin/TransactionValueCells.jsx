@@ -1,10 +1,10 @@
 import { useRef, useState } from 'react'
 import { signedTransactionAmount, transactionEditLock, TRANSACTION_TYPES } from '../../lib/transactionEditing'
 import { effectiveStatus, STATUS_LABELS } from '../../lib/transactions'
-import { toISODate } from '../../lib/amortization'
+import { formatPeso, toISODate } from '../../lib/amortization'
 import { inputClass } from '../ui'
 
-export function TransactionAmountCell({transaction,onSave,wide=false}) {
+export function TransactionAmountCell({transaction,onSave,wide=false,formatted=false}) {
   const [text,setText]=useState(String(transaction.amount)),[last,setLast]=useState(transaction.amount),[editing,setEditing]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState('')
   const cancel=useRef(false),inFlight=useRef(false),lock=transactionEditLock(transaction)
   if(last!==transaction.amount){setLast(transaction.amount);if(!editing)setText(String(transaction.amount))}
@@ -16,7 +16,7 @@ export function TransactionAmountCell({transaction,onSave,wide=false}) {
       if(result?.error){setText(String(transaction.amount));setError(result.error)}
     }catch(failure){setError(failure.message);setText(String(transaction.amount))}finally{inFlight.current=false;setBusy(false)}
   }
-  return <div className={wide?'w-full':'w-[8.2rem]'}><input type="number" step="0.01" aria-label={`Amount for ${transaction.description}`} aria-invalid={!!error} title={lock||'Save on Enter or leaving this field; Escape cancels.'} disabled={!!lock||busy} value={text} onFocus={()=>setEditing(true)} onChange={event=>setText(event.target.value)} onBlur={commit} onKeyDown={event=>{if(event.key==='Enter'){event.preventDefault();event.currentTarget.blur()}if(event.key==='Escape'){cancel.current=true;setText(String(transaction.amount));setError('');setEditing(false);event.currentTarget.blur()}}} className={`${inputClass} !min-h-8 !px-1.5 !py-1 !text-xs font-mono text-right`}/>{busy&&<small role="status">Saving…</small>}{error&&<small role="alert" className="block whitespace-normal text-red-700">{error}</small>}</div>
+  return <div className={(formatted?'tg-money-field ':'')+(wide?'w-full':'w-[8.2rem]')} data-editing={editing} data-formatted={formatted?formatPeso(transaction.amount):undefined}><input type="number" step="0.01" aria-label={`Amount for ${transaction.description}`} aria-invalid={!!error} title={lock||'Save on Enter or leaving this field; Escape cancels.'} disabled={!!lock||busy} value={text} onFocus={()=>setEditing(true)} onChange={event=>setText(event.target.value)} onBlur={commit} onKeyDown={event=>{if(event.key==='Enter'){event.preventDefault();event.currentTarget.blur()}if(event.key==='Escape'){cancel.current=true;setText(String(transaction.amount));setError('');setEditing(false);event.currentTarget.blur()}}} className={`${inputClass} !min-h-8 !px-1.5 !py-1 !text-xs font-mono text-right`}/>{busy&&<small role="status">Saving…</small>}{error&&<small role="alert" className="block whitespace-normal text-red-700">{error}</small>}</div>
 }
 
 function SavedSelect({transaction,onSave,kind,options,value,lock,wide}) {

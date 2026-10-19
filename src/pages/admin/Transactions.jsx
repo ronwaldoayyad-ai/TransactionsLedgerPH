@@ -6,7 +6,7 @@ import PaymentAdjustmentActivity from '../../components/PaymentAdjustmentActivit
 import { PageHeader } from '../../components/AppShell'
 import Icon from '../../components/Icon'
 import RefreshButton from '../../components/RefreshButton'
-import { Badge, Button, Card, CardHeader, EmptyState, Modal, MultiSelect, Switch, inputClass } from '../../components/ui'
+import { Badge, Button, Card, EmptyState, Modal, MultiSelect, Switch, inputClass } from '../../components/ui'
 import Pagination from '../../components/Pagination'
 import { usePagination } from '../../hooks/usePagination'
 import { downloadCSV, formatDate, formatPeso, toISODate } from '../../lib/amortization'
@@ -14,6 +14,7 @@ import { STATUS_LABELS, effectiveStatus } from '../../lib/transactions'
 import { parseCSV, parseCSVAmount, parseCSVDate } from '../../lib/csv'
 import InstallmentGroupEditor from '../../components/admin/InstallmentGroupEditor'
 import TransactionEntryForm from '../../components/admin/TransactionEntryForm'
+import TransactionGrid from '../../components/admin/TransactionGrid'
 import { TransactionAmountCell, TransactionTypeCell, TransactionStatusCell } from '../../components/admin/TransactionValueCells'
 
 const IMPORT_HEADERS = ['Borrower', 'Txn Date', 'Item Description', 'Amount', 'Type', 'Due Date', 'Date Paid', 'Status']
@@ -29,7 +30,7 @@ const dateCellClass =
   'min-h-8 w-[7.2rem] cursor-pointer rounded-md border border-slate-200 bg-transparent px-1.5 py-1 text-[11px] text-slate-700 transition-colors duration-200 hover:border-slate-400 focus:border-navy-600 focus:outline-2 focus:outline-navy-600/20'
 
 const descCellClass =
-  'min-h-8 w-[11rem] cursor-text truncate rounded-md border border-slate-200 bg-transparent px-1.5 py-1 text-xs text-slate-700 transition-colors duration-200 hover:border-slate-400 focus:border-navy-600 focus:outline-2 focus:outline-navy-600/20'
+  'min-h-8 w-full cursor-text truncate rounded-md border border-slate-200 bg-transparent px-1.5 py-1 text-xs text-slate-700 transition-colors duration-200 hover:border-slate-400 focus:border-navy-600 focus:outline-2 focus:outline-navy-600/20'
 
 // --- Find & Replace (Item Description) helpers ---------------------------
 const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
@@ -82,7 +83,7 @@ function computeReplacement(desc, { find, replace, mode, matchCase }) {
 export default function Transactions() {
   const navigate=useNavigate()
   const {
-    users, transactions, setTransactionStatus, updateTransaction, archiveTransactions,
+    session, users, transactions, setTransactionStatus, updateTransaction, archiveTransactions,
     replaceTransactionDescriptions, importTransactions, importLoans,
   } = useApp()
   const borrowers = users.filter((u) => u.role === 'user')
@@ -178,7 +179,6 @@ export default function Transactions() {
       setSortDir('asc')
     }
   }
-  const sortArrow = (key) => (sortKey === key ? (sortDir === 'asc' ? ' ↑' : ' ↓') : '')
 
   // Live aggregate of the Amount column for whatever filters are applied.
   const filteredTotal = useMemo(() => filtered.reduce((s, t) => s + t.amount, 0), [filtered])
@@ -546,20 +546,7 @@ export default function Transactions() {
           context, so this card must sit above the grid card below for the
           dropdown panels to overlay it. */}
       <Card className="relative z-20 mb-4 hidden p-4 md:block">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-          <div>
-            <label htmlFor="txn-search" className="mb-1 block text-xs font-medium text-slate-500">
-              Search
-            </label>
-            <input
-              id="txn-search"
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Borrower or item…"
-              className={inputClass}
-            />
-          </div>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           <div>
             <span className="mb-1 block text-xs font-medium text-slate-500">Borrower</span>
             <MultiSelect
@@ -672,26 +659,8 @@ export default function Transactions() {
           </div>
         </div>
 
-        <div className="hidden md:block">
-          <CardHeader
-            title="All Transactions"
-            subtitle={`${filtered.length} records · Amount total ${formatPeso(filteredTotal)}${Object.entries(statusCounts)
-              .map(([s, c]) => ` · ${c} ${STATUS_LABELS[s].toLowerCase()}`)
-              .join('')}`}
-            action={
-              <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
-                <Switch
-                  checked={hideSettled}
-                  onChange={setHideSettled}
-                  label={hideSettled ? 'Show all transactions' : 'Hide paid, refunded, and cancelled transactions'}
-                />
-                {hideSettled ? 'Show all transactions' : 'Hide paid/refunded/cancelled'}
-              </label>
-            }
-          />
-        </div>
         {filtered.length === 0 ? (
-          <EmptyState icon="scroll" title="No matching transactions" body="Adjust your filters or search." />
+          <div className="md:hidden"><EmptyState icon="scroll" title="No matching transactions" body="Adjust your filters or search." /></div>
         ) : (
           <>
           {/* Mobile: tappable cards (mirrors the mobile app). Tap opens the
@@ -732,141 +701,20 @@ export default function Transactions() {
             </div>
           </div>
 
-          {/* Desktop / tablet: full editable table. */}
-          <div className="hidden overflow-x-auto md:block">
-            <table className="w-full min-w-[1060px] text-xs">
-              <thead>
-                <tr className="border-b border-slate-200 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                  <th scope="col" className="px-2.5 py-3">
-                    <input
-                      type="checkbox"
-                      checked={allSelected}
-                      onChange={toggleAll}
-                      aria-label="Select all filtered transactions"
-                      className="h-4 w-4 cursor-pointer accent-[#1e3a8a]"
-                    />
-                  </th>
-                  <th scope="col" className="px-2.5 py-3">Borrower</th>
-                  <th scope="col" className="px-2.5 py-3" aria-sort={sortKey === 'txnDate' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
-                    <button
-                      type="button"
-                      onClick={() => toggleSort('txnDate')}
-                      className="cursor-pointer font-semibold uppercase tracking-wide transition-colors duration-150 hover:text-navy-800"
-                      title="Sort by Transaction Date"
-                    >
-                      Txn Date{sortArrow('txnDate')}
-                    </button>
-                  </th>
-                  <th scope="col" className="px-2.5 py-3">Item Description</th>
-                  <th scope="col" className="px-2.5 py-3 text-right">Amount</th>
-                  <th scope="col" className="px-2.5 py-3">Type</th>
-                  <th scope="col" className="px-2.5 py-3" aria-sort={sortKey === 'dueDate' ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}>
-                    <button
-                      type="button"
-                      onClick={() => toggleSort('dueDate')}
-                      className="cursor-pointer font-semibold uppercase tracking-wide transition-colors duration-150 hover:text-navy-800"
-                      title="Sort by Due Date"
-                    >
-                      Due Date{sortArrow('dueDate')}
-                    </button>
-                  </th>
-                  <th scope="col" className="px-2.5 py-3">Date Paid</th>
-                  <th scope="col" className="px-2.5 py-3">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {pag.pageItems.map((t) => {
-                  const effective = effectiveStatus(t, today)
-                  const isPastDue = effective === 'past_due'
-                  return (
-                    <tr
-                      key={t.id}
-                      data-fee-kind={t.feeKind||undefined}
-                      className={`border-b border-slate-100 transition-colors duration-150 ${
-                        t.amount < 0 || effective === 'paid'
-                          ? 'bg-emerald-50/70 hover:bg-emerald-50'
-                          : t.feeKind || isPastDue
-                            ? 'bg-red-50/70 hover:bg-red-50'
-                            : selected.has(t.id)
-                              ? 'bg-navy-50/60 hover:bg-navy-50/40'
-                              : 'hover:bg-navy-50/40'
-                      }`}
-                    >
-                      <td className="px-2.5 py-2.5">
-                        <input
-                          type="checkbox"
-                          checked={selected.has(t.id)}
-                          onChange={() => toggleOne(t.id)}
-                          disabled={!!t.feeAssessmentId}
-                          aria-label={`Select ${t.description} for ${nameOf(t.userId)}`}
-                          className="h-4 w-4 cursor-pointer accent-[#1e3a8a]"
-                        />
-                      </td>
-                      <td className="max-w-[7.5rem] truncate px-2.5 py-2.5 font-medium text-slate-900" title={nameOf(t.userId)}>
-                        {nameOf(t.userId)}
-                      </td>
-                      <td className="px-2.5 py-2.5">
-                        <input
-                          type="date"
-                          value={t.txnDate}
-                          onChange={(e) => updateTransaction(t.id, { txnDate: e.target.value })}
-                          disabled={!!t.feeAssessmentId}
-                          aria-label={`Transaction date for ${t.description}`}
-                          className={dateCellClass}
-                        />
-                      </td>
-                      <td className="px-2.5 py-2.5">
-                        <DescriptionCell
-                          txn={t}
-                          onSave={(desc) => updateTransaction(t.id, { description: desc })}
-                        />
-                      </td>
-                      <td className="px-2.5 py-2.5 text-right font-mono text-slate-900">
-                        <TransactionAmountCell transaction={t} onSave={patch=>updateTransaction(t.id,patch)}/>
-                      </td>
-                      <td className="px-2.5 py-2.5"><TransactionTypeCell transaction={t} onSave={patch=>updateTransaction(t.id,patch)}/></td>
-                      <td className="px-2.5 py-2.5">
-                        <input
-                          type="date"
-                          value={t.dueDate}
-                          onChange={(e) => updateTransaction(t.id, { dueDate: e.target.value })}
-                          disabled={!!t.feeAssessmentId}
-                          aria-label={`Due date for ${t.description}`}
-                          className={dateCellClass}
-                        />
-                      </td>
-                      <td className="px-2.5 py-2.5">
-                        <input
-                          type="date"
-                          value={t.datePaid ?? ''}
-                          onChange={(e) =>
-                            updateTransaction(t.id, { datePaid: e.target.value || null })
-                          }
-                          disabled={!!t.feeAssessmentId||t.paidAmount>0}
-                          aria-label={`Date paid for ${t.description}`}
-                          className={dateCellClass}
-                        />
-                      </td>
-                      <td className="px-2.5 py-2.5"><TransactionStatusCell transaction={t} onSave={patch=>updateTransaction(t.id,patch)}/></td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-              <tfoot>
-                <tr className="bg-navy-50/70 text-xs font-semibold text-navy-900">
-                  <td className="px-2.5 py-3" colSpan={4}>
-                    FILTERED TOTAL ({filtered.length} record{filtered.length === 1 ? '' : 's'})
-                  </td>
-                  <td className="px-2.5 py-3 text-right font-mono">{formatPeso(filteredTotal)}</td>
-                  <td className="px-2.5 py-3" colSpan={4} />
-                </tr>
-              </tfoot>
-            </table>
-          </div>
           </>
         )}
+        <TransactionGrid key={session?.user?.id||'anonymous'} ownerId={session?.user?.id||'anonymous'} items={pag.pageItems} total={filteredTotal} count={filtered.length} statusCounts={statusCounts} today={today} query={query} onQueryChange={setQuery} hideSettled={hideSettled} onHideSettledChange={setHideSettled} onExport={exportCSV} sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} allSelected={allSelected} onToggleAll={toggleAll} selected={selected} onToggleOne={toggleOne} renderCell={(key,t)=>{
+          switch(key){
+            case 'borrower':return <span className="block truncate" title={nameOf(t.userId)}>{nameOf(t.userId)}</span>
+            case 'description':return <DescriptionCell txn={t} onSave={description=>updateTransaction(t.id,{description})}/>
+            case 'amount':return <TransactionAmountCell transaction={t} formatted onSave={patch=>updateTransaction(t.id,patch)}/>
+            case 'type':return <TransactionTypeCell transaction={t} onSave={patch=>updateTransaction(t.id,patch)}/>
+            case 'status':return <TransactionStatusCell transaction={t} onSave={patch=>updateTransaction(t.id,patch)}/>
+            default:return <div className="tg-date-field" data-empty={!t[key]}><input type="date" value={t[key]??''} onChange={event=>updateTransaction(t.id,{[key]:event.target.value||null})} disabled={!!t.feeAssessmentId||(key==='datePaid'&&t.paidAmount>0)} aria-label={(key==='txnDate'?'Transaction date':key==='dueDate'?'Due date':'Date paid')+' for '+t.description} className={dateCellClass}/>{!t[key]&&<span aria-hidden="true">—</span>}</div>
+          }
+        }}/>
         {filtered.length > 0 && (
-          <Pagination
+          <div className="transaction-grid-footer"><Pagination
             page={pag.page}
             pageCount={pag.pageCount}
             pageSize={pag.pageSize}
@@ -877,7 +725,7 @@ export default function Transactions() {
             onPageSizeChange={pag.setPageSize}
             pageSizeOptions={[15, 25, 50, 100]}
             itemLabel="records"
-          />
+          /></div>
         )}
       </Card>
 
