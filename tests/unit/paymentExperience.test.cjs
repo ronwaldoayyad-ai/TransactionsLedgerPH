@@ -23,8 +23,18 @@ test('Dashboard credit advisory appears only for a positive available credit amo
  const code=read('public/v41224-staging-adapter.js'),context={};vm.createContext(context);vm.runInContext(code.match(/function hasAvailableAccountCredit\(value\)\{[^\n]+/)[0],context);
  for(const value of [0,'0.00',null,undefined,-1,NaN,Infinity,'invalid',0.001])assert.equal(context.hasAvailableAccountCredit(value),false);
  for(const value of [0.01,1500,'2209.96'])assert.equal(context.hasAvailableAccountCredit(value),true);
- assert.match(code,/if\(card&&hasAvailableAccountCredit\(stagingData.user.creditBalance\)\)/);
+ assert.match(code,/hasAvailableAccountCredit\(stagingData\?\.user.creditBalance\)/);
  assert.match(read('src/pages/user/UserDashboard.jsx'),/Number.isFinite\(accountCredit\)&&Math.round\(accountCredit\*100\)>0&&/);
+});
+
+test('credit advisory is included once in every balance-content render, including partial balance switches',()=>{
+ const code=read('public/v41224-staging-adapter.js'),context={cash:n=>'₱'+Number(n).toFixed(2),dashboard:()=>'<div class="balance-content">Balance</div><div class="balance-foot">Footer</div>'};
+ vm.createContext(context);vm.runInContext(code.slice(0,code.indexOf('const stagingDateFormat')).replace("const stagingSend=payload=>parent.postMessage({channel:'loanledger-v41224',...payload},location.origin);",''),context);
+ for(const credit of [2209.96,150,0,-1]){
+  vm.runInContext('stagingData={user:{creditBalance:'+credit+'}}',context);
+  for(let i=0;i<4;i++){const html=context.dashboard();assert.equal((html.match(/account-credit-summary/g)||[]).length,credit>0?1:0);if(credit>0)assert.ok(html.indexOf('account-credit-summary')<html.indexOf('balance-foot'));}
+ }
+ assert.match(read('public/v41224-enhancements.js'),/template.innerHTML=dashboard\(\)/);
 });
 test('all upload boundaries enforce the same 5 MB cap and assigned installment categories are persisted',()=>{
  assert.doesNotMatch(read('src/lib/mobileLocalFlow.js'),/payment-submit'\?10\*/);

@@ -2,7 +2,8 @@ const {test}=require('node:test'),assert=require('node:assert/strict'),fs=requir
 const factory=require('../../server/sent-notifications.cjs'),{sentFilters,SENT_SQL}=factory
 const id='10000000-0000-4000-8000-000000000001',other='20000000-0000-4000-8000-000000000002',actor='30000000-0000-4000-8000-000000000003',key='40000000-0000-4000-8000-000000000004'
 test('sent filters bind borrower, category and subject with literal wildcard escaping and bounded pages',()=>{
- assert.deepEqual(sentFilters({borrowerIds:[id,id],category:'payment',subject:'  50%_paid  ',offset:51.8}),[false,'',[id],'payment','%50\\%\\_paid%',51])
+ assert.deepEqual(sentFilters({borrowerIds:[id,id],category:'payment',subject:'  50%_paid  ',offset:51.8}),[false,'',[id],'payment','%50\\%\\_paid%',51,false])
+ assert.equal(sentFilters({hideAdmin:true})[6],true);assert.equal(sentFilters({hideAdmin:'true'})[6],false)
  assert.equal(sentFilters({offset:Infinity})[5],0);assert.equal(sentFilters({offset:1e9})[5],100000)
  for(const borrowerIds of ['not-array',[null],['invalid'],Array(101).fill(id)])assert.throws(()=>sentFilters({borrowerIds}),/borrower/)
  assert.match(SENT_SQL,/n\.title ilike \$5/);assert.doesNotMatch(SENT_SQL,/n\.body ilike \$5/)
@@ -44,7 +45,7 @@ test('the protected HTTP handler routes sent deletion separately from deleting r
 })
 test('sent manager shows borrower pills, subject/category filters and reviewed page-only deletion',()=>{
  const source=fs.readFileSync('src/components/notifications/SentNotificationsManager.jsx','utf8')
- for(const label of ['Filter notifications by borrower','Filter sent notifications by category','Filter sent notifications by subject','Select all notifications on this page','Delete selected','Include deleted'])assert.ok(source.includes(label),label)
+ for(const label of ['Filter notifications by borrower','Filter sent notifications by category','Filter sent notifications by subject','Select all notifications on this page','Delete selected','Include deleted','Hide admin notifications'])assert.ok(source.includes(label),label)
  assert.match(source,/shared notifications/);assert.match(source,/expected:deleting.expected/)
  assert.doesNotMatch(source,/setInterval/)
 })

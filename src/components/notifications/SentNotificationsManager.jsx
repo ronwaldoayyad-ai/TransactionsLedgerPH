@@ -1,12 +1,12 @@
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react'
 import {useApp} from '../../context/AppContext'
 import {useNotifications} from '../../context/NotificationsContext'
-import {Button,Modal,inputClass} from '../ui'
+import {Button,Modal,Switch,inputClass} from '../ui'
 import {notificationRuleRequest as request} from '../../lib/notificationRules'
 import {categoryMeta} from '../../lib/notifications'
 import {EVENTS,FIELDS} from '../../../public/notification-rule-core'
 
-const defaults={borrowerIds:[],category:'',subject:'',includeArchived:false,offset:0}
+const defaults={borrowerIds:[],category:'',subject:'',includeArchived:false,hideAdmin:false,offset:0}
 const Field=({label,children})=><label className="nr-field"><span>{label}</span>{children}</label>
 const Text=({value,onChange,...props})=><input className={inputClass} value={value??''} onChange={e=>onChange(e.target.value)} {...props}/>
 const Select=({value,onChange,options,...props})=><select className={inputClass} value={value} onChange={e=>onChange(e.target.value)} {...props}>{options.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select>
@@ -64,7 +64,8 @@ export default function SentNotificationsManager(){
     <Button type="submit" disabled={busy}>Apply / refresh</Button>
     <button type="button" className="ns-clear" disabled={busy} onClick={()=>{setSubject('');setBorrowerQuery('');setSelected(new Set());setFilters({...defaults})}}>Clear filters</button>
    </form>
-   <label className="ns-include"><input type="checkbox" checked={filters.includeArchived} disabled={busy} onChange={e=>changeFilters({includeArchived:e.target.checked})}/> Include deleted</label>
+   <div className="ns-display-options"><label className="ns-include"><input type="checkbox" checked={filters.includeArchived} disabled={busy} onChange={e=>changeFilters({includeArchived:e.target.checked})}/> Include deleted</label><div className="ns-hide-admin"><Switch label="Hide admin notifications" checked={filters.hideAdmin} disabled={busy} onChange={hideAdmin=>changeFilters({hideAdmin})}/><span>Hide admin notifications</span></div></div>
+   {filters.hideAdmin&&<p className="nr-muted">Admin-only messages are hidden. Shared notices addressed to borrowers remain visible.</p>}
   </div>
   {notice&&<p className="nr-success" role="status">{notice}</p>}{error&&!deleting&&!editing&&!linking&&<p className="nr-error" role="alert">{error}</p>}
   <div className="ns-selection"><label><input type="checkbox" aria-label="Select all notifications on this page" disabled={busy||!selectable.length} checked={allSelected} ref={e=>{if(e)e.indeterminate=selected.size>0&&!allSelected}} onChange={()=>setSelected(allSelected?new Set():new Set(selectable.map(item=>item.id)))}/> Select page</label><span>{selected.size} selected on this page</span>{selected.size>0&&<button type="button" disabled={busy} className="ns-clear" onClick={()=>setSelected(new Set())}>Clear selection</button>}<Button variant="danger" disabled={busy||!selected.size} onClick={()=>reviewDelete(items.filter(item=>selected.has(item.id)))}>Delete selected{selected.size?` (${selected.size})`:''}</Button></div>

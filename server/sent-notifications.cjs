@@ -13,6 +13,8 @@ const SENT_SQL=`with matched as materialized (
     or (nullif(b.borrower_account_number,'') is not null and (b.borrower_account_number=l.payload->>'account_number' or b.borrower_account_number=e.payload->>'account_number')))))
  and ($4::text='' or n.category::text=$4)
  and ($5::text='' or n.title ilike $5)
+ and (not $7::boolean or n.audience='all' or not exists(select 1 from public.profiles a where a.role='admin' and a.id=any(n.target_user_ids))
+  or exists(select 1 from public.profiles b where b.role='user' and b.id=any(n.target_user_ids)))
 ), page as (
  select n.id,n.category,n.title,n.body,n.audience,n.target_user_ids,n.created_by,n.created_at,n.archived_at,n.edited_at,
  n.rule_id,n.rule_version,n.event_id,n.delivery_surface,n.display_duration,n.xmin::text as edit_version,l.rule_id as linked_rule_id,l.event_type,l.provenance,
@@ -26,7 +28,7 @@ function sentFilters(body={}){
  if(!Array.isArray(ids)||ids.length>100||ids.some(id=>!uuid(id)))throw Error('Choose valid borrower filters.')
  const category=String(body.category??'').trim();if(category.length>80)throw Error('Choose a valid notification category.')
  const value=Number(body.offset)
- return [body.includeArchived===true,pattern(body.query),[...new Set(ids)],category,pattern(body.subject),Number.isFinite(value)?Math.max(0,Math.min(100000,Math.floor(value))):0]
+ return [body.includeArchived===true,pattern(body.query),[...new Set(ids)],category,pattern(body.subject),Number.isFinite(value)?Math.max(0,Math.min(100000,Math.floor(value))):0,body.hideAdmin===true]
 }
 module.exports=({db,authorize})=>{
  const admin=async req=>{const user=await authorize(req);if(user.role!=='admin')throw Object.assign(Error('Only an active lender can manage sent notifications.'),{status:403});return user}

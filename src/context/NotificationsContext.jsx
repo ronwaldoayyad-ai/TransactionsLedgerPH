@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { useApp } from './AppContext'
 import { useRecordRefresh } from '../lib/recordRefresh'
 import { supabase } from '../supabaseClient'
+import { subscribeToInvalidations } from '../lib/realtimeInvalidation'
 import { NOTIFICATION_TEMPLATES } from '../lib/notificationTemplates'
 import { adminUser } from '../data/mock'
 import { installNotificationCategories, NOTIFICATION_CATEGORIES } from '../lib/notifications'
@@ -129,6 +130,9 @@ export function NotificationsProvider({ children }) {
   const isLive = realSession?.source === 'supabase'
   const me = session?.user ?? null
   const meId = me?.id ?? null
+  // "View as borrower" changes presentation, while metadata RLS still uses
+  // the lender's authenticated identity.
+  const signalOwnerId = realSession?.user?.id ?? meId
   const isAdmin = me?.role === 'admin'
 
   const [liveNotifications, setLiveNotifications] = useState([])
@@ -196,19 +200,16 @@ export function NotificationsProvider({ children }) {
 
   useEffect(() => {
     if (!isLive || !meId) return undefined
-    let timer=0,needsNotifications=false,needsReads=false,needsRules=false
-    const queue=(kind)=>{needsNotifications ||= kind!=='reads';needsReads ||= kind==='reads';needsRules ||= kind==='rules';clearTimeout(timer);timer=setTimeout(()=>{const notifications=needsNotifications,reads=needsReads,rules=needsRules;needsNotifications=needsReads=needsRules=false;if(notifications)fetchAll();if(reads)fetchReads();if(rules)window.dispatchEvent(new CustomEvent('loanledger-notification-rules-changed'))},120)}
-    const channel = supabase
-      .channel(`notifications-rt-${meId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, () => queue('notifications'))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'notification_reads' }, () => queue('reads'))
-    if(companionEnabled)channel.on('postgres_changes',{event:'*',schema:'public',table:'notification_change_signals',filter:'user_id=eq.'+meId},()=>queue('rules'))
-    channel.subscribe()
-    return () => {
-      clearTimeout(timer)
-      supabase.removeChannel(channel)
-    }
-  }, [isLive, meId, fetchAll, fetchReads])
+    // The published metadata row stays visible through edits, archive and
+    // recipient changes. Fetch content through the existing inbox RLS.
+    return subscribeToInvalidations({client:supabase,name:`notifications-rt-${signalOwnerId}`,
+      table:companionEnabled?'notification_change_signals':'notifications',
+      ownerId:signalOwnerId,ownerColumn:'user_id',isAdmin:!companionEnabled,
+      onChange:async()=>{
+        await Promise.all([fetchAll(),fetchReads()])
+        if(companionEnabled)window.dispatchEvent(new CustomEvent('loanledger-notification-rules-changed'))
+      },onError:error=>console.warn('[notifications]',error.message),delay:120})
+  }, [isLive, meId, signalOwnerId, fetchAll, fetchReads])
 
   // ---- Scoped notification list ----
   // Admin sees every notification; a borrower sees only those addressed to them.

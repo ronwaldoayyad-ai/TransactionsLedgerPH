@@ -37,6 +37,32 @@ test('sent filters combine borrower recipients, broadcasts, captured borrower id
  assert.ok(!filtered.items.some(n=>[foreign,general].includes(n.id)))
  const subject=await f.service.sent({}, {borrowerIds:[f.borrower],subject:f.prefix+' Direct'});assert.equal(subject.total,1);assert.equal(subject.items[0].id,direct)
 });
+test('hide-admin filtering keeps borrower and shared notices, with accurate counts before pagination',async()=>{
+ const f=await sentFixture(),direct=await f.insert('Borrower','general',[f.borrower]),shared=await f.insert('Shared','general',[],'all'),mixed=await f.insert('Mixed','general',[f.admin,f.borrower]);
+ await f.insert('Admin','general',[f.admin]);
+ const shown=await f.service.sent({}, {subject:f.prefix,hideAdmin:true});assert.equal(shown.total,3);assert.deepEqual(new Set(shown.items.map(n=>n.id)),new Set([direct,shared,mixed]));
+ assert.equal((await f.service.sent({}, {subject:f.prefix})).total,4);
+ assert.equal((await f.service.sent({}, {subject:f.prefix,borrowerIds:[f.borrower],hideAdmin:true})).total,3);
+});
+
+test('notification metadata signals cover insert, edit, retarget, archive, restore, reads and deletion without exposing another recipient',async()=>{
+ const f=await fixture();try{
+  await f.client.query('reset role');
+  const other=crypto.randomUUID();await f.client.query('insert into auth.users(id,email) values($1,$2)',[other,other+'@test.invalid']);await f.client.query("insert into public.profiles(id,email,name,role,status) values($1,$2,'Unrelated recipient','user','active')",[other,other+'@test.invalid']);
+  const revisions=async()=>Object.fromEntries((await f.client.query('select user_id,revision from public.notification_change_signals where user_id=any($1::uuid[])',[[f.admin,f.borrower,other]])).rows.map(r=>[r.user_id,r.revision]));
+  const id=(await f.client.query("insert into public.notifications(category,title,body,audience,target_user_ids,created_by) values('general','Synthetic live notification','QA','targeted',array[$1::uuid],$2) returning id",[f.borrower,f.admin])).rows[0].id;
+  let before=await revisions();assert.ok(before[f.admin]);assert.ok(before[f.borrower]);assert.equal(before[other],undefined);
+  for(const sql of ["update public.notifications set body='Edited' where id=$1","update public.notifications set archived_at=now() where id=$1","update public.notifications set archived_at=null where id=$1"]){await f.client.query(sql,[id]);const after=await revisions();assert.notEqual(after[f.borrower],before[f.borrower]);assert.equal(after[other],undefined);before=after;}
+  await f.client.query('insert into public.notification_reads(notification_id,user_id) values($1,$2)',[id,f.borrower]);let after=await revisions();assert.notEqual(after[f.borrower],before[f.borrower]);assert.notEqual(after[f.admin],before[f.admin]);assert.equal(after[other],undefined);
+  before=after;await f.client.query('update public.notifications set target_user_ids=array[$2::uuid] where id=$1',[id,other]);after=await revisions();assert.notEqual(after[f.borrower],before[f.borrower]);assert.ok(after[other]);
+  await f.client.query("select set_config('request.jwt.claims',$1,true)",[JSON.stringify({sub:f.borrower,role:'authenticated',session_id:f.sid})]);
+  // Use an actual session belonging to the borrower for the metadata RLS check.
+  const sid=crypto.randomUUID();await f.client.query('insert into auth.sessions(id,user_id) values($1,$2)',[sid,f.borrower]);await f.client.query("select set_config('request.jwt.claims',$1,true)",[JSON.stringify({sub:f.borrower,role:'authenticated',session_id:sid})]);
+  await f.client.query('set local role authenticated');assert.deepEqual((await f.client.query('select user_id from public.notification_change_signals')).rows.map(r=>r.user_id),[f.borrower]);
+  await f.client.query('reset role');before=await revisions();await f.client.query('delete from public.notifications where id=$1',[id]);after=await revisions();assert.notEqual(after[other],before[other]);
+ }finally{await release(f)}
+});
+
 test('sent paging counts all matching notifications instead of filtering only a 50-row page',async()=>{
  const f=await sentFixture();await db.query("insert into public.notifications(category,title,body,audience,target_user_ids,created_by) select 'general',$1||' #'||s,'Synthetic page test','targeted',array[$2::uuid],$3 from generate_series(1,51) s",[f.prefix,f.borrower,f.admin])
  const first=await f.service.sent({}, {subject:f.prefix,borrowerIds:[f.borrower]}),second=await f.service.sent({}, {subject:f.prefix,borrowerIds:[f.borrower],offset:50})

@@ -4,6 +4,12 @@ import {subscribeToInvalidations} from '../../src/lib/realtimeInvalidation.js'
 const wait=()=>new Promise(resolve=>setTimeout(resolve,25))
 function fixture(onChange=async()=>{}){let event,status,filter,removed=0;const channel={on(kind,f,cb){filter=f;event=cb;return this},subscribe(cb){status=cb;return this}};const client={channel:()=>channel,removeChannel:()=>{removed++}};const errors=[];const stop=subscribeToInvalidations({client,name:'fixture',table:'message_change_signals',ownerId:'borrower-1',isAdmin:false,onChange,onError:e=>errors.push(e.message),delay:1});return {event:()=>event(),status:s=>status(s),filter:()=>filter,removed:()=>removed,errors,stop,client}}
 test('borrower invalidations subscribe only to their own signal metadata',()=>{const f=fixture();assert.deepEqual(f.filter(),{event:'*',schema:'public',table:'message_change_signals',filter:'borrower_id=eq.borrower-1'});f.stop();assert.equal(f.removed(),1)})
+
+test('notification invalidations use the authenticated recipient column, including admins',()=>{
+ let filter;const channel={on(_event,value){filter=value;return this},subscribe(){return this}};
+ const stop=subscribeToInvalidations({client:{channel:()=>channel,removeChannel(){}},name:'notifications',table:'notification_change_signals',ownerId:'recipient',ownerColumn:'user_id',isAdmin:false,onChange:async()=>{}});
+ assert.equal(filter.filter,'user_id=eq.recipient');stop();
+})
 test('bursts coalesce and idle time causes no recurring reads',async()=>{let calls=0;const f=fixture(async()=>{calls++});f.event();f.event();f.event();await wait();assert.equal(calls,1);await wait();assert.equal(calls,1);f.stop()})
 test('initial join and reconnect reconcile missed events once each',async()=>{let calls=0;const f=fixture(async()=>{calls++});f.status('SUBSCRIBED');await wait();f.status('SUBSCRIBED');await wait();assert.equal(calls,2);f.stop()})
 test('events during a read request one follow-up without concurrent reads',async()=>{let release,calls=0;const held=new Promise(r=>release=r);const f=fixture(async()=>{calls++;if(calls===1)await held});f.event();await wait();f.event();f.event();assert.equal(calls,1);release();await wait();assert.equal(calls,2);f.stop()})
