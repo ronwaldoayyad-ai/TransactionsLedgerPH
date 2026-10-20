@@ -27,6 +27,7 @@ import { mobileAction } from '../lib/mobileLocalFlow'
 import { refreshRecords } from '../lib/recordRefresh'
 import { saveBorrowerDetails } from '../lib/borrowerAdministration'
 import { subscribeToInvalidations } from '../lib/realtimeInvalidation'
+import { fetchLedgerSnapshot } from '../lib/ledgerRealtime'
 
 // Map a payment_due_overrides row (one per borrower) to the app's shape.
 const mapPaymentDueOverride = (r) => ({
@@ -134,6 +135,8 @@ export function AppProvider({ children }) {
   const [archivedTransactions, setArchivedTransactions] = useState([])
   const [paymentLogs, setPaymentLogs] = useState([])
   const [paymentPostings, setPaymentPostings] = useState([])
+  const [hiddenPaymentBreakdowns,setHiddenPaymentBreakdowns]=useState([])
+  const ledgerGeneration=useRef(0)
   const [arbitrageLoans, setArbitrageLoans] = useState([])
   const [interestRates, setInterestRates] = useState([])
   const [trackedLoans, setTrackedLoans] = useState([])
@@ -189,6 +192,7 @@ export function AppProvider({ children }) {
     setArchivedTransactions([])
     setPaymentLogs([])
     setPaymentPostings([])
+    setHiddenPaymentBreakdowns([])
     setArbitrageLoans([])
     setInterestRates([])
     setTrackedLoans([])
@@ -218,6 +222,7 @@ export function AppProvider({ children }) {
         auditRes,
         overridesRes,
         postingsRes,
+        visibilityRes,
       ] = await Promise.all([
           // Secondary .order('id') makes paging deterministic (a non-unique
           // primary sort key could otherwise shift rows across page boundaries).
@@ -244,6 +249,7 @@ export function AppProvider({ children }) {
           borrowerInitial ? empty : supabase.from('audit_log').select('*').order('at', { ascending: false }).limit(500),
         supabase.from('payment_due_overrides').select('*'),
         fetchAllRows(() => supabase.from('payment_postings').select('*, allocation_rows:payment_allocations(transaction_id,user_id,amount,before_balance)').order('created_at').order('id')),
+        fetchAllRows(() => supabase.from('payment_breakdown_visibility').select('*').order('posting_id')),
         ])
 
       if (generation !== loadGeneration.current) return
@@ -264,6 +270,8 @@ export function AppProvider({ children }) {
       else setPaymentLogs((paymentLogsRes.data ?? []).map(mapPaymentLog))
       if(postingsRes.error)failures.push(`payment postings (${postingsRes.error.message})`)
       else setPaymentPostings(postingsRes.data ?? [])
+      if(visibilityRes.error)failures.push(`payment breakdown visibility (${visibilityRes.error.message})`)
+      else setHiddenPaymentBreakdowns(visibilityRes.data??[])
 
       // Arbitrage + interest rates are admin-only; RLS returns an empty set for
       // borrowers (not an error), so these stay empty for them.
@@ -327,6 +335,19 @@ export function AppProvider({ children }) {
     }
   }, [])
 
+  const refreshLedger=useCallback(async()=>{
+    const owner=authenticatedOwner.current,generation=++ledgerGeneration.current
+    if(!owner)return
+    const rows=await fetchLedgerSnapshot(supabase,fetchAllRows)
+    if(owner!==authenticatedOwner.current||generation!==ledgerGeneration.current)return
+    const all=rows.transactions.map(mapTransaction)
+    setUsers(rows.profiles.map(mapProfile));setLoans(rows.loans.map(mapLoan))
+    setTransactions(all.filter(t=>!t.archivedAt));setArchivedTransactions(all.filter(t=>t.archivedAt))
+    setPaymentLogs(rows.payment_logs.map(mapPaymentLog));setPaymentPostings(rows.payment_postings)
+    setHiddenPaymentBreakdowns(rows.payment_breakdown_visibility)
+    setPayments(previous=>{const urls=new Map(previous.map(p=>[p.id,p.fileUrl]));return rows.payments.map(p=>mapPayment(p,urls.get(p.id)??null))})
+  },[])
+
   // Manual re-sync from Supabase (Refresh button). Also resets retained
   // page state (filters, sorts, calculator inputs) back to defaults.
   const refreshData = useCallback(async ({preservePageState=false}={}) => {
@@ -377,7 +398,7 @@ export function AppProvider({ children }) {
           setDataReady(false)
           setSyncError(null)
           setUsers([]); setLoans([]); setPayments([]); setTransactions([])
-          setArchivedTransactions([]); setPaymentLogs([]); setPaymentDueOverrides([])
+          setArchivedTransactions([]); setPaymentLogs([]); setPaymentDueOverrides([]);setPaymentPostings([]);setHiddenPaymentBreakdowns([])
           setSession((prev) => (prev?.source === 'demo' ? prev : null))
           setAuthLoading(false)
         }
@@ -398,7 +419,7 @@ export function AppProvider({ children }) {
             authenticatedOwner.current = profile.id
             setDataReady(false)
             setUsers([]); setLoans([]); setPayments([]); setTransactions([])
-            setArchivedTransactions([]); setPaymentLogs([]); setPaymentDueOverrides([])
+            setArchivedTransactions([]); setPaymentLogs([]); setPaymentDueOverrides([]);setPaymentPostings([]);setHiddenPaymentBreakdowns([])
           }
           setSession({
             source: 'supabase',
@@ -1038,14 +1059,13 @@ export function AppProvider({ children }) {
 
   // Permanent delete of archived ledger records (Reports & Logs → Archives).
   const purgeArchivedTransactions = useCallback(
-    async (ids) => {
+    async (ids,key=crypto.randomUUID()) => {
       const idSet = new Set(ids)
       if (isLive) {
-        const { error } = await supabase.from('transactions').delete().in('id', [...idSet])
-        if (error) {
-          console.error('[supabase] purge archived failed:', error.message)
-          return false
-        }
+        const {data,error}=await supabase.rpc('admin_purge_archived_transactions',{p_payload:{ids:[...idSet],key,reviewed:true}})
+        if(error)return {error:error.message,deletedIds:[],blocked:[]}
+        setArchivedTransactions(previous=>previous.filter(t=>!data.deletedIds.includes(t.id)))
+        return {...data,error:null}
       }
       setArchivedTransactions((prev) => prev.filter((t) => !idSet.has(t.id)))
       log(
@@ -1053,10 +1073,20 @@ export function AppProvider({ children }) {
         'TXN_PURGED',
         `${idSet.size} archived installment${idSet.size === 1 ? '' : 's'} permanently deleted`,
       )
-      return true
+      return {error:null,deletedIds:[...idSet],blocked:[]}
     },
     [isLive, log, actor],
   )
+
+  const setPaymentBreakdownVisibility=useCallback(async(ids,hidden,key=crypto.randomUUID())=>{
+    if(session?.user.role!=='admin')return {error:'Only a lender can manage payment breakdowns.'}
+    if(isLive){
+      const {data,error}=await supabase.rpc('admin_set_payment_breakdown_visibility',{p_payload:{ids,hidden,key,reviewed:true}})
+      if(error)return {error:error.message}
+      setHiddenPaymentBreakdowns(previous=>[...previous.filter(row=>!data.ids.includes(row.posting_id)),...(hidden?data.ids.map(id=>({posting_id:id,user_id:paymentPostings.find(p=>p.id===id)?.user_id})):[])])
+    }else setHiddenPaymentBreakdowns(previous=>[...previous.filter(row=>!ids.includes(row.posting_id)),...(hidden?ids.map(id=>({posting_id:id,user_id:paymentPostings.find(p=>p.id===id)?.user_id})):[])])
+    return {error:null}
+  },[isLive,session,paymentPostings])
 
   // Permanent delete of audit entries (admin housekeeping).
   const purgeAuditEntries = useCallback(
@@ -1685,6 +1715,12 @@ export function AppProvider({ children }) {
   // Payment Due tile updates without a manual refresh.
   const pdoListenerId = session?.user?.id ?? 'anon'
   const pdoIsAdmin=session?.user?.role==='admin'
+  useEffect(()=>{
+    if(!isLive||!dataReady)return undefined
+    const generation=ledgerGeneration
+    const stop=subscribeToInvalidations({client:supabase,name:`ledger-rt-${pdoListenerId}`,table:'ledger_change_signals',ownerId:pdoListenerId,isAdmin:pdoIsAdmin,onChange:refreshLedger,onError:error=>console.warn('[ledger]',error.message),delay:100})
+    return()=>{++generation.current;stop()}
+  },[isLive,dataReady,pdoListenerId,pdoIsAdmin,refreshLedger])
   useEffect(() => {
     if (!isLive) return undefined
     const generationRef=overrideGeneration
@@ -1714,6 +1750,7 @@ export function AppProvider({ children }) {
       payments,
       paymentLogs,
       paymentPostings,
+      hiddenPaymentBreakdowns,setPaymentBreakdownVisibility,
       postCredit,
       reversePayment,
       createPaymentLog,
@@ -1764,7 +1801,7 @@ export function AppProvider({ children }) {
     [
       session, effectiveSession, isViewingAs, startViewAs, stopViewAs, authLoading,
       dataReady, refreshing, refreshData, refreshOwnProfile, syncError, getProofUrl, importLoans, updateMyProfile, setMyAvatar,
-      users, loans, payments, paymentLogs,paymentPostings,postCredit,reversePayment, createPaymentLog, updatePaymentLog, deletePaymentLog,
+      users, loans, payments, paymentLogs,paymentPostings,hiddenPaymentBreakdowns,setPaymentBreakdownVisibility,postCredit,reversePayment, createPaymentLog, updatePaymentLog, deletePaymentLog,
       arbitrageLoans, interestRates, createArbitrageLoan, deleteArbitrageLoan,
       addInterestRate, deleteInterestRate,
       trackedLoans, createTrackedLoan, deleteTrackedLoan,

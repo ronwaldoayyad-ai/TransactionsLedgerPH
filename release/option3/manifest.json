@@ -1,7 +1,7 @@
 {
   "status": "rehearsal candidate; production approval required",
   "classic_commit": "db08a917120a6455b8d2d0d42ddf981c5b3cbd63",
-  "sha256": "70ba5496a677ed59f55d2082131fe06437c94919a6b65a5c5e617898354ca235",
+  "sha256": "e03a0804b188709e6bc458adc65fe0ba56cdde1191ada2f924599015adc52537",
   "sources": [
     {
       "file": "release/option3/foundation.sql",
@@ -102,6 +102,10 @@
     {
       "file": "supabase/migrations/20261020165218_notification_delivery_signals.sql",
       "sha256": "cdd8d3126d37082153f746e46a737f09bd8ce27b4bd0f9d687c50c1bb03d4868"
+    },
+    {
+      "file": "supabase/migrations/20261020172823_ledger_live_and_archive_deletion.sql",
+      "sha256": "ea2d8db7bcab32eae68feb42b4fe3205a80fa579b6fb0a010c00648e71ea30fe"
     }
   ],
   "adaptations": [

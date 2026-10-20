@@ -1,13 +1,14 @@
 import {moneyCents} from './paymentAllocation.js'
 
 // Presentation only: these rows are never added to transactions or balance totals.
-export function buildPaymentAdjustments({ownerId,postings=[],transactions=[],logs=[]}) {
+export function buildPaymentAdjustments({ownerId,postings=[],transactions=[],logs=[],hiddenPostingIds=[]}) {
   if(!ownerId)return []
   const own=new Map(postings.filter(p=>p.user_id===ownerId).map(p=>[p.id,p]))
   const reversed=new Set([...own.values()].filter(p=>p.reversal_of).map(p=>p.reversal_of))
   const dues=new Map(transactions.filter(t=>t.userId===ownerId).map(t=>[t.id,t]))
   const references=new Map(logs.filter(l=>l.userId===ownerId).map(l=>[l.sourcePostingId,l.reference]))
-  return [...own.values()].filter(p=>!p.reversal_of&&moneyCents(p.cash_amount??0)>0).flatMap(p=>{
+  const hidden=new Set(hiddenPostingIds)
+  return [...own.values()].filter(p=>!hidden.has(p.id)&&!p.reversal_of&&moneyCents(p.cash_amount??0)>0).flatMap(p=>{
     const allocations=(p.allocation_rows||[]).filter(a=>a.user_id===ownerId).map(a=>{
       const t=dues.get(a.transaction_id),amount=moneyCents(a.amount),before=moneyCents(a.before_balance)
       return {description:t?.description||'Previously recorded due',dueDate:t?.dueDate||null,amount:amount/100,beforeBalance:before/100,afterBalance:(before-amount)/100}

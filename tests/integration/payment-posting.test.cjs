@@ -165,6 +165,70 @@ test('invalid, stale and unauthorized overrides fail atomically; correction hist
  }finally{await release(f)}
 });
 
+test('permanent archive deletion removes eligible rows, reports protected rows and retries safely',async()=>{
+ const f=await fixture();try{
+  await post(f)
+  const plain='purge-'+crypto.randomUUID()
+  await f.client.query("insert into public.transactions(id,user_id,n,description,amount,type,txn_date,due_date,archived_at) values($1,$2,1,'Disposable archive',10,'Straight',current_date,current_date,current_date)",[plain,f.borrower])
+  await f.client.query('update public.transactions set archived_at=current_date where id=$1',[f.due])
+  const payload={key:crypto.randomUUID(),ids:[f.due,plain],reviewed:true},purge=()=>f.client.query('select public.admin_purge_archived_transactions($1) result',[payload])
+  const result=(await purge()).rows[0].result
+  assert.deepEqual(result.deletedIds,[plain]);assert.equal(result.blocked[0].id,f.due);assert.match(result.blocked[0].reason,/allocations/)
+  assert.deepEqual((await purge()).rows[0].result,result)
+  assert.equal((await f.client.query('select count(*)::int n from public.transactions where id=$1',[plain])).rows[0].n,0)
+  assert.equal(Number((await f.client.query('select amount_applied from public.transactions where id=$1',[f.due])).rows[0].amount_applied),1000)
+ }finally{await release(f)}
+});
+
+test('archive purge preserves active records and correction history and rejects missing review',async()=>{
+ const f=await fixture();try{
+  await correct(f,await correctionPayload(f,{description:'Corrected synthetic due'}))
+  let r=(await f.client.query('select public.admin_purge_archived_transactions($1) result',[{key:crypto.randomUUID(),ids:[f.due],reviewed:true}])).rows[0].result
+  assert.deepEqual(r.deletedIds,[]);assert.match(r.blocked[0].reason,/no longer archived/)
+  await f.client.query('update public.transactions set archived_at=current_date where id=$1',[f.due])
+  r=(await f.client.query('select public.admin_purge_archived_transactions($1) result',[{key:crypto.randomUUID(),ids:[f.due],reviewed:true}])).rows[0].result
+  assert.deepEqual(r.deletedIds,[]);assert.match(r.blocked[0].reason,/correction history/)
+  await f.client.query('savepoint validation');await assert.rejects(f.client.query('select public.admin_purge_archived_transactions($1)',[{key:crypto.randomUUID(),ids:[f.due],reviewed:false}]),/Review/);await f.client.query('rollback to savepoint validation')
+ }finally{await release(f)}
+});
+
+test('single and bulk breakdown hiding changes display metadata only and restores safely',async()=>{
+ const f=await fixture(400);try{
+  await post(f)
+  const posting=(await f.client.query('select id from public.payment_postings where payment_id=$1',[f.proof])).rows[0].id
+  const before=(await f.client.query('select to_jsonb(p) row from public.payment_postings p where id=$1',[posting])).rows[0].row
+  const payload={key:crypto.randomUUID(),ids:[posting],hidden:true,reviewed:true},hide=()=>f.client.query('select public.admin_set_payment_breakdown_visibility($1) result',[payload])
+  assert.deepEqual((await hide()).rows[0].result.ids,[posting]);assert.equal((await hide()).rows[0].result.hidden,true)
+  assert.equal((await f.client.query('select count(*)::int n from public.payment_breakdown_visibility where posting_id=$1',[posting])).rows[0].n,1)
+  assert.deepEqual((await f.client.query('select to_jsonb(p) row from public.payment_postings p where id=$1',[posting])).rows[0].row,before)
+  assert.equal(Number((await f.client.query('select amount_applied from public.transactions where id=$1',[f.due])).rows[0].amount_applied),400)
+  assert.equal(Number((await f.client.query('select credit_balance from public.profiles where id=$1',[f.borrower])).rows[0].credit_balance),0)
+  await f.client.query('select public.admin_set_payment_breakdown_visibility($1)',[{key:crypto.randomUUID(),ids:[posting],hidden:false,reviewed:true}])
+  assert.equal((await f.client.query('select count(*)::int n from public.payment_breakdown_visibility where posting_id=$1',[posting])).rows[0].n,0)
+  await f.client.query('savepoint bad_retry');await assert.rejects(f.client.query('select public.admin_set_payment_breakdown_visibility($1)',[{...payload,hidden:false}]),/Retry details changed/);await f.client.query('rollback to savepoint bad_retry')
+ }finally{await release(f)}
+});
+
+test('borrowers see only their ledger revisions and cannot delete archives or hide breakdowns',async()=>{
+ const f=await fixture();try{
+  await f.client.query('reset role');const sid=crypto.randomUUID();await f.client.query('insert into auth.sessions(id,user_id) values($1,$2)',[sid,f.borrower]);await f.client.query("select set_config('request.jwt.claims',$1,true)",[JSON.stringify({sub:f.borrower,role:'authenticated',session_id:sid})]);await f.client.query('set local role authenticated')
+  assert.deepEqual((await f.client.query('select borrower_id from public.ledger_change_signals')).rows.map(r=>r.borrower_id),[f.borrower])
+  for(const name of ['admin_purge_archived_transactions','admin_set_payment_breakdown_visibility']){
+   await f.client.query('savepoint denied');await assert.rejects(f.client.query('select public.'+name+'($1)',[{key:crypto.randomUUID(),ids:[f.due],hidden:true,reviewed:true}]),/Only an active lender/);await f.client.query('rollback to savepoint denied')
+  }
+  await f.client.query('savepoint cannot_forge');await assert.rejects(f.client.query('insert into public.ledger_change_signals(borrower_id) values($1)',[f.borrower]),/permission denied/);await f.client.query('rollback to savepoint cannot_forge')
+ }finally{await release(f)}
+});
+
+test('transaction edits, archive/restore, loan edits and owner moves notify every affected ledger',async()=>{
+ const f=await fixture();try{
+  const version=async owner=>(await f.client.query('select version from public.ledger_change_signals where borrower_id=$1',[owner])).rows[0]?.version
+  let previous=await version(f.borrower)
+  for(const [sql,args] of [["update public.transactions set description='Live edit' where id=$1",[f.due]],["update public.transactions set archived_at=current_date where id=$1",[f.due]],["update public.transactions set archived_at=null where id=$1",[f.due]],["update public.loans set label='Live category label' where id=$1",[f.loan]]]){await f.client.query(sql,args);const next=await version(f.borrower);assert.ok(Number(next)>Number(previous));previous=next}
+  const targetBefore=await version(f.admin);await f.client.query('update public.transactions set user_id=$2,loan_id=null where id=$1',[f.due,f.admin]);assert.ok(Number(await version(f.borrower))>Number(previous));assert.ok(Number(await version(f.admin))>Number(targetBefore))
+ }finally{await release(f)}
+});
+
 test('reviewed approval atomically posts the proof to its selected installment',async()=>{
  const f=await fixture();try{
   await f.client.query("select public.mobile_action('payment-review',$1)",[f.payload]);

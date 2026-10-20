@@ -24,3 +24,11 @@ test('reversed payments remain auditable and reversals do not create new negativ
  assert.equal(rows.length,1);assert.equal(rows[0].status,'reversed')
  assert.equal(build([posting],[])[0].dueDates.length,0)
 })
+
+test('deleted breakdowns are filtered without changing postings, credits or allocations',()=>{
+ const original=JSON.stringify(posting)
+ assert.deepEqual(model.buildPaymentAdjustments({ownerId:'u',postings:[posting],transactions:[due],hiddenPostingIds:['p']}),[])
+ assert.equal(build().length,1);assert.equal(JSON.stringify(posting),original)
+ const credit={...posting,credit_used:'10'}
+ assert.equal(model.buildCreditActivity({ownerId:'u',postings:[credit],transactions:[due],hiddenPostingIds:['p']}).length,1)
+})
