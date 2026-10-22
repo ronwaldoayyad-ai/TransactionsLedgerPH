@@ -38,5 +38,5 @@ module.exports=function({db,hash,sendVerification,origin,cookiePath='/api'}){
   if(!ticket)throw Object.assign(Error('Your verification expired. Request a new code.'),{status:401});
   const events=(await db.query('select status,note,created_at from public.support_ticket_events where ticket_id=$1 order by created_at,id',[ticket.id])).rows;delete ticket.id;return {ticket,events};
  }
- return {request,verify,read,end(req,res){cookie(res,'',0);const raw=token(req);return raw?db.query('delete from mobile_private.support_tracking_sessions where token_hash=$1',[hash('support-session:'+raw)]).then(()=>({ended:true})):Promise.resolve({ended:true});}};
+ return {request,verify,read,capabilities(){return {emailTracking:typeof sendVerification==='function'}},end(req,res){cookie(res,'',0);const raw=token(req);return raw?db.query('delete from mobile_private.support_tracking_sessions where token_hash=$1',[hash('support-session:'+raw)]).then(()=>({ended:true})):Promise.resolve({ended:true});}};
 };

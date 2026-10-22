@@ -120,7 +120,7 @@ export default function VersionedBorrower({ children }) {
             if(owner){const {data}=await supabase.auth.getSession();if(data.session?.access_token)headers.Authorization='Bearer '+data.session.access_token}
             const response=await fetch(serviceEndpoint('pawcheebels/ask'),{method:'POST',headers,body:JSON.stringify({question:payload.question,useAI:payload.useAI===true,language:payload.language})})
             const answer=await response.json();if(!response.ok)throw Error(answer.error||'Unable to answer. Please retry.');result=answer
-          }else if(['support-track-request','support-track-verify','support-track-read','support-track-end'].includes(action)){
+          }else if(['support-track-capabilities','support-track-request','support-track-verify','support-track-read','support-track-end'].includes(action)){
             const route=action.slice('support-track-'.length)
             const response=await fetch(serviceEndpoint('support-tracking/'+route),{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:AbortSignal.timeout(25000)})
             const answer=await response.json();if(!response.ok)throw Error(answer.error||'Unable to check this support ticket.');result=answer

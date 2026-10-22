@@ -1,7 +1,14 @@
 // Ticket access uses an HttpOnly, ticket-scoped cookie held by the parent app.
 let supportTrackingGeneration=0;
+let supportTrackingAvailable=false,supportCapabilityStarted=false;
+window.addEventListener('message',async event=>{
+ if(event.origin!==location.origin||event.source!==parent||event.data?.channel!=='loanledger-v41224'||!['session','snapshot'].includes(event.data.type)||supportCapabilityStarted)return;
+ supportCapabilityStarted=true;
+ try{const answer=await mobileCall('support-track-capabilities',{});supportTrackingAvailable=answer.emailTracking===true;if(supportTrackingAvailable&&['faq','support','more','profile'].includes(page))render();}catch{/* Keep unavailable email features hidden until the next page load. */}
+});
 function closeSupportTracking(){supportTrackingGeneration++;const dialog=document.getElementById('supportTrackingDialog');dialog?.close();dialog?.remove();return mobileCall('support-track-end',{}).catch(()=>{});}
 function openSupportTracking(){
+ if(!supportTrackingAvailable){toast('Please contact your lender with your ticket reference.');return;}
  document.getElementById('supportTrackingDialog')?.remove();const generation=++supportTrackingGeneration,dialog=document.createElement('dialog');dialog.id='supportTrackingDialog';dialog.className='support-ticket-dialog support-tracking-dialog';dialog.setAttribute('aria-labelledby','supportTrackingTitle');
  dialog.innerHTML='<div class="ticket-viewer-heading"><h2 id="supportTrackingTitle">Track a support request</h2><button type="button" aria-label="Close ticket tracking">×</button></div><p class="muted">Use your ticket reference and the email address you submitted. You can track a request while signed out.</p><form id="supportTrackingRequest"><label>Ticket reference<input name="reference" required maxlength="36" placeholder="SUP-…" autocapitalize="characters" autocomplete="off"></label><label>Email address<input name="email" type="email" required maxlength="254" autocomplete="email"></label><button class="primary" type="submit">Send verification code</button></form><form id="supportTrackingVerify" hidden><label>Email verification code<input name="code" required inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="6-digit code"></label><button class="primary" type="submit">Verify &amp; view ticket</button><button type="button" class="link" id="supportTrackingRestart">Use different details</button></form><p id="supportTrackingNotice" role="status" aria-live="polite"></p><section id="supportTrackingResult" hidden></section>';
  const request=dialog.querySelector('#supportTrackingRequest'),verify=dialog.querySelector('#supportTrackingVerify'),notice=dialog.querySelector('#supportTrackingNotice'),result=dialog.querySelector('#supportTrackingResult');let challenge='',busy=false;
@@ -13,6 +20,6 @@ function openSupportTracking(){
  dialog.querySelector('#supportTrackingRestart').onclick=()=>{challenge='';verify.reset();verify.hidden=true;request.hidden=false;notice.textContent='';};dialog.querySelector('.ticket-viewer-heading button').onclick=closeSupportTracking;dialog.addEventListener('cancel',event=>{event.preventDefault();closeSupportTracking();});document.body.append(dialog);dialog.showModal();request.elements.reference.focus();
 }
 const navigationBeforeSupportTracking=supportNavigation;
-supportNavigation=()=>navigationBeforeSupportTracking().replace('</nav>','<button type="button" onclick="openSupportTracking()">'+helpIcon('search')+'Track request</button></nav>');
+supportNavigation=()=>supportTrackingAvailable?navigationBeforeSupportTracking().replace('</nav>','<button type="button" onclick="openSupportTracking()">'+helpIcon('search')+'Track request</button></nav>'):navigationBeforeSupportTracking();
 const submenuBeforeSupportTracking=supportSubmenu;
-supportSubmenu=()=>submenuBeforeSupportTracking().replace('</section>','<button type="button" onclick="openSupportTracking()">'+helpIcon('search')+'<span><b>Track request</b><small>Verify your email to check a ticket</small></span><span aria-hidden="true">›</span></button></section>');
+supportSubmenu=()=>supportTrackingAvailable?submenuBeforeSupportTracking().replace('</section>','<button type="button" onclick="openSupportTracking()">'+helpIcon('search')+'<span><b>Track request</b><small>Verify your email to check a ticket</small></span><span aria-hidden="true">›</span></button></section>'):submenuBeforeSupportTracking();

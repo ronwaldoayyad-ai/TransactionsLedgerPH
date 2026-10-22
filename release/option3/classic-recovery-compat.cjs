@@ -46,7 +46,10 @@ exports.patchClassicRecovery=(code,id)=>{
   code=replaceRequired(code,'transactions.reduce((s, t) => s + t.amount, 0)','transactions.reduce((s, t) => s + (t.originalAmount ?? t.amount), 0)');
   return code.replaceAll('formatPeso(t.amount)','formatPeso(t.originalAmount ?? t.amount)');
  }
- if(id.endsWith('/src/components/PaymentList.jsx'))return replaceRequired(code,'  const { users, loans, reviewPayment, getProofUrl, deletePayment } = useApp()', '  canReview = false;\n  const { users, loans, reviewPayment, getProofUrl, deletePayment } = useApp()');
+ if(id.endsWith('/src/components/PaymentList.jsx')){
+  code=replaceRequired(code,'  const { users, loans, reviewPayment, getProofUrl, deletePayment } = useApp()', '  canReview = false;\n  const { users, loans, reviewPayment, getProofUrl, deletePayment } = useApp()');
+  return code.replace('onClick={() => setDeleting(p)}','hidden disabled onClick={() => setDeleting(p)}');
+ }
  if(id.endsWith('/src/components/DuesOverview.jsx'))return replaceRequired(code,'  const goStatus = (key) => {',"  const goStatus = (key) => {\n    if(key==='paid'&&mode==='amount'&&scopedTxns.some(t=>t.paidAmount>0&&['unpaid','past_due'].includes(t.status))){navigate('/portal/payment-logs');return}");
  return code;
 };

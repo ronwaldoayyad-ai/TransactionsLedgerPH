@@ -69,7 +69,7 @@ const localHandler=async(req,res)=>{
   res.setHeader('Cache-Control','no-store');res.setHeader('Content-Type','application/json');
   if(req.headers.origin&&req.headers.origin!==origin){res.writeHead(403);res.end();return;}
   try{if(req.method!=='POST')throw Error('Unsupported request.');let data='',size=0;for await(const chunk of req){size+=chunk.length;if(size>4096)throw Error('Request too large.');data+=chunk;}const body=JSON.parse(data||'{}'),action=req.url.slice('/support-tracking/'.length);
-   const answer=action==='request'?await supportTracking.request(req,body):action==='verify'?await supportTracking.verify(req,res,body):action==='read'?await supportTracking.read(req):action==='end'?await supportTracking.end(req,res):null;
+   const answer=action==='capabilities'?supportTracking.capabilities():action==='request'?await supportTracking.request(req,body):action==='verify'?await supportTracking.verify(req,res,body):action==='read'?await supportTracking.read(req):action==='end'?await supportTracking.end(req,res):null;
    if(!answer)throw Error('Unsupported tracking action.');res.end(JSON.stringify(answer));
   }catch(error){respondError(res,error);}return;
  }

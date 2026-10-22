@@ -35,8 +35,9 @@ const installmentTotal = installmentTxns.reduce((s, t) => s + t.amount, 0)
  const code=patchClassicRecovery(source,'/src/pages/user/UserDashboard.jsx');assert.match(code,/Available account credit/);assert.match(code,/t.originalAmount \?\? t.amount/);assert.match(code,/users.find/);
 });
 test('recovery hides legacy proof-approval controls and does not queue withdrawn proofs',()=>{
- const component=patchClassicRecovery('  const { users, loans, reviewPayment, getProofUrl, deletePayment } = useApp()','/src/components/PaymentList.jsx');
+ const component=patchClassicRecovery('  const { users, loans, reviewPayment, getProofUrl, deletePayment } = useApp()\n<button onClick={() => setDeleting(p)}>Delete</button>','/src/components/PaymentList.jsx');
  assert.match(component,/canReview = false/);
+ assert.match(component,/hidden disabled onClick/);
  assert.match(patchClassicRecovery(source,'/src/lib/dbMappers.js'),/r.retracted_at \? 'withdrawn' : r.status/);
 });
 test('recovery preserves schedule totals and routes partial paid-fund drilldown to history',()=>{

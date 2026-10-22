@@ -1,6 +1,9 @@
 const test=require('node:test'),assert=require('node:assert/strict');
 const create=require('../../server/web-api.cjs');
 const origin='https://fixture.example',workerSecret='separate-worker-fixture-secret-at-least-32';
+test('public support capabilities route is passed to the service without requiring a ticket or session',async()=>{
+ const r=await create(runtime)(new Request(origin+'/api/support-tracking/capabilities',{method:'POST',body:'{}'}));assert.equal(r.status,200);assert.equal((await r.json()).route,'/support-tracking/capabilities');
+});
 function runtime(){return {origin,workerSecret,service:{db:{query:async()=>({rows:[]})},runNotifications:async()=>({worked:true}),handler:async(req,res)=>{let data='';for await(const chunk of req)data+=chunk;res.setHeader('Content-Type','application/json');res.setHeader('Set-Cookie','fixture=opaque; HttpOnly; Path=/api; Secure');res.end(JSON.stringify({route:req.url,body:JSON.parse(data||'{}'),cookieSeen:!!req.headers.cookie}));}},assistant:async(req,res)=>res.end('{}')}}
 test('Vercel rewrite preserves the endpoint and JSON, including HttpOnly response cookies',async()=>{
  const handler=create(runtime),r=await handler(new Request(origin+'/api?__route=login-status',{method:'POST',headers:{cookie:'fixture=opaque','Content-Type':'application/json'},body:'{"check":true}'}));

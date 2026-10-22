@@ -407,7 +407,21 @@ test('borrower allocation reads have a covering ownership index',async()=>{
 });
 
 const invoice=f=>f.client.query("select public.create_invoice($1,'Synthetic borrower',current_date,array[current_date],1000,0,0,1000,'[]'::jsonb)",[f.borrower]);
+const disburse=f=>f.client.query("select (public.create_loan_disbursement($1,null::uuid,'QA-SECURITY',current_date,'QA','QA bank','000000','QA borrower',1000,1000,100,current_date,current_date,0,0,0,0,1000,'bank_transfer','[]'::jsonb)).id id",[f.borrower]);
 async function revokeSession(f){await f.client.query('reset role');await f.client.query('delete from auth.sessions where id=$1',[f.sid]);await f.client.query('set local role authenticated')}
+
+test('legacy disbursement creation requires a lender and rejects revoked lender sessions',async()=>{
+ const f=await fixture();try{assert.ok((await disburse(f)).rows[0].id);await revokeSession(f);await assert.rejects(disburse(f),/not authorized|active sign-in/i);}finally{await release(f)}
+});
+test('legacy invoice and disbursement creation deny a signed-in borrower',async()=>{
+ for(const action of [invoice,disburse]){const f=await fixture();try{await f.client.query('reset role');await f.client.query("update public.profiles set role='user' where id=$1",[f.admin]);await f.client.query('set local role authenticated');await assert.rejects(action(f),/not authorized|active sign-in/i);}finally{await release(f)}}
+});
+test('legacy request status updates require a live lender session',async()=>{
+ const f=await fixture();try{await f.client.query('reset role');const id=crypto.randomUUID();await f.client.query("insert into public.loan_requests(id,user_id,amount,term_months,monthly_rate,bank_name,bank_account_number,bank_account_name) values($1,$2,1000,3,0.03,'QA bank','000','Synthetic')",[id,f.borrower]);await f.client.query('set local role authenticated');await f.client.query("select public.update_loan_request_status($1,'pending','Synthetic review')",[id]);await revokeSession(f);await assert.rejects(f.client.query("select public.update_loan_request_status($1,'completed','Must reject')",[id]),/not authorized|active sign-in/i);}finally{await release(f)}
+});
+test('legacy disbursement acknowledgement rejects foreign owners and revoked borrower sessions',async()=>{
+ for(const mode of ['foreign','revoked','valid']){const f=await fixture();try{const id=(await disburse(f)).rows[0].id;await f.client.query('reset role');await f.client.query("update public.loan_disbursements set status='assigned' where id=$1",[id]);const actor=mode==='foreign'?f.admin:f.borrower,sid=crypto.randomUUID();await f.client.query('insert into auth.sessions(id,user_id) values($1,$2)',[sid,actor]);if(mode==='revoked')await f.client.query('delete from auth.sessions where id=$1',[sid]);await f.client.query("select set_config('request.jwt.claims',$1,true)",[JSON.stringify({sub:actor,role:'authenticated',session_id:sid})]);await f.client.query('set local role authenticated');const action=()=>f.client.query('select public.acknowledge_loan_disbursement($1)',[id]);if(mode==='valid')await action();else await assert.rejects(action(),/not found|active sign-in/i);}finally{await release(f)}}
+});
 
 test('legacy invoice creation accepts an active lender but rejects the same revoked session',async()=>{
  const f=await fixture();try{
