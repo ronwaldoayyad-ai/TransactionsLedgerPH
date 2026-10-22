@@ -75,8 +75,19 @@ submitLoanRequest=async()=>{loanUpdate();if($('#loanSubmitButton').disabled){exp
 };
 const flowLoanUpdate=loanUpdate;loanUpdate=()=>{flowLoanUpdate();if($('#loanSubmitButton')&&!stagingData?.canRequest)$('#loanSubmitButton').disabled=true;};
 const flowLoan=loan;loan=()=>{const content=flowLoan();return (!stagingData?.canRequest?'<div class="glass pad" role="status">Loan requests are not enabled for this account. Contact your lender.</div>':'')+content;};
-const flowGo=go;go=p=>{if(p==='login')mobileCloseOverlays();flowGo(p);if(p==='messages'&&stagingData?.messages.some(m=>m.fromAdmin&&!m.readAt))mobileCall('message-read').catch(e=>toast(e.message));};
-const flowChatToggle=toggleChatWidget;toggleChatWidget=()=>{flowChatToggle();if(chatWidgetOpen&&(typeof pawMode==='undefined'||pawMode==='lender')&&stagingData?.messages.some(m=>m.fromAdmin&&!m.readAt))mobileCall('message-read').catch(e=>toast(e.message));};
+let mobileReadPending=false,mobileReadAttempted='';
+function mobileReadVisibleMessages(retry=false){
+ const owner=stagingData?.user?.id;
+ if(!owner||document.visibilityState!=='visible'||!(page==='messages'||chatWidgetOpen&&(typeof pawMode==='undefined'||pawMode==='lender')))return;
+ const ids=(stagingData.messages||[]).filter(m=>m.borrowerId===owner&&m.fromAdmin&&!m.readAt&&!stagingData.hiddenMessages?.includes(m.id)).map(m=>m.id).sort();
+ if(!ids.length||mobileReadPending)return;
+ const key=JSON.stringify([owner,ids]);if(!retry&&key===mobileReadAttempted)return;
+ mobileReadAttempted=key;mobileReadPending=true;
+ mobileCall('message-read').catch(e=>{if(stagingData?.user?.id===owner)toast(e.message);}).finally(()=>{mobileReadPending=false;mobileReadVisibleMessages();});
+}
+const flowGo=go;go=p=>{if(p==='login')mobileCloseOverlays();flowGo(p);if(p==='messages')mobileReadVisibleMessages(true);};
+const flowChatToggle=toggleChatWidget;toggleChatWidget=()=>{flowChatToggle();mobileReadVisibleMessages(true);};
+document.addEventListener('visibilitychange',()=>mobileReadVisibleMessages(true));
 cancelMobileLoan=async id=>{if(!confirm('Cancel this loan request?'))return;try{await mobileSave('loan-cancel',{id,note:'Cancelled by borrower.'},()=>{toast('Loan request cancelled.');render();});}catch{}};
 editMobileLoanBank=id=>{const r=loanRequests.find(r=>r.uuid===id);if(!r)return;const dialog=document.createElement('dialog');dialog.id='mobileBankDialog';dialog.className='support-ticket-dialog';dialog.innerHTML='<h2>Update receiving bank</h2>'+[['Bank','bank',r.bank],['Account number','number',r.accountNumber],['Account name','name',r.accountName]].map(([label,key,value])=>'<label class="field"><span>'+label+'</span><input id="mobile-bank-'+key+'" value="'+htmlSafe(value)+'"></label>').join('')+'<p id="mobileBankError" role="alert"></p><button class="primary" onclick="saveMobileLoanBank(\''+id+'\')">Save bank details</button><button class="secondary" onclick="this.closest(\'dialog\').remove()">Cancel</button>';document.body.append(dialog);dialog.showModal();};
 saveMobileLoanBank=async id=>{try{await mobileSave('loan-bank',{id,bank:$('#mobile-bank-bank').value,accountNumber:$('#mobile-bank-number').value,accountName:$('#mobile-bank-name').value},()=>{$('#mobileBankDialog')?.remove();toast('Bank details saved.');},'#mobileBankError');}catch{}};
@@ -124,7 +135,7 @@ render=()=>{
   supportTicketImages.clear();stagingData.tickets?.forEach(t=>{if(t.attachment_url)supportTicketImages.set(t.ticket_number,t.attachment_url);});
   invoiceGenerated=[...stagingData.invoices.map(i=>({id:i.invoiceNumber,invoiceDate:stagingDate(i.invoiceDate),dueDate:stagingDate(i.dueDate),statusLabel:'Issued invoice',generatedAt:stagingDate(i.createdAt),totalDue:i.totalDue,rows:i.lineItems.map(r=>({...r,transactionDate:r.txnDate,paidDate:r.datePaid}))})),...(stagingData.statements||[]).map(mobileStatementRecord)];
  }
- localFlowRender();mobileRestoreForm(formDraft);flowRenderedPage=page;
+ localFlowRender();mobileRestoreForm(formDraft);flowRenderedPage=page;mobileReadVisibleMessages();
  if(stagingData){
   if(page==='personalInfo'){const email=$('#info-email');if(email){email.disabled=true;email.title='Your lender manages the login email.';}document.querySelector('.info-profile-card small').innerHTML=borrowerAccountDisplayHTML('Account no.');}
   if(page==='invoices'){document.querySelectorAll('button').forEach(b=>{if(b.getAttribute('onclick')==='generateInvoice()')b.textContent='Generate statement';});}
