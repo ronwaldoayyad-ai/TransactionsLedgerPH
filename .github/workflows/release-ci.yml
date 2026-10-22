@@ -35,7 +35,8 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: public.ecr.aws/supabase/postgres:17.11.0.002@sha256:0450166354dc9c1d25f0322ac8b580774d4fb0184d2b087f6e4fe9499c66cf53
+        # Official Docker Hub copy; identical verified digest avoids anonymous ECR limits.
+        image: docker.io/supabase/postgres:17.11.0.002@sha256:0450166354dc9c1d25f0322ac8b580774d4fb0184d2b087f6e4fe9499c66cf53
         env:
           POSTGRES_PASSWORD: postgres
         ports:

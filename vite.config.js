@@ -5,6 +5,9 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
 const require=createRequire(import.meta.url)
+const clientBuildConfig={name:'validate-client-build',configResolved(config){
+  if(config.command==='build')require('./tools/validate-client-build.cjs')({...loadEnv(config.mode,config.envDir,'VITE_'),...process.env})
+}}
 const localOrigin=process.env.LOCAL_PUBLIC_ORIGIN || 'http://127.0.0.1:5173'
 const localCompanion={name:'local-staging-flows',configureServer(server){
   const env=loadEnv(server.config.mode,process.cwd(),'')
@@ -16,7 +19,7 @@ const localCompanion={name:'local-staging-flows',configureServer(server){
   server.middlewares.use('/local-flow',(req,res)=>{if(req.headers.host!==new URL(localOrigin).host){res.writeHead(403);res.end();return;}if(req.url.startsWith('/pawcheebels/'))return assistant(req,res);handler(req,res)})
 }}
 export default defineConfig({
-  plugins: [react(), tailwindcss(),localCompanion],
+  plugins: [clientBuildConfig,react(), tailwindcss(),localCompanion],
   resolve: {alias: {'@':resolve(process.cwd(),'src')}},
   server: {
     // The borrower-facing server must not restart an active screen as assets
