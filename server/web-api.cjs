@@ -7,8 +7,9 @@ module.exports=function createApiHandler(getRuntime){return async function handl
  if(!routes.has(route)&&!/^\/(release-access|notification-rules)\/[a-z-]+$/.test(route)&&!/^\/support-tracking\/(capabilities|request|verify|read|end)$/.test(route)&&!['/pawcheebels/ask','/notification-worker','/health'].includes(route))return json(404,{error:'Unsupported request.'});
  if(request.method!=='POST'&&!(route==='/health'&&request.method==='GET'))return json(405,{error:'Unsupported request method.'});
  let runtime;try{runtime=getRuntime()}catch{return json(503,{error:'The service is not configured yet. Please contact support.'});}
- const {service,assistant,origin,workerSecret}=runtime;
- if(request.headers.get('origin')&&request.headers.get('origin')!==origin)return json(403,{error:'This request is not allowed.'});
+ const {service,assistant,origin,deploymentOrigin,workerSecret}=runtime;
+ const requestOrigin=request.headers.get('origin');
+ if(requestOrigin&&requestOrigin!==origin&&requestOrigin!==deploymentOrigin)return json(403,{error:'This request is not allowed.'});
  if(route==='/health'){
   try{await service.db.query('select 1');return json(200,{ready:true})}catch{return json(503,{ready:false})}
  }
@@ -21,6 +22,9 @@ module.exports=function createApiHandler(getRuntime){return async function handl
   const limit=route==='/guest-support'?4194304:65536,chunks=[];let size=0;
   if(request.body)for await(const chunk of request.body){size+=chunk.byteLength;if(size>limit)return json(413,{error:'Request is too large.'});chunks.push(Buffer.from(chunk));}
   const req=Readable.from(chunks);req.url=route;req.method=request.method;req.headers=Object.fromEntries(request.headers);
+  // Nested handlers use the canonical origin. Normalize only after matching the
+  // exact platform-bound deployment origin above; never broaden their CORS policy.
+  if(deploymentOrigin&&requestOrigin===deploymentOrigin)req.headers.origin=origin;
   req.socket={remoteAddress:request.headers.get('x-vercel-forwarded-for')?.split(',')[0]||'anonymous'};
   const headers=new Headers({'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});let status=200,ended=false,result;
   const response=new Promise(resolve=>result=resolve);

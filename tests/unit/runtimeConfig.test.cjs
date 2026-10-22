@@ -8,3 +8,8 @@ test('production refuses localhost, insecure origins, paths and transaction pool
 test('hosted database TLS always verifies certificates',()=>{
  const value=config(valid);assert.equal(value.ssl.rejectUnauthorized,true);assert.ok(!value.databaseUrl.includes('sslmode'));assert.equal(value.api,valid.SUPABASE_URL);
 });
+
+test('staged builds trust only the exact platform deployment hostname',()=>{
+ const value=config({...valid,VERCEL_URL:'loanledger-reviewed-123.vercel.app'});assert.equal(value.origin,valid.APP_ORIGIN);assert.equal(value.deploymentOrigin,'https://loanledger-reviewed-123.vercel.app');assert.equal(config(valid).deploymentOrigin,null);
+ for(const host of ['https://loanledger.vercel.app','loanledger.vercel.app/path','loanledger.vercel.app:443','loanledger.vercel.app.evil.invalid','user@loanledger.vercel.app','*.vercel.app','loanledger.vercel.app?x'])assert.throws(()=>config({...valid,VERCEL_URL:host}));
+});

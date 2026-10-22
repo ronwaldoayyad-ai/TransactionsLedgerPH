@@ -11,9 +11,13 @@ module.exports=function runtimeConfig(env=process.env){
  if(database.port==='6543')throw Error('Use the session pooler (5432), not the transaction pooler.');
  if(env.LOGIN_CODE_SECRET.length<32||env.LOGIN_CODE_SECRET===env.SUPABASE_SERVICE_KEY)throw Error('Use a dedicated Login Code secret of at least 32 characters.');
  if(env.SUPABASE_PUBLIC_KEY===env.SUPABASE_SERVICE_KEY)throw Error('Public and privileged keys must differ.');
+ // Only this deployment's platform-supplied hostname is a second trusted origin.
+ // Other previews, branches and arbitrary vercel.app hosts remain untrusted.
+ if(env.VERCEL_URL&&!/^[a-z0-9][a-z0-9.-]*\.vercel\.app$/.test(env.VERCEL_URL))throw Error('Use the exact Vercel deployment hostname.');
+ const deploymentOrigin=env.VERCEL_URL?'https://'+env.VERCEL_URL:null;
  if(!env.NOTIFICATION_WORKER_SECRET||env.NOTIFICATION_WORKER_SECRET.length<32||env.NOTIFICATION_WORKER_SECRET===env.LOGIN_CODE_SECRET)throw Error('Use a separate notification worker secret of at least 32 characters.');
  const dbUrl=new URL(database);dbUrl.searchParams.delete('sslmode');dbUrl.searchParams.delete('sslrootcert');
- return {origin:origin.origin,api:api.origin,databaseUrl:dbUrl.href,
+ return {origin:origin.origin,deploymentOrigin,api:api.origin,databaseUrl:dbUrl.href,
   ssl:{rejectUnauthorized:true,...(env.DATABASE_CA_CERT?{ca:env.DATABASE_CA_CERT}:env.DATABASE_CA_FILE?{ca:fs.readFileSync(env.DATABASE_CA_FILE,'utf8')}:{})},
   publicKey:env.SUPABASE_PUBLIC_KEY,serviceKey:env.SUPABASE_SERVICE_KEY,secret:env.LOGIN_CODE_SECRET,
   workerSecret:env.NOTIFICATION_WORKER_SECRET};

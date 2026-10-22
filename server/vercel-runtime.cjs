@@ -8,7 +8,7 @@ module.exports=function getRuntime(){
  db.on('error',()=>console.error('Database connection interrupted.'));
  const service=require('./flow-service.cjs')({db,...config,cookiePath:'/api',backgroundWorkers:false,sendSupportVerification:require('./support-mailer.cjs')(),jwt:role=>role==='anon'?config.publicKey:config.serviceKey,hash:code=>crypto.createHmac('sha256',config.secret).update(String(code)).digest('hex')});
  const {createPawcheebelsHandler}=require('./pawcheebels.cjs');
- runtime={service,origin:config.origin,workerSecret:config.workerSecret,assistant:createPawcheebelsHandler({origin:config.origin,authenticate:service.active})};
+ runtime={service,origin:config.origin,deploymentOrigin:config.deploymentOrigin,workerSecret:config.workerSecret,assistant:createPawcheebelsHandler({origin:config.origin,authenticate:service.active})};
  // No intervals, LISTEN connections or background daemons in a Vercel function.
  return runtime;
 };

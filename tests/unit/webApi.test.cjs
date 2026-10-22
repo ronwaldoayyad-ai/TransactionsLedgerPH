@@ -26,3 +26,11 @@ test('oversized function bodies are rejected before the service handler',async()
 test('worker failures return a retryable error rather than a false success',async()=>{
  const r=runtime();r.service.runNotifications=async()=>{throw Error('database unavailable')};const result=await create(()=>r)(new Request(origin+'/api/notification-worker',{method:'POST',headers:{Authorization:'Bearer '+workerSecret}}));assert.equal(result.status,503);
 });
+
+test('the exact staged deployment origin reaches canonical handlers; other previews stay denied',async()=>{
+ const deploymentOrigin='https://reviewed-build.vercel.app',r=runtime();r.deploymentOrigin=deploymentOrigin;
+ r.service.handler=async(req,res)=>res.end(JSON.stringify({origin:req.headers.origin}));const h=create(()=>r);
+ const accepted=await h(new Request(deploymentOrigin+'/api/login-status',{method:'POST',headers:{Origin:deploymentOrigin},body:'{}'}));assert.equal(accepted.status,200);assert.equal((await accepted.json()).origin,origin);
+ for(const foreign of ['https://other-preview.vercel.app',deploymentOrigin+'.evil.invalid','http://reviewed-build.vercel.app','null'])assert.equal((await h(new Request(deploymentOrigin+'/api/login-status',{method:'POST',headers:{Origin:foreign}}))).status,403);
+ const canonical=await h(new Request(origin+'/api/login-status',{method:'POST',headers:{Origin:origin}}));assert.equal(canonical.status,200);
+});
