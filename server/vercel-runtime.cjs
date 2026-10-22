@@ -6,7 +6,7 @@ module.exports=function getRuntime(){
  const db=new Pool({connectionString:config.databaseUrl,ssl:config.ssl,max:3,connectionTimeoutMillis:10000,idleTimeoutMillis:10000,allowExitOnIdle:true,statement_timeout:20000});
  require('@vercel/functions').attachDatabasePool(db);
  db.on('error',()=>console.error('Database connection interrupted.'));
- const service=require('./flow-service.cjs')({db,...config,cookiePath:'/api',backgroundWorkers:false,jwt:role=>role==='anon'?config.publicKey:config.serviceKey,hash:code=>crypto.createHmac('sha256',config.secret).update(String(code)).digest('hex')});
+ const service=require('./flow-service.cjs')({db,...config,cookiePath:'/api',backgroundWorkers:false,sendSupportVerification:require('./support-mailer.cjs')(),jwt:role=>role==='anon'?config.publicKey:config.serviceKey,hash:code=>crypto.createHmac('sha256',config.secret).update(String(code)).digest('hex')});
  const {createPawcheebelsHandler}=require('./pawcheebels.cjs');
  runtime={service,origin:config.origin,workerSecret:config.workerSecret,assistant:createPawcheebelsHandler({origin:config.origin,authenticate:service.active})};
  // No intervals, LISTEN connections or background daemons in a Vercel function.

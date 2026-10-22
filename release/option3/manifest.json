@@ -1,7 +1,144 @@
 {
   "status": "rehearsal candidate; production approval required",
   "classic_commit": "db08a917120a6455b8d2d0d42ddf981c5b3cbd63",
-  "sha256": "e03a0804b188709e6bc458adc65fe0ba56cdde1191ada2f924599015adc52537",
+  "sha256": "433b3218e4e4f58fadce82cc805039749de48dab29f1c405a88689ab6fde08b0",
+  "transaction_boundaries": [
+    {
+      "file": "release/option3/foundation.sql",
+      "begins": 8,
+      "commits": 8
+    },
+    {
+      "file": "supabase/migrations/20261013041107_notification_interactions_guest_support.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261013061101_borrower_invoice_deletion.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261014033328_borrower_account_numbers.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261016090000_borrower_profile_updates.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261016091000_session_check_initplan.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261016133725_login_access_lockout.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261016143643_notification_rules_and_delivery.sql",
+      "begins": 3,
+      "commits": 3
+    },
+    {
+      "file": "supabase/migrations/20261016205239_release_access.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261016230322_notification_categories.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261017002202_optimize_portfolio_read_policies.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261017134229_release_runtime_hardening.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261017142819_proof_submission_timestamp.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261017145342_login_gate_compatibility.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261017215448_restrict_classic_anonymous_rpcs.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261018023949_reviewed_payment_posting.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261018120945_accounting_lookup_index.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261018131233_legacy_session_boundaries.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261018184226_payment_proof_five_mb.sql",
+      "begins": 0,
+      "commits": 0
+    },
+    {
+      "file": "supabase/migrations/20261018201527_monthly_fee_assessment.sql",
+      "begins": 0,
+      "commits": 0
+    },
+    {
+      "file": "supabase/migrations/20261018223454_borrower_access_overrides.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261019000052_borrower_realtime_signals.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261019162523_admin_transaction_corrections.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261019165316_correction_reversal_credit_history.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261020165218_notification_delivery_signals.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261020172823_ledger_live_and_archive_deletion.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261021230453_guest_support_tracking.sql",
+      "begins": 1,
+      "commits": 1
+    }
+  ],
   "sources": [
     {
       "file": "release/option3/foundation.sql",
@@ -106,13 +243,17 @@
     {
       "file": "supabase/migrations/20261020172823_ledger_live_and_archive_deletion.sql",
       "sha256": "ea2d8db7bcab32eae68feb42b4fe3205a80fa579b6fb0a010c00648e71ea30fe"
+    },
+    {
+      "file": "supabase/migrations/20261021230453_guest_support_tracking.sql",
+      "sha256": "b720794e4b25114306469b6a408004879cf7689622a299cbebae01da9766e84f"
     }
   ],
   "adaptations": [
     "Preserve Classic borrower payment/message policies",
     "Do not infer or backfill loan categories",
     "Schema-qualify imported disbursement return type for empty search_path",
-    "One transaction; paused rollout and default Classic",
+    "SQL-aware single transaction; paused rollout and default Classic",
     "No staging accounts, passwords, codes or enrollments"
   ]
 }

@@ -1,7 +1,7 @@
 const {test,before,after}=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
 const {Pool}=require('pg');
-const root=path.resolve(__dirname,'../..'),workspace=path.resolve(root,'../..');
+const root=path.resolve(__dirname,'../..');
 const port=Number(process.env.PAYMENT_TEST_PORT??54322);
 if(![54322,25432].includes(port))throw Error('Only the local staging or separate rehearsal port is permitted.');
 const config={host:'127.0.0.1',port,user:'postgres',password:'postgres',connectionTimeoutMillis:5000,statement_timeout:10000};
@@ -10,9 +10,9 @@ const control=new Pool({...config,database:'postgres'});let db,created=false;
 const clean=sql=>sql.replace(/^\\.*$/gm,'');
 before(async()=>{
  await control.query('create database '+database);created=true;db=new Pool({...config,database});
- await db.query(clean(fs.readFileSync(path.join(workspace,'outputs/release-readiness/platform-pre.sql'),'utf8')));
+ await db.query(clean(fs.readFileSync(path.join(root,'tests/fixtures/sql/platform-pre.sql'),'utf8')));
  await db.query('alter table auth.users add primary key(id);alter table auth.sessions add primary key(id);alter table storage.objects add primary key(id);alter table storage.buckets add primary key(id)');
- await db.query(clean(fs.readFileSync(path.join(workspace,'outputs/staging-baseline/production-public-schema.sql'),'utf8')));
+ await db.query(clean(fs.readFileSync(path.join(root,'tests/fixtures/sql/classic-public-schema.sql'),'utf8')));
  await db.query('create publication supabase_realtime');
  await db.query("insert into storage.buckets(id,name,file_size_limit) values('payment-proofs','payment-proofs',10485760)");
  await db.query(fs.readFileSync(path.join(root,'release/option3/forward-candidate.sql'),'utf8'));
@@ -358,6 +358,16 @@ test('concurrent approvals of one proof commit exactly one posting and acknowled
 
 test('legacy negative adjustments remain valid and are not treated as payment allocations',async()=>{
  const f=await fixture();try{const id=await addDue(f,-50);const row=(await f.client.query('select amount,amount_applied from public.transactions where id=$1',[id])).rows[0];assert.equal(Number(row.amount),-50);assert.equal(Number(row.amount_applied),0)}finally{await release(f)}
+});
+
+test('already-approved legacy proofs cannot create another posting, allocation or credit',async()=>{
+ const f=await fixture();try{
+  await f.client.query('reset role');await f.client.query("update public.payments set status='approved' where id=$1",[f.proof]);await f.client.query('set local role authenticated;savepoint legacy_denied');
+  await assert.rejects(post(f,{allocations:[]}),/already been reviewed/);await f.client.query('rollback to savepoint legacy_denied');
+  assert.equal((await f.client.query('select count(*)::int n from public.payment_postings where payment_id=$1',[f.proof])).rows[0].n,0);
+  assert.equal(Number((await f.client.query('select credit_balance from public.profiles where id=$1',[f.borrower])).rows[0].credit_balance),0);
+  assert.equal((await f.client.query('select count(*)::int n from public.payment_allocations where user_id=$1',[f.borrower])).rows[0].n,0);
+ }finally{await release(f)}
 });
 
 test('prior credit and new cash fund the exact reviewed allocation without overpaying a due',async()=>{

@@ -1,7 +1,7 @@
 // Shared service; production dependencies are supplied by the validated runtime.
 const http=require('node:http'),crypto=require('node:crypto'),supabaseHeaders=require('./supabase-headers.cjs'),publicError=require('./public-service-error.cjs');
 function respondError(res,error){const result=publicError(error);res.writeHead(result.status);res.end(JSON.stringify(result.body));}
-module.exports=function createFlowService({db,api,origin,jwt,hash,validator=require('./file-validator.cjs'),cookiePath='/api',backgroundWorkers=true}){
+module.exports=function createFlowService({db,api,origin,jwt,hash,validator=require('./file-validator.cjs'),cookiePath='/api',backgroundWorkers=true,sendSupportVerification=null}){
 async function validateUpload(req,body){
  const user=await active(req),allowed={ 'payment-proofs':['image/jpeg','image/png','image/webp','application/pdf'],avatars:['image/jpeg','image/png','image/webp'],'mobile-attachments':['image/jpeg','image/png','image/webp','image/gif','image/bmp','image/avif','application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document']};
  if(!allowed[body.bucket]||String(body.path).split('/')[0]!==user.id)throw Error('File ownership mismatch.');
@@ -63,7 +63,16 @@ async function guestSupport(req,body){
 const notificationRules=require('./notification-rules.cjs')({db,active,wakeEnabled:backgroundWorkers});
 const notificationRulesHandler=require('./notification-rules-http.cjs')({service:notificationRules,origin});
 const releaseAccessHandler=require('./release-access.cjs')({db,active,origin});
+const supportTracking=require('./support-tracking.cjs')({db,hash,sendVerification:sendSupportVerification,origin,cookiePath});
 const localHandler=async(req,res)=>{
+ if(req.url.startsWith('/support-tracking/')){
+  res.setHeader('Cache-Control','no-store');res.setHeader('Content-Type','application/json');
+  if(req.headers.origin&&req.headers.origin!==origin){res.writeHead(403);res.end();return;}
+  try{if(req.method!=='POST')throw Error('Unsupported request.');let data='',size=0;for await(const chunk of req){size+=chunk.length;if(size>4096)throw Error('Request too large.');data+=chunk;}const body=JSON.parse(data||'{}'),action=req.url.slice('/support-tracking/'.length);
+   const answer=action==='request'?await supportTracking.request(req,body):action==='verify'?await supportTracking.verify(req,res,body):action==='read'?await supportTracking.read(req):action==='end'?await supportTracking.end(req,res):null;
+   if(!answer)throw Error('Unsupported tracking action.');res.end(JSON.stringify(answer));
+  }catch(error){respondError(res,error);}return;
+ }
  if(req.url.startsWith('/release-access/'))return releaseAccessHandler(req,res);
  if(req.url.startsWith('/notification-rules/'))return notificationRulesHandler(req,res);
  if(req.url!=='/guest-support')return handler(req,res);

@@ -31,4 +31,30 @@ jobs:
           name: review-build-${{ github.sha }}
           path: dist
           retention-days: 7
+  database-migration-and-accounting:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: public.ecr.aws/supabase/postgres:17.11.0.002@sha256:0450166354dc9c1d25f0322ac8b580774d4fb0184d2b087f6e4fe9499c66cf53
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 25432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.19.0
+          cache: npm
+      - run: npm ci
+      - run: node release/option3/generate-forward.cjs
+      - run: git diff --exit-code -- release/option3/forward-candidate.sql release/option3/manifest.json
+      - run: node --test --test-concurrency=1 tests/integration/migration-rollback.test.cjs tests/integration/payment-posting.test.cjs tests/integration/support-tracking.test.cjs
+        env:
+          PAYMENT_TEST_PORT: '25432'
 # No production deploy job. Hosted acceptance and a reviewed migration are gates.

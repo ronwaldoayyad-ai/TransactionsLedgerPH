@@ -30,6 +30,7 @@ alter table public.payments add column if not exists paid_date date;
 -- rather than treating upload date as payment date.
 notify pgrst,'reload schema';
 
+
 -- local-full-flow.sql
 
 create schema if not exists mobile_private;
@@ -222,6 +223,7 @@ do $$declare t text;begin foreach t in array array['loans','transactions','payme
  execute format('create policy mobile_active_account on public.%I as restrictive to authenticated using (exists(select 1 from public.profiles where id=(select auth.uid()) and status=''active'')) with check (exists(select 1 from public.profiles where id=(select auth.uid()) and status=''active''))',t);end loop;end $$;
 notify pgrst,'reload schema';
 
+
 -- local-statements.sql
 
 create table public.borrower_statements(id uuid primary key default gen_random_uuid(),user_id uuid not null references public.profiles(id),statement_number text unique not null,due_date date not null,status_filter text not null,rows jsonb not null,total_due numeric(14,2) not null,created_at timestamptz not null default now());
@@ -253,6 +255,7 @@ create policy "payment_due_overrides: own or lender" on public.payment_due_overr
 -- Enable realtime for new durable contracts.
 alter publication supabase_realtime add table public.support_tickets,public.support_ticket_events,public.message_hidden,public.borrower_statements;
 notify pgrst,'reload schema';
+
 
 -- local-flow-fixes.sql
 
@@ -291,6 +294,7 @@ revoke execute on function public.update_my_loan_request_bank(uuid,text,text,tex
 revoke execute on function public.notify_admins(text,text,text) from public,anon,authenticated;
 notify pgrst,'reload schema';
 
+
 -- local-upload-validation.sql
 
 create table mobile_private.verified_uploads(object_id uuid primary key references storage.objects(id) on delete cascade,owner_id uuid not null,bucket text not null,path text not null,updated_at timestamptz not null,sha256 text not null,mime text not null,size bigint not null);
@@ -310,7 +314,7 @@ do $$declare v text;begin select pg_get_functiondef('mobile_private.action(text,
  v:=replace(v,'array[''image/jpeg'',''image/png'',''image/webp'',''application/pdf''],5242880','array[''image/jpeg'',''image/png'',''image/webp'',''application/pdf'',''application/msword'',''application/vnd.openxmlformats-officedocument.wordprocessingml.document''],5242880');
  execute v;
 end $$;
-notify pgrst,'reload schema';commit;
+notify pgrst,'reload schema';
 
 -- local-flow-guards.sql
 
@@ -344,7 +348,7 @@ do $$declare n text;v text;begin foreach n in array array['update_my_profile','s
 end loop;end $$;
 -- Internal trigger functions do not need client execution privileges.
 do $$declare r record;begin for r in select oid::regprocedure sig from pg_proc where pronamespace='public'::regnamespace and prorettype in ('trigger'::regtype,'event_trigger'::regtype) loop execute format('revoke execute on function %s from public,anon,authenticated',r.sig);end loop;end $$;
-notify pgrst,'reload schema';commit;
+notify pgrst,'reload schema';
 
 -- local-storage-guards.sql
 
@@ -363,7 +367,7 @@ alter function public.set_loan_request_reference() set search_path=pg_catalog,pu
 alter function public.set_transaction_id() set search_path=pg_catalog,public;
 drop policy "audit: authenticated append" on public.audit_log;
 create policy "audit: lender append" on public.audit_log for insert to authenticated with check(public.is_admin() and mobile_private.valid_session());
-notify pgrst,'reload schema';commit;
+notify pgrst,'reload schema';
 
 -- local-proof-review.sql
 
@@ -388,6 +392,7 @@ revoke all on function mobile_private.review_proof(jsonb) from public,anon;
 grant execute on function mobile_private.review_proof(jsonb) to authenticated;
 create or replace function public.mobile_action(p_action text,p_payload jsonb) returns jsonb language sql security invoker set search_path='' as $$select case when p_action='statement-create' then mobile_private.statement(p_payload) when p_action='payment-review' then mobile_private.review_proof(p_payload) else mobile_private.action(p_action,p_payload) end$$;
 notify pgrst,'reload schema';
+
 
 -- 20261013041107_notification_interactions_guest_support.sql
 
@@ -446,6 +451,7 @@ end $migration$;
 alter publication supabase_realtime add table public.notification_reactions;
 notify pgrst,'reload schema';
 
+
 -- 20261013061101_borrower_invoice_deletion.sql
 
 alter table public.borrower_statements add column deleted_at timestamptz;
@@ -468,6 +474,7 @@ revoke all on function mobile_private.delete_statement(jsonb) from public,anon;
 grant execute on function mobile_private.delete_statement(jsonb) to authenticated;
 create or replace function public.mobile_action(p_action text,p_payload jsonb) returns jsonb language sql security invoker set search_path='' as $$select case when p_action='statement-create' then mobile_private.statement(p_payload) when p_action='statement-delete' then mobile_private.delete_statement(p_payload) when p_action='payment-review' then mobile_private.review_proof(p_payload) else mobile_private.action(p_action,p_payload) end$$;
 notify pgrst,'reload schema';
+
 
 -- 20261014033328_borrower_account_numbers.sql
 -- Public-facing account numbers are permanent references, separate from UUID keys.
@@ -536,6 +543,7 @@ end $$;
 comment on column public.profiles.borrower_account_number is 'Permanent numeric borrower reference: encoded first five given-name letters, zero-padded to 10 digits, followed by a unique prefix suffix of at least three digits.';
 notify pgrst, 'reload schema';
 
+
 -- 20261016090000_borrower_profile_updates.sql
 -- Profile edits share the existing preferences row. Publish only that row's
 -- changes; clients then fetch their own profile without reloading the ledger.
@@ -550,6 +558,7 @@ begin
     alter publication supabase_realtime add table public.borrower_preferences;
   end if;
 end $migration$;
+
 
 -- 20261016091000_session_check_initplan.sql
 -- The session does not vary between rows in a statement. A scalar subquery
@@ -572,6 +581,7 @@ begin
     end if;
   end loop;
 end $migration$;
+
 
 -- 20261016133725_login_access_lockout.sql
 -- Local staging bootstrap. Counters are private, durable and never client-writable.
@@ -631,6 +641,7 @@ begin
 end $$;
 revoke all on function mobile_private.login_password_verification(jsonb),mobile_private.login_access_token(jsonb) from public,anon,authenticated;
 grant execute on function mobile_private.login_password_verification(jsonb),mobile_private.login_access_token(jsonb) to supabase_auth_admin;
+
 
 -- 20261016143643_notification_rules_and_delivery.sql
 
@@ -751,6 +762,8 @@ do $$declare t text;begin
  end loop;
 end $$;
 
+
+
 insert into mobile_private.notification_event_catalog(event_type,label,presentation) values('payment.proof_submitted','Proof submitted · borrower',false) on conflict(event_type) do nothing;
 insert into mobile_private.notification_event_catalog(event_type,label,presentation) values('payment.proof_submitted_admin','Proof submitted · lender',false) on conflict(event_type) do nothing;
 insert into mobile_private.notification_event_catalog(event_type,label,presentation) values('payment.proof_approved','Proof approved',false) on conflict(event_type) do nothing;
@@ -850,7 +863,7 @@ insert into mobile_private.notification_rules(id,name,enabled,version,graph) val
 insert into mobile_private.notification_rule_versions(rule_id,version,name,enabled,graph) values('e4f4aef3-d59e-4dc6-b587-904f5562fb5f',1,'Other app feedback',true,'{"edges":[{"to":"send-1","from":"when-1","port":"next"}],"nodes":[{"x":40,"y":70,"id":"when-1","data":{"at":"09:00","event":"ui.notice"},"type":"when"},{"x":380,"y":70,"id":"send-1","data":{"body":"{{message}}","title":"Notice","channel":"banner","userIds":[],"category":"general","duration":10,"language":"all","recipients":"source","filipinoBody":"","filipinoTitle":""},"type":"send"}]}'::jsonb) on conflict(rule_id,version) do nothing;
 insert into mobile_private.notification_rules(id,name,enabled,version,graph) values('fc8fc341-d5b2-49a7-b5d7-d658091bc696','Lender reacted',true,1,'{"edges":[{"to":"send-1","from":"when-1","port":"next"}],"nodes":[{"x":40,"y":70,"id":"when-1","data":{"at":"09:00","event":"notification.lender_reaction"},"type":"when"},{"x":380,"y":70,"id":"send-1","data":{"body":"{{original_body}}","title":"{{original_title}}","channel":"inbox","userIds":[],"category":"general","duration":10,"language":"all","recipients":"source","filipinoBody":"","filipinoTitle":""},"type":"send"}]}'::jsonb) on conflict(id) do nothing;
 insert into mobile_private.notification_rule_versions(rule_id,version,name,enabled,graph) values('fc8fc341-d5b2-49a7-b5d7-d658091bc696',1,'Lender reacted',true,'{"edges":[{"to":"send-1","from":"when-1","port":"next"}],"nodes":[{"x":40,"y":70,"id":"when-1","data":{"at":"09:00","event":"notification.lender_reaction"},"type":"when"},{"x":380,"y":70,"id":"send-1","data":{"body":"{{original_body}}","title":"{{original_title}}","channel":"inbox","userIds":[],"category":"general","duration":10,"language":"all","recipients":"source","filipinoBody":"","filipinoTitle":""},"type":"send"}]}'::jsonb) on conflict(rule_id,version) do nothing;
-insert into mobile_private.notification_rule_state(key,value) values('defaults-v1','installed') on conflict(key) do nothing;commit;
+insert into mobile_private.notification_rule_state(key,value) values('defaults-v1','installed') on conflict(key) do nothing;
 -- Generated from the audited local staging function definitions.
 -- Only notification event context is added; existing transaction decisions are preserved.
 
@@ -1172,6 +1185,7 @@ begin
 end $function$
 ;
 
+
 -- 20261016205239_release_access.sql
 -- Server-owned release assignments. No changes to Auth, roles or financial data.
 
@@ -1204,6 +1218,7 @@ revoke all on sequence mobile_private.release_history_id_seq from public,anon,au
 -- A production migration starts paused. Local bootstrap is intentionally separate.
 insert into mobile_private.release_settings(id) values(1);
 
+
 -- 20261016230322_notification_categories.sql
 
 create table public.notification_categories (
@@ -1234,6 +1249,7 @@ alter table public.notification_templates add constraint notification_templates_
 create index if not exists notifications_category_idx on public.notifications(category);
 create index if not exists notification_templates_category_idx on public.notification_templates(category);
 
+
 -- 20261017002202_optimize_portfolio_read_policies.sql
 
 -- These identity checks are constant for a statement. InitPlans evaluate them
@@ -1248,6 +1264,7 @@ alter policy "transactions: read own active or admin" on public.transactions
  using ((user_id=(select auth.uid()) and archived_at is null) or (select public.is_admin()));
 alter policy "transactions: admin write" on public.transactions
  using ((select public.is_admin())) with check ((select public.is_admin()));
+
 
 -- 20261017134229_release_runtime_hardening.sql
 -- Additive release preparation. No borrower enrollments or credential changes.
@@ -1292,6 +1309,7 @@ $$;
 revoke all on function public.notify_admins(text,text,text) from public,anon;
 grant execute on function public.notify_admins(text,text,text) to authenticated;
 
+
 -- 20261017142819_proof_submission_timestamp.sql
 -- Preserve the legacy date column and its Classic readers. Do not invent times
 -- for historical submissions; only future inserts receive a server timestamp.
@@ -1309,6 +1327,7 @@ revoke all on function public.set_payment_submitted_time() from public,anon,auth
 create trigger payment_submission_time before insert or update on public.payments
 for each row execute function public.set_payment_submitted_time();
 notify pgrst,'reload schema';
+
 
 -- 20261017145342_login_gate_compatibility.sql
 -- The public Vercel sign-in gate counts failed attempts on every plan.
@@ -1331,6 +1350,7 @@ end $$;
 revoke all on function mobile_private.login_access_token(jsonb) from public,anon,authenticated;
 grant execute on function mobile_private.login_access_token(jsonb) to supabase_auth_admin;
 
+
 -- 20261017215448_restrict_classic_anonymous_rpcs.sql
 -- These Classic RPCs are used after sign-in. Their authenticated and service
 -- access is retained; anonymous callers must not execute privileged functions.
@@ -1343,6 +1363,7 @@ do $$declare routine record;begin
  end loop;
 end $$;
 notify pgrst,'reload schema';
+
 
 -- 20261018023949_reviewed_payment_posting.sql
 -- Additive accounting. Historical proofs/logs are never inferred or backfilled.
@@ -1608,14 +1629,17 @@ language sql security invoker set search_path='' as $$select case
  else mobile_private.action(p_action,p_payload) end$$;
 notify pgrst,'reload schema';
 
+
 -- 20261018120945_accounting_lookup_index.sql
 -- New accounting table: ownership reads and FK checks share this index.
 
 create index payment_allocations_user on public.payment_allocations(user_id,posting_id);
 
+
 -- 20261018131233_legacy_session_boundaries.sql
 -- Classic and New UI must both reject an access token whose Auth session ended.
 -- Keep existing ownership policies; add a restrictive boundary alongside them.
+
 
 create or replace function public.is_admin()
 returns boolean language sql stable security definer set search_path='' as $$
@@ -1670,6 +1694,7 @@ end $$;
 revoke all on function public.is_admin(),public.update_my_profile(text,text,text,text),public.activate_my_account() from public,anon;
 grant execute on function public.is_admin(),public.update_my_profile(text,text,text,text),public.activate_my_account() to authenticated,service_role;
 notify pgrst,'reload schema';
+
 
 -- 20261018184226_payment_proof_five_mb.sql
 -- Limit future uploads and submissions; existing proof downloads are unchanged.
@@ -1899,6 +1924,7 @@ end $$;
 revoke all on function mobile_private.login_access_token(jsonb) from public,anon,authenticated;
 grant execute on function mobile_private.login_access_token(jsonb) to supabase_auth_admin;
 
+
 -- 20261019000052_borrower_realtime_signals.sql
 
 -- Publish only invalidation metadata. Clients re-read their RLS-scoped records;
@@ -1937,6 +1963,7 @@ end $$;
 revoke all on function mobile_private.signal_borrower_live_change() from public,anon,authenticated;
 create trigger messages_live_signal after insert or update or delete on public.messages for each row execute function mobile_private.signal_borrower_live_change();
 create trigger payment_due_live_signal after insert or update or delete on public.payment_due_overrides for each row execute function mobile_private.signal_borrower_live_change();
+
 
 -- 20261019162523_admin_transaction_corrections.sql
 -- Additive, audited admin corrections. Do not remove these records after use.
@@ -2122,6 +2149,7 @@ end $$;
 
 notify pgrst,'reload schema';
 
+
 -- 20261019165316_correction_reversal_credit_history.sql
 -- Additive reversal metadata; keep it with immutable accounting history.
 
@@ -2176,6 +2204,7 @@ end $$;
 
 notify pgrst,'reload schema';
 
+
 -- 20261020165218_notification_delivery_signals.sql
 
 -- Publish only a recipient's revision. Inbox content continues through RLS;
@@ -2216,6 +2245,7 @@ revoke all on function mobile_private.signal_notification_read_change() from pub
 drop trigger if exists notification_read_change_signal on public.notification_reads;
 create trigger notification_read_change_signal after insert or update or delete on public.notification_reads
  for each row execute function mobile_private.signal_notification_read_change();
+
 
 -- 20261020172823_ledger_live_and_archive_deletion.sql
 
@@ -2342,5 +2372,30 @@ begin
 end $$;
 revoke all on function public.admin_purge_archived_transactions(jsonb) from public,anon;
 grant execute on function public.admin_purge_archived_transactions(jsonb) to authenticated;
+
+
+-- 20261021230453_guest_support_tracking.sql
+
+create table mobile_private.support_verification_challenges (
+ id uuid primary key,
+ ticket_id uuid references public.support_tickets(id) on delete cascade,
+ code_hash text not null check(length(code_hash)=64),
+ attempts integer not null default 0 check(attempts between 0 and 5),
+ created_at timestamptz not null default now(),
+ expires_at timestamptz not null,
+ consumed_at timestamptz
+);
+create table mobile_private.support_tracking_sessions (
+ token_hash text primary key check(length(token_hash)=64),
+ ticket_id uuid not null references public.support_tickets(id) on delete cascade,
+ created_at timestamptz not null default now(),
+ expires_at timestamptz not null
+);
+create index support_verification_expiry on mobile_private.support_verification_challenges(expires_at);
+create index support_tracking_session_expiry on mobile_private.support_tracking_sessions(expires_at);
+alter table mobile_private.support_verification_challenges enable row level security;
+alter table mobile_private.support_tracking_sessions enable row level security;
+revoke all on mobile_private.support_verification_challenges,mobile_private.support_tracking_sessions from public,anon,authenticated;
+
 
 commit;

@@ -120,6 +120,10 @@ export default function VersionedBorrower({ children }) {
             if(owner){const {data}=await supabase.auth.getSession();if(data.session?.access_token)headers.Authorization='Bearer '+data.session.access_token}
             const response=await fetch(serviceEndpoint('pawcheebels/ask'),{method:'POST',headers,body:JSON.stringify({question:payload.question,useAI:payload.useAI===true,language:payload.language})})
             const answer=await response.json();if(!response.ok)throw Error(answer.error||'Unable to answer. Please retry.');result=answer
+          }else if(['support-track-request','support-track-verify','support-track-read','support-track-end'].includes(action)){
+            const route=action.slice('support-track-'.length)
+            const response=await fetch(serviceEndpoint('support-tracking/'+route),{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),signal:AbortSignal.timeout(25000)})
+            const answer=await response.json();if(!response.ok)throw Error(answer.error||'Unable to check this support ticket.');result=answer
           }else if(action==='guest-support'){
             if(owner)throw Error('Use the signed-in Support form.')
             const response=await fetch(serviceEndpoint('guest-support'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(await guestSupportPayload(payload)),signal:AbortSignal.timeout(30000)})
