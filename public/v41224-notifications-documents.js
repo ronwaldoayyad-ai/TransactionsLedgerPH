@@ -23,11 +23,11 @@ renderLoanRequestHistory=()=>{
 };
 
 // Anchor downloads use the browser's configured destination, without a directory picker.
-downloadAppFile=async(source,name,typeHint='application/pdf')=>{
- try{const blob=typeof source==='function'?await source():source;if(!(blob instanceof Blob)||!blob.size)throw Error('The file is unavailable.');const url=URL.createObjectURL(blob),anchor=document.createElement('a');anchor.href=url;anchor.download=String(name||'download').replace(/[\\/\u0000-\u001f]/g,'_');document.body.append(anchor);setTimeout(()=>URL.revokeObjectURL(url),120000);
+downloadAppFile=async(source,name,typeHint='application/pdf',_preview=null,isCurrent=()=>true)=>{
+ try{const blob=typeof source==='function'?await source():source;if(!(blob instanceof Blob)||!blob.size)throw Error('The file is unavailable.');if(!isCurrent())return false;const url=URL.createObjectURL(blob),anchor=document.createElement('a');anchor.href=url;anchor.download=String(name||'download').replace(/[\\/\u0000-\u001f]/g,'_');document.body.append(anchor);setTimeout(()=>URL.revokeObjectURL(url),120000);
  // Let fast downloads paint their loading state before native browser UI opens.
  await new Promise(resolve=>setTimeout(resolve,Math.max(0,600-(performance.now()-fileDownloadStartedAt))));
- toast('Download started.');await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));anchor.click();anchor.remove();return true;}catch(error){toast(error.message||'Unable to download. Please retry.');return false;}
+ await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));if(!isCurrent()){anchor.remove();URL.revokeObjectURL(url);return false;}toast('Download started.');anchor.click();anchor.remove();return true;}catch(error){toast(error.message||'Unable to download. Please retry.');return false;}
 };
 downloadRecentPayment=async id=>{try{const result=await mobileCall('proof-download',{id}),response=await fetch(result.url);if(!response.ok)throw Error('Unable to download this proof.');return downloadAppFile(await response.blob(),result.name||'payment-proof');}catch(e){toast(e.message);return false;}};
 viewRecentPayment=downloadRecentPayment;
@@ -123,7 +123,7 @@ for(const name of ['downloadRecentPayment','downloadAcknowledgement','downloadIn
 viewRecentPayment=downloadRecentPayment;viewAcknowledgement=downloadAcknowledgement;viewInvoice=downloadInvoice;viewDisbursement=downloadDisbursement;
 function decoratePaymentDownloads(){
  const icon='<svg class="download-file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g class="download-icon-arrow"><path d="M12 3v12m-4-4 4 4 4-4"/></g><path d="M5 16v4h14v-4"/></svg>';
- const kinds={downloadRecentPayment:'Proof',downloadAcknowledgement:'Receipt',downloadInvoice:'Invoice',downloadDisbursement:'Disbursement',downloadLoanDisclosure:'Loan summary',downloadChatAttachment:'Attachment',downloadNotificationAttachment:'Attachment'};
+ const kinds={downloadRecentPayment:'Proof',downloadAcknowledgement:'Receipt',downloadPaymentConfirmation:'Confirmation',downloadInvoice:'Invoice',downloadDisbursement:'Disbursement',downloadLoanDisclosure:'Loan summary',downloadChatAttachment:'Attachment',downloadNotificationAttachment:'Attachment'};
  document.querySelectorAll('button[onclick]').forEach(button=>{const action=button.getAttribute('onclick').match(/^(download\w+)\(/)?.[1],kind=kinds[action];if(!kind)return;const oldLabel=button.getAttribute('aria-label')||button.textContent.trim().replace(/^[⇩↓▤]+\s*/,'');if(!button.hasAttribute('aria-label'))button.setAttribute('aria-label',oldLabel==='Download AR'?'Download receipt':oldLabel);button.classList.add('download-file-action');button.classList.remove('payment-file-action');button.innerHTML=icon+'<span>'+kind+'</span>';button.title=button.getAttribute('aria-label');});
 }
 

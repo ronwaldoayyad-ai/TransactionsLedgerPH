@@ -2,7 +2,7 @@
 let paymentConfirmationState=null,paymentConfirmationGeneration=0;
 const paymentConfirmationOwner=()=>stagingData?.user?.id||null;
 const paymentConfirmationMoney=cents=>'PHP '+(cents/100).toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2});
-function paymentConfirmationDate(value,time=false){if(!value)return '';const date=new Date(time?value:String(value).slice(0,10)+'T00:00:00');if(!Number.isFinite(date.getTime()))return '';return date.toLocaleString('en-PH',time?{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'}:{month:'short',day:'numeric',year:'numeric'});}
+function paymentConfirmationDate(value,time=false){if(!value)return '';if(time&&/^\d{4}-\d{2}-\d{2}$/.test(String(value)))time=false;const date=new Date(time?value:String(value).slice(0,10)+'T00:00:00');if(!Number.isFinite(date.getTime()))return '';return date.toLocaleString('en-PH',time?{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit'}:{month:'short',day:'numeric',year:'numeric'});}
 function paymentConfirmationModel(record){
  const paid=Math.round(Number(record.amount)*100);if(!record.id||!Number.isSafeInteger(paid)||paid<=0)throw Error('The saved payment confirmation is incomplete.');
  const rows=record.allocations,known=Array.isArray(rows)&&rows.length>0&&rows.every(item=>Number.isFinite(Number(item.amount))&&Number(item.amount)>0);

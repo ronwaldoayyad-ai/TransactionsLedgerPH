@@ -18,3 +18,11 @@
 .recent-actions .proof-retry-button{flex:1 1 100%;height:auto;min-height:40px;padding:8px 10px;font-size:11px;line-height:1.4;white-space:normal;background:var(--soft);color:var(--blue)}
 @media(max-width:340px){.recent-actions .proof-retract-button{flex:1.4 1 0}.recent-actions .proof-retract-button,.recent-actions .download-file-action{font-size:10px!important;padding:8px 4px!important;gap:3px}.recent-actions .proof-retract-button span,.recent-actions .download-file-action span{font-size:inherit!important}.recent-actions .proof-retract-button svg,.recent-actions .download-file-icon{width:12px;height:12px}}
 @media(max-width:340px){.recent-actions .proof-retract-button{flex:1.6 1 0;padding:8px 2px!important;gap:2px}.recent-actions .proof-retract-button svg{width:11px;height:11px}}
+
+/* Three download actions share one row; withdrawal/correction remain below. */
+.recent-actions .recent-downloads{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;flex:1 1 100%;width:100%;min-width:0;order:0}
+.recent-downloads .download-file-action{order:0!important;display:inline-flex;align-items:center;justify-content:center;min-width:0;min-height:40px;border:1px solid var(--line);border-radius:11px;white-space:nowrap}
+.recent-actions .proof-retract-button{flex:1 1 100%;order:1!important}
+.recent-downloads button:disabled{opacity:.45;cursor:not-allowed}
+@media(max-width:340px){.recent-actions .recent-downloads{gap:4px}.recent-downloads .download-file-action{font-size:10px!important;padding:8px 3px!important;gap:2px}.recent-downloads .download-file-icon{width:11px;height:11px}}
+@media(max-width:300px){.recent-downloads .download-file-icon{display:none}}
