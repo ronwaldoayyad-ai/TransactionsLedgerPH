@@ -2663,7 +2663,7 @@ create trigger telegram_new_proof after insert on public.payments for each row e
 -- Existing notification event wake-ups and the canonical one-minute worker also process this independent queue.
 
 
--- 20261024202731_telegram_borrower_message_alerts.sql
+-- 20261024204957_telegram_borrower_message_alerts.sql
 
 set local lock_timeout='5s';
 alter table mobile_private.telegram_settings add column message_enabled boolean not null default false;

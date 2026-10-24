@@ -1,7 +1,7 @@
 {
   "status": "rehearsal candidate; production approval required",
   "classic_commit": "db08a917120a6455b8d2d0d42ddf981c5b3cbd63",
-  "sha256": "f09a3a15c02e18c7330f0f62a32603e08ba9aa2491f58729a4538b8b299364c8",
+  "sha256": "46466c1a86c9083ab2ec92372d0ff451989c4c5fbe1d34063011b1828b8001a1",
   "transaction_boundaries": [
     {
       "file": "release/option3/foundation.sql",
@@ -159,7 +159,7 @@
       "commits": 1
     },
     {
-      "file": "supabase/migrations/20261024202731_telegram_borrower_message_alerts.sql",
+      "file": "supabase/migrations/20261024204957_telegram_borrower_message_alerts.sql",
       "begins": 1,
       "commits": 1
     }
@@ -290,7 +290,7 @@
       "sha256": "b6e65a6bfb72db5a910f60fc22aae77fa6d0e5c73aba41001f4691ad4244db6e"
     },
     {
-      "file": "supabase/migrations/20261024202731_telegram_borrower_message_alerts.sql",
+      "file": "supabase/migrations/20261024204957_telegram_borrower_message_alerts.sql",
       "sha256": "dda444fa3c8960a91cda2d1f8f5c006965822595f6314c75775e8f267d5eb100"
     }
   ],
