@@ -116,7 +116,7 @@ window.addEventListener('message',event=>{
     const previousUser=stagingData?.user.id;stagingData=message.data;
     const user=stagingData.user;
     if(!personalInfoEditing||previousUser!==user.id)personalInfo={fullName:[user.firstName,user.lastName].filter(Boolean).join(' ')||user.name,preferredDisplayName:user.nickname||'',email:user.email,phone:user.phone,birthDate:'',address:'',occupation:''};profilePhotoData=user.avatarUrl||'';
-    recentPayments=stagingData.payments.map(p=>({id:p.id,amount:p.amount,paidDate:stagingDate(p.submittedAt),dueDate:'See lender allocation',reference:p.reference,proofName:p.fileName,method:p.method,status:p.status[0].toUpperCase()+p.status.slice(1),reviewedDate:stagingDate(p.reviewedAt),format:p.fileType==='pdf'?'PDF':'IMAGE',note:p.note}));
+    recentPayments=stagingData.payments.map(p=>({id:p.id,amount:p.amount,submittedAt:p.submittedAt,paidDate:stagingDate(p.submittedAt),dueDate:'See lender allocation',reference:p.reference,proofName:p.fileName,method:p.method,status:p.status[0].toUpperCase()+p.status.slice(1),reviewedDate:stagingDate(p.reviewedAt),format:p.fileType==='pdf'?'PDF':'IMAGE',note:p.note}));
     mostRecentPayment=recentPayments.find(p=>p.id===mostRecentPayment?.id)||null;
     chatMessages=stagingData.messages.map(m=>({id:m.id,sender:m.fromAdmin?'lender':'borrower',body:m.body,time:new Date(m.createdAt).toLocaleTimeString('en-PH',{hour:'numeric',minute:'2-digit'}),replyTo:null,reactions:[]}));
     notificationItems=stagingData.notifications.map(n=>({id:n.id,kind:({payment:'Payment',document:'Loan',account:'Account',general:'Account'}[n.category]||'Account'),icon:'♧',title:htmlSafe(n.title),detail:htmlSafe(n.body),time:new Date(n.createdAt).toLocaleString('en-PH')}));

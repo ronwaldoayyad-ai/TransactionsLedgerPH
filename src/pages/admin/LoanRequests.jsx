@@ -43,31 +43,27 @@ function AccessRow({ userId, initialEnabled, onSave }) {
 }
 
 function FeatureVisibility({ borrowers }) {
-  const { accessFor, setAccess } = useLoanRequests()
+  const { accessFor, setAccess, accessReady, accessError, refreshRequests } = useLoanRequests()
   const [selectedId, setSelectedId] = useState('')
-
-  return (
-    <Card>
-      <CardHeader title="Master Control — Feature Visibility" subtitle="Enable cash loan requests per borrower." />
-      <div className="space-y-4 px-5 py-4">
-        <Field label="Select Borrower" htmlFor="fv-borrower">
-          <select id="fv-borrower" className={inputClass} value={selectedId} onChange={(e) => setSelectedId(e.target.value)}>
-            <option value="">— Select a borrower —</option>
-            {borrowers.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-              </option>
-            ))}
-          </select>
-        </Field>
-        {selectedId ? (
-          <AccessRow key={selectedId} userId={selectedId} initialEnabled={accessFor(selectedId)} onSave={setAccess} />
-        ) : (
-          <p className="text-sm text-slate-500">Pick a borrower to toggle their access.</p>
-        )}
-      </div>
-    </Card>
-  )
+  const [search,setSearch]=useState('')
+  const [filter,setFilter]=useState('all')
+  const enabledCount=borrowers.filter(b=>accessFor(b.id)).length
+  const query=search.trim().toLowerCase()
+  const visible=borrowers.filter(b=>(filter==='all'||accessFor(b.id)===(filter==='enabled'))&&[b.name,b.email,b.accountNumber].some(v=>String(v||'').toLowerCase().includes(query))).sort((a,b)=>String(a.name).localeCompare(String(b.name)))
+  return <Card>
+    <CardHeader title="Master Control — Feature Visibility" subtitle="Enable cash loan requests per borrower." />
+    <div className="space-y-4 px-5 py-4">
+      {accessError&&<div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{accessError}<Button variant="secondary" onClick={refreshRequests} className="mt-2">Retry access</Button></div>}
+      <Field label="Select Borrower" htmlFor="fv-borrower"><select id="fv-borrower" className={inputClass} value={selectedId} disabled={!accessReady} onChange={e=>setSelectedId(e.target.value)}><option value="">— Select a borrower —</option>{borrowers.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select></Field>
+      {selectedId&&accessReady?<AccessRow key={selectedId+':'+accessFor(selectedId)} userId={selectedId} initialEnabled={accessFor(selectedId)} onSave={setAccess}/>:<p className="text-sm text-slate-500">{accessReady?'Pick a borrower to toggle their access.':'Loading loan-request access…'}</p>}
+    </div>
+    <section aria-label="Borrower loan-request access" className="border-t border-slate-100">
+      <div className="space-y-3 px-5 py-4"><h3 className="text-sm font-semibold text-slate-900">Borrower loan-request access</h3><p className="text-xs text-slate-500">Borrowers without enabled access cannot start a new loan request.</p>
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Filter borrower access">{[['all','All',borrowers.length],['enabled','Enabled',enabledCount],['disabled','Disabled',borrowers.length-enabledCount]].map(([value,label,count])=><button key={value} type="button" aria-pressed={filter===value} disabled={!accessReady} onClick={()=>setFilter(value)} className={'rounded-full border px-3 py-1.5 text-xs font-medium '+(filter===value?'border-navy-800 bg-navy-800 text-white':'border-slate-200 bg-white text-slate-600')}>{label}{accessReady?' ('+count+')':''}</button>)}</div>
+      <input aria-label="Search borrower access" placeholder="Search name, email or account number" className={inputClass} value={search} onChange={e=>setSearch(e.target.value)}/></div>
+      {accessReady&&<ul className="max-h-96 overflow-y-auto divide-y divide-slate-100">{visible.length?visible.map(b=><li key={b.id} className="flex flex-wrap items-center gap-3 px-5 py-3"><div className="min-w-0 flex-1"><p className="break-words text-sm font-medium text-slate-900">{b.name}</p><p className="break-all text-xs text-slate-500">{b.email}{b.accountNumber?' · '+b.accountNumber:''}</p></div><span className={'rounded-full border px-2 py-0.5 text-xs font-medium '+(accessFor(b.id)?'border-emerald-200 bg-emerald-50 text-emerald-700':'border-slate-200 bg-slate-50 text-slate-600')}>{accessFor(b.id)?'Enabled':'Disabled'}</span><button type="button" aria-label={'Manage loan-request access for '+b.name} className="text-xs font-medium text-blue-700 underline underline-offset-2" onClick={()=>{setSelectedId(b.id);document.getElementById('fv-borrower')?.focus()}}>Manage</button></li>):<li className="px-5 py-4 text-sm text-slate-500">No borrowers match this filter.</li>}</ul>}
+    </section>
+  </Card>
 }
 
 // --- Rate configuration: per-term monthly add-on rate (4 decimals, in %) ---

@@ -112,7 +112,7 @@ export default function AppShell({ children }) {
   const { unreadCount: notifUnread } = useNotifications()
   const { invoices } = useInvoices()
   const { disbursements } = useDisbursements()
-  const { myRequests, requests: allLoanRequests } = useLoanRequests()
+  const { canRequest, myRequests, requests: allLoanRequests } = useLoanRequests()
   const navigate = useNavigate()
   const location = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
@@ -179,7 +179,7 @@ export default function AppShell({ children }) {
     stopViewAs()
     navigate('/admin/users')
   }
-  const nav = isAdmin ? adminNav : userNav
+  const nav = isAdmin ? adminNav : userNav.map(group=>({...group,items:group.items.filter(item=>item.to!=='/portal/loan-request'||canRequest)})).filter(group=>group.items.length)
   const pendingCount = payments.filter((p) => p.status === 'pending').length
   // Admin workload badges: how many items are currently awaiting admin action.
   // Unlike the borrower's "changed since last visit" watermarks, these persist

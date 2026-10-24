@@ -221,5 +221,11 @@ export default function VersionedBorrower({ children }) {
     return ()=>clearTimeout(timer)
   }, [active, ready, releaseEnabled, borrower.ready, frameGeneration, preference, extras,extrasError,app.users,app.session, app.authLoading, app.dataReady, app.syncError, app.loans, app.transactions, app.archivedTransactions,app.paymentPostings,app.hiddenPaymentBreakdowns,app.payments, app.paymentLogs, app.paymentDueOverrides, messages, notifications, invoices.invoices, disbursements.disbursements, requests])
   if (!active) return children
-  return <iframe ref={frame} onLoad={()=>setReady(true)} title="LoanLedger PH · v4.12.24" allow="web-share" src="/borrower-v4.12.24.html" style={{position:'fixed',inset:0,width:'100%',height:'100%',border:0,background:'#101a31',zIndex:100}} />
+  return <div style={{position:'fixed',inset:0,zIndex:100,display:'flex',flexDirection:'column',background:'#101a31'}}>
+    {app.isViewingAs && <section aria-label="Borrower preview controls" className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950" style={{paddingTop:'max(8px, env(safe-area-inset-top))'}}>
+      <span className="min-w-0 break-words">Viewing as <strong>{app.session.user.name}</strong></span>
+      <button type="button" className="min-h-10 shrink-0 rounded-lg bg-amber-900 px-3 py-2 font-semibold text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-900" onClick={()=>{app.stopViewAs();navigate('/admin/users')}}>Return to Admin view</button>
+    </section>}
+    <iframe ref={frame} onLoad={()=>setReady(true)} title="LoanLedger PH · v4.12.24" allow="web-share" src="/borrower-v4.12.24.html" style={{flex:1,minHeight:0,width:'100%',border:0,background:'#101a31'}} />
+  </div>
 }
