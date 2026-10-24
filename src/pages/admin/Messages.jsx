@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
 import { useMessages } from '../../context/MessagesContext'
 import { PageHeader } from '../../components/AppShell'
@@ -16,7 +17,10 @@ export default function AdminMessages() {
   const today = toISODate(new Date())
   const firstName = (session.user.name || 'My').split(' ')[0]
 
-  const [selectedId, setSelectedId] = useState(null)
+  const [params,setParams] = useSearchParams()
+  const requestedBorrower=params.get('borrower')
+  const selectedId=users.some(user=>user.role==='user'&&user.id===requestedBorrower)?requestedBorrower:null
+  const setSelectedId=id=>setParams(previous=>{const next=new URLSearchParams(previous);if(id)next.set('borrower',id);else next.delete('borrower');return next},{replace:true})
   const [collapsed, setCollapsed] = useState({}) // group key → bool
   const [clearing, setClearing] = useState(false) // confirm clear-chat modal
 

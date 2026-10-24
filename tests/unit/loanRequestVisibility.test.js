@@ -13,7 +13,7 @@ test('loan visibility covers saved shortcuts, add picker, More, Finder and direc
  const shell=fs.readFileSync('src/components/AppShell.jsx','utf8');assert.match(shell,/item\.to!==\x27\/portal\/loan-request\x27\|\|canRequest/);
 })
 test('admin access overview uses saved flags, status filters and read-error handling',()=>{
- const ui=fs.readFileSync('src/pages/admin/LoanRequests.jsx','utf8');for(const text of ['Borrower loan-request access','Search borrower access','Filter borrower access','accessFor(b.id)','accessReady','accessError','Manage loan-request access for'])assert.ok(ui.includes(text),text);
+ const ui=fs.readFileSync('src/pages/admin/LoanRequests.jsx','utf8');for(const text of ['Borrower loan-request access','Search borrower access','Filter borrower access','accessFor(b.id)','accessReady','accessError','Show Request a Loan for'])assert.ok(ui.includes(text),text);
  const context=fs.readFileSync('src/context/LoanRequestsContext.jsx','utf8');assert.match(context,/return accessReady && accessList.some/);assert.match(context,/setAccessList\(\[\]\);setAccessReady\(false\)/);assert.match(context,/table:\x27loan_request_access\x27,ownerId:meId,ownerColumn:\x27user_id\x27,isAdmin,onChange:fetchAll/);assert.match(context,/stopAccess\(\)/);
 })
 test('access publication changes no financial data or existing read policies',()=>{

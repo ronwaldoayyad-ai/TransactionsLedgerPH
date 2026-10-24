@@ -667,3 +667,49 @@ test('Telegram delivery records success once and marks ambiguous sends for manua
   await uncertain.run();await uncertain.run();assert.equal((await db.query('select status from mobile_private.telegram_deliveries where id=$1',[id])).rows[0].status,'uncertain');assert.equal(sends,1);
  }finally{await db.query("update mobile_private.telegram_settings set enabled=false where singleton")}
 });
+
+test('Telegram message alerts are future-only, one per new borrower message, and exclude admin replies and updates',async()=>{
+ const f=await fixture();try{
+  await f.client.query('reset role');
+  const insert=async(body='Synthetic message',admin=false,sender=f.borrower)=>(await f.client.query('insert into public.messages(borrower_id,sender_id,from_admin,body) values($1,$2,$3,$4) returning id',[f.borrower,sender,admin,body])).rows[0].id;
+  const old=await insert('Before enabling');assert.equal((await f.client.query('select count(*)::int n from mobile_private.telegram_deliveries where source_message_id=$1',[old])).rows[0].n,0);
+  await f.client.query("update mobile_private.telegram_settings set message_enabled=true,chat_id='123456',bot_id='1' where singleton");
+  await f.client.query('savepoint new_message');const first=await insert('A'.repeat(240)),second=await insert('Second message');
+  const jobs=(await f.client.query('select source_message_id,payload from mobile_private.telegram_deliveries where source_message_id=any($1::uuid[])',[ [first,second] ])).rows;
+  assert.equal(jobs.length,2);assert.equal(jobs.find(r=>r.source_message_id===first).payload.preview.length,201);assert.ok(jobs[0].payload.borrowerId);assert.ok(!('body' in jobs[0].payload));
+  await insert('Lender reply',true,f.admin);await insert('Wrong sender',false,f.admin);
+  await f.client.query("update public.messages set body='Edited message',read_at=now(),reactions='{}' where id=$1",[first]);
+  assert.equal((await f.client.query("select count(*)::int n from mobile_private.telegram_deliveries where kind='message'")).rows[0].n,2);
+  await f.client.query('rollback to savepoint new_message');
+  assert.equal((await f.client.query("select count(*)::int n from mobile_private.telegram_deliveries where kind='message'")).rows[0].n,0);
+ }finally{await release(f)}
+});
+test('Telegram switches do not cancel the other alert type and existing proof alerts survive message enablement',async()=>{
+ const f=await fixture();await f.client.query('reset role');await f.client.query("update mobile_private.telegram_settings set enabled=true,message_enabled=false,chat_id='123456',bot_id='1' where singleton");
+ const proof=crypto.randomUUID();await f.client.query("insert into public.payments(id,user_id,loan_id,amount,method,reference,file_name,file_type,file_path) values($1,$2,$3,100,'Bank Transfer','QA','qa.png','image','qa-only.png')",[proof,f.borrower,f.loan]);
+ await f.client.query('commit');f.client.release();
+ const svc=require('../../server/telegram.cjs')({db,active:async()=>({id:f.admin}),origin:'https://fixture.example',token:'123456:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',deliveryEnabled:true,fetchImpl:async()=>({ok:true,status:200,json:async()=>({ok:true,result:{id:1,is_bot:true,username:'PayTrack_payment_bot'}})})});
+ try{
+  const version=async()=>(await db.query('select version from mobile_private.telegram_settings')).rows[0].version;
+  await svc.save({},{kind:'message',enabled:true,version:await version()});
+  assert.equal((await db.query('select status from mobile_private.telegram_deliveries where payment_id=$1',[proof])).rows[0].status,'queued');
+  const mid=(await db.query("insert into public.messages(borrower_id,sender_id,from_admin,body) values($1,$1,false,'Synthetic message') returning id",[f.borrower])).rows[0].id;
+  await svc.save({},{kind:'proof',enabled:false,version:await version()});
+  assert.equal((await db.query('select status from mobile_private.telegram_deliveries where payment_id=$1',[proof])).rows[0].status,'cancelled');
+  assert.equal((await db.query('select status from mobile_private.telegram_deliveries where source_message_id=$1',[mid])).rows[0].status,'queued');
+  await svc.save({},{kind:'proof',enabled:true,version:await version()});
+  assert.equal((await db.query('select status from mobile_private.telegram_deliveries where source_message_id=$1',[mid])).rows[0].status,'queued');
+  await svc.save({},{kind:'message',enabled:false,version:await version()});
+  assert.equal((await db.query('select status from mobile_private.telegram_deliveries where source_message_id=$1',[mid])).rows[0].status,'cancelled');
+  const s=(await db.query('select enabled,message_enabled from mobile_private.telegram_settings')).rows[0];assert.equal(s.enabled,true);assert.equal(s.message_enabled,false);
+ }finally{await db.query('update mobile_private.telegram_settings set enabled=false,message_enabled=false where singleton')}
+});
+test('deleted borrower messages are not sent and attachment-only previews do not forward file details',async()=>{
+ const f=await fixture();await f.client.query('reset role');await f.client.query("update mobile_private.telegram_settings set message_enabled=true,chat_id='123456',bot_id='1' where singleton");
+ const mid=(await f.client.query("insert into public.messages(borrower_id,sender_id,from_admin,body,attachment_path,attachment_name) values($1,$1,false,'','private/secret.pdf','secret.pdf') returning id",[f.borrower])).rows[0].id;
+ const payload=(await f.client.query('select payload from mobile_private.telegram_deliveries where source_message_id=$1',[mid])).rows[0].payload;assert.equal(payload.preview,'Attachment shared');assert.doesNotMatch(JSON.stringify(payload),/secret.pdf|private\//);
+ await f.client.query('delete from public.messages where id=$1',[mid]);await f.client.query('commit');f.client.release();let sent=0;
+ const svc=require('../../server/telegram.cjs')({db,active:async()=>({id:f.admin}),origin:'https://fixture.example',token:'123456:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',deliveryEnabled:true,fetchImpl:async url=>{if(url.endsWith('/sendMessage'))sent++;return {ok:true,status:200,json:async()=>({ok:true,result:{id:1,is_bot:true,username:'PayTrack_payment_bot'}})}}});
+ try{await svc.run();assert.equal(sent,0);assert.equal((await db.query('select status from mobile_private.telegram_deliveries where source_message_id=$1',[mid])).rows[0].status,'cancelled')}
+ finally{await db.query('update mobile_private.telegram_settings set enabled=false,message_enabled=false where singleton')}
+});

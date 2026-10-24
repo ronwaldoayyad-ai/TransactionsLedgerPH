@@ -97,7 +97,7 @@ let stagingListOwner=null,stagingMessageVisible=20;
 const approvedExpandableRows=expandableRowsHTML;
 expandableRowsHTML=(key,rows,limit=3)=>approvedExpandableRows(key,rows,Math.max(1,Math.min(5,limit)));
 const approvedRecentRender=renderRecentPayments;
-renderRecentPayments=()=>{approvedRecentRender();const button=document.querySelector('.recent-view-all');if(button){button.hidden=recentPaymentTotal<=5;button.setAttribute('aria-expanded',String(recentShowAll));}};
+renderRecentPayments=()=>{approvedRecentRender();const button=document.querySelector('.recent-view-all');if(button){button.hidden=recentPaymentTotal<=5;const footer=button.closest('.recent-more-footer');if(footer)footer.hidden=button.hidden;button.setAttribute('aria-expanded',String(recentShowAll));}};
 const approvedRecentFilter=setRecentPaymentFilter;
 setRecentPaymentFilter=value=>{recentShowAll=false;recentPaymentLimit=5;approvedRecentFilter(value);};
 const approvedDisbursementRows=disbursementRows;

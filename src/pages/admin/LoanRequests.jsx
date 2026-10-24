@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useApp } from '../../context/AppContext'
 import { useLoanRequests } from '../../context/LoanRequestsContext'
 import { useNotifications } from '../../context/NotificationsContext'
@@ -10,58 +10,42 @@ import StatusBadge from '../../components/loanrequest/StatusBadge'
 import HistoryTimeline from '../../components/loanrequest/HistoryTimeline'
 import RequestDetailBody from '../../components/loanrequest/RequestDetailBody'
 import UpdateStatusModal from '../../components/loanrequest/UpdateStatusModal'
-import { Button, Card, CardHeader, EmptyState, Field, Modal, Switch, inputClass } from '../../components/ui'
+import { Button, Card, CardHeader, EmptyState, Modal, Switch, inputClass } from '../../components/ui'
 import { formatPeso } from '../../lib/amortization'
 import { TERMS, statusNotification } from '../../lib/loanRequest'
 
-// --- Feature Visibility: enable/disable loan requests per borrower ---
-function AccessRow({ userId, initialEnabled, onSave }) {
-  const [enabled, setEnabled] = useState(initialEnabled)
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
+// --- Feature Visibility: each borrower switch saves immediately ---
+function AccessRow({userId,name,initialEnabled,onSave}) {
+  const [pending,setPending]=useState(null)
   const [error,setError]=useState('')
-  const dirty = enabled !== initialEnabled
-
-  const save = async () => {
-    setSaving(true)
-    setError('');setSaved(false)
-    try{const result=await onSave(userId, enabled);if(result?.error)setError(result.error);else setSaved(true)}catch(e){setError(e.message)}finally{setSaving(false)}
+  const busy=useRef(false)
+  const saving=pending!==null
+  async function change(next){
+    if(busy.current)return
+    busy.current=true;setPending(next);setError('')
+    try{const result=await onSave(userId,next);if(result?.error)throw Error(result.error)}
+    catch(failure){setError(failure.message)}
+    finally{setPending(null);busy.current=false}
   }
-
-  return (
-    <div className="flex flex-wrap items-center gap-3">
-      <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
-        <Switch checked={enabled} onChange={(v) => { setEnabled(v); setSaved(false) }} label="Enable loan requests" />
-        {enabled ? 'Enabled' : 'Disabled'}
-      </label>
-      <Button onClick={save} disabled={saving || (!dirty && saved)}>
-        {saving ? 'Saving…' : saved && !dirty ? 'Saved' : 'Save'}
-      </Button>
-      {error&&<p role="alert" className="w-full text-sm text-red-700">{error}</p>}
-    </div>
-  )
+  const enabled=pending??initialEnabled
+  return <div className="flex max-w-xs flex-col items-end gap-1"><div className="flex items-center gap-3"><span className={'min-w-6 text-xs '+(enabled?'text-emerald-700':'text-slate-500')}>{saving?'Saving…':enabled?'On':'Off'}</span><Switch checked={enabled} disabled={saving} onChange={change} label={'Show Request a Loan for '+name}/></div>{error&&<p role="alert" className="text-right text-xs text-red-700">{error}</p>}</div>
 }
-
-function FeatureVisibility({ borrowers }) {
-  const { accessFor, setAccess, accessReady, accessError, refreshRequests } = useLoanRequests()
-  const [selectedId, setSelectedId] = useState('')
+function FeatureVisibility({borrowers}){
+  const {accessFor,setAccess,accessReady,accessError,refreshRequests}=useLoanRequests()
   const [search,setSearch]=useState('')
   const [filter,setFilter]=useState('all')
   const enabledCount=borrowers.filter(b=>accessFor(b.id)).length
   const query=search.trim().toLowerCase()
   const visible=borrowers.filter(b=>(filter==='all'||accessFor(b.id)===(filter==='enabled'))&&[b.name,b.email,b.accountNumber].some(v=>String(v||'').toLowerCase().includes(query))).sort((a,b)=>String(a.name).localeCompare(String(b.name)))
   return <Card>
-    <CardHeader title="Master Control — Feature Visibility" subtitle="Enable cash loan requests per borrower." />
-    <div className="space-y-4 px-5 py-4">
-      {accessError&&<div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{accessError}<Button variant="secondary" onClick={refreshRequests} className="mt-2">Retry access</Button></div>}
-      <Field label="Select Borrower" htmlFor="fv-borrower"><select id="fv-borrower" className={inputClass} value={selectedId} disabled={!accessReady} onChange={e=>setSelectedId(e.target.value)}><option value="">— Select a borrower —</option>{borrowers.map(b=><option key={b.id} value={b.id}>{b.name}</option>)}</select></Field>
-      {selectedId&&accessReady?<AccessRow key={selectedId+':'+accessFor(selectedId)} userId={selectedId} initialEnabled={accessFor(selectedId)} onSave={setAccess}/>:<p className="text-sm text-slate-500">{accessReady?'Pick a borrower to toggle their access.':'Loading loan-request access…'}</p>}
-    </div>
-    <section aria-label="Borrower loan-request access" className="border-t border-slate-100">
-      <div className="space-y-3 px-5 py-4"><h3 className="text-sm font-semibold text-slate-900">Borrower loan-request access</h3><p className="text-xs text-slate-500">Borrowers without enabled access cannot start a new loan request.</p>
+    <CardHeader title="Master Control — Feature Visibility" subtitle="Switch on to show Request a Loan. Switch off to hide it. Changes save automatically."/>
+    {accessError&&<div role="alert" className="m-5 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{accessError}<Button variant="secondary" onClick={refreshRequests} className="mt-2">Retry access</Button></div>}
+    <section aria-label="Borrower loan-request access">
+      <div className="space-y-3 px-5 py-4"><h3 className="text-sm font-semibold text-slate-900">Borrower loan-request access</h3><p className="text-xs text-slate-500">Existing requests stay in the borrower’s history. Each switch controls starting a new request.</p>
       <div className="flex flex-wrap gap-2" role="group" aria-label="Filter borrower access">{[['all','All',borrowers.length],['enabled','Enabled',enabledCount],['disabled','Disabled',borrowers.length-enabledCount]].map(([value,label,count])=><button key={value} type="button" aria-pressed={filter===value} disabled={!accessReady} onClick={()=>setFilter(value)} className={'rounded-full border px-3 py-1.5 text-xs font-medium '+(filter===value?'border-navy-800 bg-navy-800 text-white':'border-slate-200 bg-white text-slate-600')}>{label}{accessReady?' ('+count+')':''}</button>)}</div>
-      <input aria-label="Search borrower access" placeholder="Search name, email or account number" className={inputClass} value={search} onChange={e=>setSearch(e.target.value)}/></div>
-      {accessReady&&<ul className="max-h-96 overflow-y-auto divide-y divide-slate-100">{visible.length?visible.map(b=><li key={b.id} className="flex flex-wrap items-center gap-3 px-5 py-3"><div className="min-w-0 flex-1"><p className="break-words text-sm font-medium text-slate-900">{b.name}</p><p className="break-all text-xs text-slate-500">{b.email}{b.accountNumber?' · '+b.accountNumber:''}</p></div><span className={'rounded-full border px-2 py-0.5 text-xs font-medium '+(accessFor(b.id)?'border-emerald-200 bg-emerald-50 text-emerald-700':'border-slate-200 bg-slate-50 text-slate-600')}>{accessFor(b.id)?'Enabled':'Disabled'}</span><button type="button" aria-label={'Manage loan-request access for '+b.name} className="text-xs font-medium text-blue-700 underline underline-offset-2" onClick={()=>{setSelectedId(b.id);document.getElementById('fv-borrower')?.focus()}}>Manage</button></li>):<li className="px-5 py-4 text-sm text-slate-500">No borrowers match this filter.</li>}</ul>}
+      <input aria-label="Search borrower access" placeholder="Search name, email or account number" className={inputClass} value={search} disabled={!accessReady} onChange={e=>setSearch(e.target.value)}/></div>
+      {!accessReady&&!accessError&&<p role="status" className="px-5 py-4 text-sm text-slate-500">Loading loan-request access…</p>}
+      {accessReady&&<ul className="max-h-96 overflow-y-auto divide-y divide-slate-100">{visible.length?visible.map(b=><li key={b.id} className="flex items-center gap-3 px-5 py-3"><div className="min-w-0 flex-1"><p className="break-words text-sm font-medium text-slate-900">{b.name}</p><p className="break-all text-xs text-slate-500">{b.email}{b.accountNumber?' · '+b.accountNumber:''}</p></div><AccessRow userId={b.id} name={b.name} initialEnabled={accessFor(b.id)} onSave={setAccess}/></li>):<li className="px-5 py-4 text-sm text-slate-500">No borrowers match this filter.</li>}</ul>}
     </section>
   </Card>
 }

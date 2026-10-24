@@ -31,7 +31,7 @@ test('payment list exposes five then ten then fifteen then all without losing so
  const c=vm.createContext({Date,$:()=>host,cash:String,safeRecent:x=>String(x??''),recentPayments:rows,mostRecentPayment:null,recentPaymentFilter:'All',recentShowAll:false,recentPaymentLimit:5,recentPaymentTotal:0})
  vm.runInContext(fs.readFileSync('public/v41224-payment-sort.js','utf8')+'\n'+line('renderRecentPayments')+'\n'+line('toggleRecentAll'),c)
  const count=()=>[...host.innerHTML.matchAll(/<article class="recent-payment-row">/g)].length
- c.renderRecentPayments();assert.equal(count(),5)
+ c.renderRecentPayments();assert.equal(count(),5);assert.ok(host.innerHTML.indexOf('recent-more-footer')>host.innerHTML.lastIndexOf('</article>'));assert.ok(host.innerHTML.indexOf('recent-view-all')>host.innerHTML.indexOf('recent-payment-list'))
  c.toggleRecentAll();assert.equal(count(),10);c.toggleRecentAll();assert.equal(count(),15);c.toggleRecentAll();assert.equal(count(),17)
  c.toggleRecentAll();assert.equal(count(),5);assert.equal(rows.length,17)
  assert.match(enhance,/button.hidden=recentPaymentTotal<=5/)

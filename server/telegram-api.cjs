@@ -27,14 +27,28 @@ function transport({token,fetchImpl=fetch}){
  };
 }
 const nonceHash=value=>crypto.createHash('sha256').update(String(value)).digest('hex');
+const clean=(value,limit)=>Array.from(String(value||'').replace(/[\u0000-\u001f\u007f]/g,' ')).slice(0,limit).join('');
+const preview=value=>{const text=String(value||'').replace(/\s+/g,' ').trim(),chars=Array.from(text);return chars.length>200?chars.slice(0,200).join('')+'…':text};
 function message(job,origin){
- const text=job.kind==='test'?'LoanLedger PH · Telegram test\nYour private chat is connected. This is a test alert; no payment was submitted.':
-  'LoanLedger PH · Proof submitted\nBorrower: '+String(job.payload.borrower||'Borrower').replace(/[\u0000-\u001f\u007f]/g,' ').slice(0,120)+
-  '\nAmount: '+new Intl.NumberFormat('en-PH',{style:'currency',currency:'PHP'}).format(Number(job.payload.amount))+
-  '\nProof: '+String(job.payload.reference||job.payment_id).replace(/[\u0000-\u001f\u007f]/g,' ').slice(0,160)+
-  '\nSubmitted: '+new Intl.DateTimeFormat('en-PH',{dateStyle:'medium',timeStyle:'short',timeZone:'Asia/Manila'}).format(new Date(job.payload.submittedAt))+' (Philippine time)\nAwaiting lender review.';
  const base=new URL(origin);if(base.protocol!=='https:'||base.origin!==origin)throw Error('Use the canonical HTTPS app origin.');
- const review=origin+'/admin/queue'+(job.kind==='proof'?'?proof='+encodeURIComponent(job.payment_id):'');
- return {chat_id:job.destination,text,link_preview_options:{is_disabled:true},protect_content:true,reply_markup:{inline_keyboard:[[{text:job.kind==='test'?'Open LoanLedger':'Review proof',url:review}]]}};
+ const isTest=job.kind==='test',isMessage=job.kind==='message'||(isTest&&job.payload?.testType==='message');
+ const time=value=>new Intl.DateTimeFormat('en-PH',{dateStyle:'medium',timeStyle:'short',timeZone:'Asia/Manila'}).format(new Date(value))+' (Philippine time)';
+ let text,review,button;
+ if(isMessage){
+  text=(isTest?'LoanLedger PH · Message alert test':'LoanLedger PH · New borrower message')+
+   '\nBorrower: '+clean(job.payload.borrower,120)+
+   '\nMessage: '+preview(job.payload.preview)+
+   '\nSent: '+time(job.payload.sentAt)+
+   (isTest?'\nThis is a test alert. No borrower message was created.':'\nOpen the app to read and reply.');
+  review=origin+'/admin/messages'+(!isTest?'?borrower='+encodeURIComponent(job.payload.borrowerId):'');button=isTest?'Open messages':'Open conversation';
+ }else{
+  text=isTest?'LoanLedger PH · Telegram test\nYour private chat is connected. This is a test alert; no payment was submitted.':
+   'LoanLedger PH · Proof submitted\nBorrower: '+clean(job.payload.borrower||'Borrower',120)+
+   '\nAmount: '+new Intl.NumberFormat('en-PH',{style:'currency',currency:'PHP'}).format(Number(job.payload.amount))+
+   '\nProof: '+clean(job.payload.reference||job.payment_id,160)+
+   '\nSubmitted: '+time(job.payload.submittedAt)+'\nSubmitted for lender review. Open the app for its current status.';
+  review=origin+'/admin/queue'+(!isTest?'?proof='+encodeURIComponent(job.payment_id):'');button=isTest?'Open LoanLedger':'Review proof';
+ }
+ return {chat_id:job.destination,text,link_preview_options:{is_disabled:true},protect_content:true,reply_markup:{inline_keyboard:[[{text:button,url:review}]]}};
 }
 module.exports={transport,message,nonceHash,TelegramFailure};

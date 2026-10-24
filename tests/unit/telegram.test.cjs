@@ -54,3 +54,21 @@ test('Telegram HTTP endpoints enforce origin, method and bounded input',async()=
  assert.equal((await request('/telegram/list','POST','x'.repeat(4097))).status,400);
  assert.equal(calls,0);assert.equal((await request('/telegram/list','POST','{}',origin)).status,200);assert.equal(calls,1);
 });
+
+test('borrower message alerts contain a bounded plain-text preview and a signed-in conversation link',()=>{
+ const borrowerId='00000000-0000-4000-8000-000000000001';
+ const r=message({kind:'message',destination:'12345',payload:{borrower:'Jane',borrowerId,preview:'<b>Hello</b> '+ '🙂'.repeat(250),sentAt:'2026-10-25T01:30:00Z',attachment_path:'private-file',fullBody:'unshared-full-body'}},origin);
+ assert.match(r.text,/New borrower message/);assert.match(r.text,/<b>Hello<\/b>/);assert.equal(r.parse_mode,undefined);assert.doesNotMatch(JSON.stringify(r),/private-file|unshared-full-body/);
+ const preview=r.text.match(/\nMessage: (.*)\nSent:/)[1];assert.equal(Array.from(preview).length,201);assert.ok(preview.endsWith('…'));
+ assert.equal(r.reply_markup.inline_keyboard[0][0].url,origin+'/admin/messages?borrower='+borrowerId);assert.equal(r.reply_markup.inline_keyboard[0][0].text,'Open conversation');
+});
+test('message-test alerts are clearly labelled and do not open an unrelated borrower conversation',()=>{
+ const r=message({kind:'test',destination:'12345',payload:{testType:'message',borrower:'QA Test Borrower',preview:'Synthetic alert only',sentAt:'2026-10-25T01:30:00Z'}},origin);
+ assert.match(r.text,/Message alert test/);assert.match(r.text,/No borrower message was created/);assert.equal(r.reply_markup.inline_keyboard[0][0].url,origin+'/admin/messages');
+});
+test('idle Telegram queues do not contact the provider',async()=>{
+ let providerCalls=0;
+ const client={query:async()=>({rows:[],rowCount:0}),release(){}};
+ const service=create({db:{connect:async()=>client},active:async()=>({}),origin,token,deliveryEnabled:true,fetchImpl:async()=>{providerCalls++;throw Error('should not call')}});
+ assert.deepEqual(await service.run(),{telegramProcessed:0});assert.equal(providerCalls,0);
+});
