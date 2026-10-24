@@ -632,3 +632,38 @@ test('loan rate configuration supports an initially empty table and one atomic a
   assert.equal(Number((await f.client.query('select monthly_rate from public.loan_request_rates where term_months=3')).rows[0].monthly_rate),0.012);
  }finally{await release(f)}
 });
+
+test('Telegram queue is future-only, atomic with proof submission, private, and does not change financial records',async()=>{
+ const f=await fixture();try{
+  await f.client.query('reset role');
+  assert.equal((await f.client.query('select count(*)::int n from mobile_private.telegram_deliveries where payment_id=$1',[f.proof])).rows[0].n,0);
+  await f.client.query("update mobile_private.telegram_settings set enabled=true,chat_id='123456',chat_label='Synthetic private chat',bot_id='1',version=version+1 where singleton");
+  const before=(await f.client.query('select t.amount,t.status,p.credit_balance from public.transactions t join public.profiles p on p.id=t.user_id where t.id=$1',[f.due])).rows[0];
+  const payment=crypto.randomUUID();await f.client.query('savepoint new_proof');
+  const insert=()=>f.client.query("insert into public.payments(id,user_id,loan_id,amount,method,reference,file_name,file_type,file_path) values($1,$2,$3,500,'Bank Transfer','synthetic reference','synthetic.png','image','synthetic-only.png')",[payment,f.borrower,f.loan]);
+  await insert();
+  const job=(await f.client.query('select * from mobile_private.telegram_deliveries where payment_id=$1',[payment])).rows[0];
+  assert.equal(job.status,'queued');assert.equal(job.destination,'123456');assert.equal(job.payload.borrower,'Synthetic borrower');assert.equal(Number(job.payload.amount),500);
+  assert.deepEqual((await f.client.query('select t.amount,t.status,p.credit_balance from public.transactions t join public.profiles p on p.id=t.user_id where t.id=$1',[f.due])).rows[0],before);
+  assert.ok((await f.client.query('select count(*)::int n from mobile_private.notification_events')).rows[0].n>0,'existing in-app notification events remain queued');
+  await f.client.query('rollback to savepoint new_proof');
+  assert.equal((await f.client.query('select count(*)::int n from mobile_private.telegram_deliveries where payment_id=$1',[payment])).rows[0].n,0);
+  await insert();assert.equal((await f.client.query('select count(*)::int n from mobile_private.telegram_deliveries where payment_id=$1',[payment])).rows[0].n,1);
+  for(const role of ['anon','authenticated'])for(const table of ['telegram_settings','telegram_connections','telegram_deliveries','telegram_audit'])assert.equal((await f.client.query('select has_table_privilege($1,$2,\'SELECT\') ok',[role,'mobile_private.'+table])).rows[0].ok,false);
+ }finally{await release(f)}
+});
+test('Telegram delivery records success once and marks ambiguous sends for manual review',async()=>{
+ const f=await fixture();await f.client.query('reset role');await f.client.query("update mobile_private.telegram_settings set enabled=true,chat_id='123456',bot_id='1',version=version+1 where singleton");
+ const id=crypto.randomUUID();await f.client.query("insert into mobile_private.telegram_deliveries(payment_id,destination,bot_id,settings_version,payload) select $1,'123456','1',version,$2 from mobile_private.telegram_settings",[f.proof,{borrower:'Synthetic borrower',amount:1000,reference:'QA',submittedAt:new Date().toISOString()}]);
+ await f.client.query('commit');f.client.release();
+ const createTelegram=require('../../server/telegram.cjs');let sends=0;
+ const fetchImpl=async url=>({ok:true,status:200,json:async()=>({ok:true,result:url.endsWith('/getMe')?{id:1,is_bot:true,username:'PayTrack_payment_bot'}:(sends++,{message_id:123})})});
+ const service=createTelegram({db,active:async()=>({id:f.admin}),origin:'https://fixture.example',token:'123456:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',deliveryEnabled:true,fetchImpl});
+ try{
+  await service.run();await service.run();assert.equal(sends,1);
+  assert.equal((await db.query('select status from mobile_private.telegram_deliveries where payment_id=$1',[f.proof])).rows[0].status,'delivered');
+  await db.query("insert into mobile_private.telegram_deliveries(id,kind,destination,bot_id,settings_version,payload) select $1,'test','123456','1',version,'{}' from mobile_private.telegram_settings",[id]);
+  const uncertain=createTelegram({db,active:async()=>({id:f.admin}),origin:'https://fixture.example',token:'123456:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',deliveryEnabled:true,fetchImpl:async url=>{if(url.endsWith('/sendMessage'))throw Error('network timeout');return fetchImpl(url)}});
+  await uncertain.run();await uncertain.run();assert.equal((await db.query('select status from mobile_private.telegram_deliveries where id=$1',[id])).rows[0].status,'uncertain');assert.equal(sends,1);
+ }finally{await db.query("update mobile_private.telegram_settings set enabled=false where singleton")}
+});

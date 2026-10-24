@@ -1,7 +1,7 @@
 // Shared service; production dependencies are supplied by the validated runtime.
 const http=require('node:http'),crypto=require('node:crypto'),supabaseHeaders=require('./supabase-headers.cjs'),publicError=require('./public-service-error.cjs');
 function respondError(res,error){const result=publicError(error);res.writeHead(result.status);res.end(JSON.stringify(result.body));}
-module.exports=function createFlowService({db,api,origin,jwt,hash,validator=require('./file-validator.cjs'),cookiePath='/api',backgroundWorkers=true,sendSupportVerification=null}){
+module.exports=function createFlowService({db,api,origin,jwt,hash,validator=require('./file-validator.cjs'),cookiePath='/api',backgroundWorkers=true,sendSupportVerification=null,telegramConfig={}}){
 async function validateUpload(req,body){
  const user=await active(req),allowed={ 'payment-proofs':['image/jpeg','image/png','image/webp','application/pdf'],avatars:['image/jpeg','image/png','image/webp'],'mobile-attachments':['image/jpeg','image/png','image/webp','image/gif','image/bmp','image/avif','application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document']};
  if(!allowed[body.bucket]||String(body.path).split('/')[0]!==user.id)throw Error('File ownership mismatch.');
@@ -60,6 +60,8 @@ async function guestSupport(req,body){
   await client.query('commit');return {ticket_number:ticket.ticket_number,status:ticket.status,created_at:ticket.created_at};
  }catch(error){await client.query('rollback');if(uploaded)await fetch(api+'/storage/v1/object/mobile-attachments',{method:'DELETE',headers:{...supabaseHeaders(jwt('anon'),jwt('service_role')),'Content-Type':'application/json'},body:JSON.stringify({prefixes:[uploaded]})}).catch(()=>{});throw error;}finally{client.release();}
 }
+const telegram=require('./telegram.cjs')({db,active,origin,...telegramConfig});
+const telegramHandler=require('./telegram-http.cjs')({service:telegram,origin});
 const notificationRules=require('./notification-rules.cjs')({db,active,wakeEnabled:backgroundWorkers});
 const notificationRulesHandler=require('./notification-rules-http.cjs')({service:notificationRules,origin});
 const releaseAccessHandler=require('./release-access.cjs')({db,active,origin});
@@ -73,6 +75,7 @@ const localHandler=async(req,res)=>{
    if(!answer)throw Error('Unsupported tracking action.');res.end(JSON.stringify(answer));
   }catch(error){respondError(res,error);}return;
  }
+ if(req.url.startsWith('/telegram/'))return telegramHandler(req,res);
  if(req.url.startsWith('/release-access/'))return releaseAccessHandler(req,res);
  if(req.url.startsWith('/notification-rules/'))return notificationRulesHandler(req,res);
  if(req.url!=='/guest-support')return handler(req,res);
@@ -80,5 +83,5 @@ const localHandler=async(req,res)=>{
  if(req.headers.origin&&req.headers.origin!==origin){res.writeHead(403);res.end();return;}
  try{if(req.method!=='POST')throw Error('Unsupported request.');let chunks=[],size=0;for await(const c of req){size+=c.length;if(size>4194304)throw Error('Request too large.');chunks.push(c)}const body=JSON.parse(Buffer.concat(chunks).toString());res.end(JSON.stringify(await guestSupport(req,body)));}catch(error){respondError(res,error);}
 };
-return {jwt,hash,localAuth,db,server,active,handler:localHandler,startNotificationWorker:()=>notificationRules.start(),stopNotificationWorker:()=>notificationRules.stop(),runNotifications:()=>notificationRules.runOnce()};
+return {jwt,hash,localAuth,db,server,active,handler:localHandler,startNotificationWorker:()=>notificationRules.start(),stopNotificationWorker:()=>notificationRules.stop(),runNotifications:async()=>{let original;try{original=await notificationRules.runOnce()}finally{try{await telegram.run()}catch{console.warn('Telegram worker unavailable; queued deliveries retained.')}}return original}};
 };
