@@ -121,6 +121,7 @@ export default function App() {
           <Route path="/set-password" element={<SetPassword />} />
           {/* Public — linked from the mobile app's store listings. */}
           <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/terms" element={<PrivacyPolicy kind="terms" />} />
 
           <Route path="/portal" element={<Protected role="user"><UserDashboard /></Protected>} />
           <Route path="/portal/more" element={<Protected role="user"><UserDashboard /></Protected>} />

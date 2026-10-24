@@ -1,5 +1,5 @@
 // FAQ content is shared by the screen, local answers and the server AI reference.
-let faqKnowledge=null,faqLoadError='',faqSearch='',faqCategory='All',faqExpanded=false,legalContent=null;
+let faqKnowledge=null,faqLoadError='',faqSearch='',faqCategory='All',faqExpanded=false,legalContent=null,legalLoadError='';
 let pawMode='assistant',pawHistory=[],pawDraft='',pawBusy=false,pawOwner, pawGeneration=0;
 let pawMessagesMode='lender';
 const helpOriginalMessages=messages;
@@ -32,8 +32,26 @@ const helpOriginalToggle=toggleChatWidget;
 toggleChatWidget=()=>{helpOriginalToggle();if(chatWidgetOpen&&pawMode==='assistant')setTimeout(()=>$('#pawQuestion')?.focus({preventScroll:true}),220);};
 const helpOriginalFloating=floatingMessagesWidget;
 floatingMessagesWidget=()=>{const host=document.createElement('div');host.innerHTML=helpOriginalFloating();const panel=host.querySelector('.chat-widget-panel'),header=host.querySelector('.chat-widget-header');if(!panel||!header)return host.innerHTML;header.querySelector('.chat-widget-heading b').textContent='Pawcheebels';header.querySelector('.chat-widget-heading small').textContent=pawMode==='assistant'?'App assistant':'Lender conversation';header.insertAdjacentHTML('afterend','<nav class="paw-modes" aria-label="Chat mode"><button type="button" aria-pressed="'+(pawMode==='assistant')+'" onclick="setPawMode(\'assistant\')">Ask Pawcheebels</button><button type="button" aria-pressed="'+(pawMode==='lender')+'" onclick="setPawMode(\'lender\')">Message lender</button></nav>');if(pawMode==='assistant'){let next=panel.querySelector('.paw-modes').nextElementSibling;while(next){const remove=next;next=next.nextElementSibling;if(!remove.classList.contains('chat-widget-resize'))remove.remove();}const area=document.createElement('section');area.className='paw-widget-body';area.innerHTML=pawAssistantHTML();panel.querySelector('.chat-widget-resize')?panel.insertBefore(area,panel.querySelector('.chat-widget-resize')):panel.append(area);header.querySelector('.chat-widget-open-full').setAttribute('onclick',"go('faq')");}return host.innerHTML;};
-legalScreen=kind=>'<button type="button" class="link" onclick="goBack()">‹ Back</button><article class="glass pad legal-document"><h1>'+(kind==='privacy'?'Privacy Policy':'Terms &amp; Conditions')+'</h1><p class="muted">LoanLedger PH · Updated '+htmlSafe(legalContent?.updated||'October 14, 2026')+'</p>'+(legalContent?(legalContent[kind]||[]).map((s,i)=>'<h2>'+(i+1)+'. '+htmlSafe(s.title)+'</h2><p>'+htmlSafe(s.text)+'</p>'+(s.link?'<a href="'+s.link.url+'" target="_blank" rel="noopener noreferrer">'+htmlSafe(s.link.label)+'</a>':'')).join(''):'<p>Loading the policy…</p><button type="button" class="link" onclick="loadHelpContent()">Retry</button>')+'</article>';
+function legalSectionHTML(section,index){
+ const p=text=>'<p>'+htmlSafe(text)+'</p>';
+ const items=(section.items||[]).length?'<ul>'+section.items.map(item=>'<li>'+htmlSafe(item)+'</li>').join('')+'</ul>':'';
+ const link=section.link&&/^https:\/\//.test(section.link.url)?'<a href="'+htmlSafe(section.link.url)+'" target="_blank" rel="noopener noreferrer">'+htmlSafe(section.link.label)+'</a>':'';
+ return '<section id="'+htmlSafe(section.id)+'"><h2>'+(index+1)+'. '+htmlSafe(section.title)+'</h2>'+p(section.text)+(section.intro?p(section.intro):'')+items+(section.paragraphs||[]).map(p).join('')+link+'</section>';
+}
+legalScreen=kind=>{
+ const sections=legalContent?.[kind]||[];
+ const toc=legalContent?'<nav class="legal-toc" aria-label="On this page"><b>On this page</b><ol>'+sections.map(s=>'<li><a href="#'+htmlSafe(s.id)+'">'+htmlSafe(s.title)+'</a></li>').join('')+'</ol></nav>':'';
+ return '<button type="button" class="link" onclick="goBack()">‹ Back</button><article class="glass pad legal-document"><h1>'+(kind==='privacy'?'Privacy Policy':'Terms &amp; Conditions')+'</h1><p class="muted">LoanLedger PH · Updated '+htmlSafe(legalContent?.updated||'October 25, 2026')+'</p>'+toc+(legalContent?sections.map(legalSectionHTML).join(''):'<p role="status">'+htmlSafe(legalLoadError||'Loading the policy…')+'</p><button type="button" class="link" onclick="loadHelpContent()">Retry</button>')+'</article>';
+};
+
 const helpOriginalRender=render;
 render=()=>{const owner=stagingData?.user?.id||null;if(owner!==pawOwner){pawOwner=owner;pawGeneration++;pawHistory=[];pawDraft='';pawBusy=false;pawUseAI=!!stagingData;pawMode='assistant';pawMessagesMode='lender';}helpOriginalRender();};
-async function loadHelpContent(){faqLoadError='';try{const [kb,legal]=await Promise.all([fetch('/faq-knowledge.json').then(r=>{if(!r.ok)throw Error();return r.json();}),fetch('/legal-content.json').then(r=>{if(!r.ok)throw Error();return r.json();})]);faqKnowledge=kb;legalContent=legal;if(['faq','privacy','terms'].includes(page))render();}catch{faqLoadError='Questions could not load.';if(page==='faq')renderFAQResults();}}
+async function loadHelpContent(){
+ faqLoadError='';legalLoadError='';
+ const read=async(url,options)=>{const response=await fetch(url,options);if(!response.ok)throw Error('Content unavailable');return response.json()};
+ const [kb,policy]=await Promise.allSettled([read('/faq-knowledge.json'),read('/legal-content.json',{cache:'no-cache'})]);
+ if(kb.status==='fulfilled')faqKnowledge=kb.value;else faqLoadError='Questions could not load.';
+ if(policy.status==='fulfilled')legalContent=policy.value;else legalLoadError='The policy could not load. Please retry.';
+ if(['privacy','terms'].includes(page))render();else if(page==='faq'){if(kb.status==='fulfilled')render();else renderFAQResults();}
+}
 loadHelpContent();render();

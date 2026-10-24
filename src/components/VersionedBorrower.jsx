@@ -66,7 +66,8 @@ export default function VersionedBorrower({ children }) {
     // Bulk records are refreshed explicitly; tab focus must never reset work.
     return () => {active = false; ++generation.current;supabase.removeChannel(channel);supabase.removeChannel(profileChannel)}
   },[preferenceOwner,refreshExtras])
-  const active = mobileEnabled && app.session?.user.role !== 'admin' && !app.session?.needsPasswordSetup && (!app.session || (releaseEnabled && borrower.ready && borrower.interface === 'new'))
+  const publicLegalPath = /^\/(?:privacy|terms)\/?$/.test(pathname)
+  const active = mobileEnabled && !publicLegalPath && app.session?.user.role !== 'admin' && !app.session?.needsPasswordSetup && (!app.session || (releaseEnabled && borrower.ready && borrower.interface === 'new'))
   const destination = sessionDestination(app.session)
   useEffect(() => {
     if (active && app.session && !app.authLoading && (pathname === '/login' || pathname === '/admin' || pathname.startsWith('/admin/'))) {
