@@ -1,0 +1,12 @@
+.quick-access-section .quickgrid{display:grid;grid-auto-flow:column;grid-template-columns:none;grid-auto-columns:calc((100% - 27px)/4);gap:9px;max-width:100%;min-width:0;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scrollbar-width:thin;scrollbar-color:#aec9eb transparent;padding:5px 0 10px;-webkit-overflow-scrolling:touch}
+.quick-access-section .quick-tile{scroll-snap-align:start;animation:none}
+.quick-access-section .quickgrid:focus-visible{outline:2px solid var(--blue);outline-offset:3px;border-radius:8px}
+.quick-access-section .quick-tile .quick{height:108px;padding:10px 3px}
+.quick-access-section .quick-label{overflow-wrap:anywhere}
+.quick-access-section .quick-tile-tools button{min-width:26px;min-height:32px}
+.quick-access-navigation{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--muted);font-size:11px}
+.quick-access-navigation>div{display:flex;gap:6px}
+.quick-access-navigation button{width:34px;height:34px;border:1px solid var(--line);border-radius:10px;background:var(--surface,#fff);color:var(--ink);font-size:21px;cursor:pointer}
+.quick-access-navigation button:disabled{opacity:.35;cursor:default}
+.quick-access-navigation button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){.quick-access-section .quickgrid{scroll-behavior:auto}}

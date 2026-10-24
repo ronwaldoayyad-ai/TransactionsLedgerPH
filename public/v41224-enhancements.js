@@ -76,10 +76,18 @@ setmode=value=>{
  }
 };
 const approvedRenderFinder=renderFinder;
+let finderRenderedOwner=null,finderRenderedSource=null;
 renderFinder=()=>{
- // A data snapshot must not restart the orb's continuous light animation.
- const mounted=document.querySelector('#accountFinder.finder-compact');
- if(page==='dashboard'&&finderCompact&&mounted){positionFinder();return;}
+ // Keep the focused input and pending first search intact during data updates.
+ const owner=stagingData?.user?.id||null,mounted=document.querySelector('#accountFinder');
+ const sameOwner=owner===finderRenderedOwner,sourceChanged=finderRenderedSource!==stagingData;
+ finderRenderedOwner=owner;finderRenderedSource=stagingData;
+ if(!sameOwner){finderQuery='';finderFilter='All';finderStatusFilter='All';}
+ if(sameOwner&&borrowerShortcutsVisible()&&mounted&&mounted.classList.contains('finder-compact')===finderCompact){
+  positionFinder();
+  if(sourceChanged&&!finderCompact&&finderQuery.trim())requestAnimationFrame(renderStagingFinderResults);
+  return;
+ }
  approvedRenderFinder();
  document.querySelector('.finder-collapse')?.remove();
  const input=document.querySelector('#finderInput');
@@ -89,9 +97,9 @@ let stagingListOwner=null,stagingMessageVisible=20;
 const approvedExpandableRows=expandableRowsHTML;
 expandableRowsHTML=(key,rows,limit=3)=>approvedExpandableRows(key,rows,Math.max(1,Math.min(5,limit)));
 const approvedRecentRender=renderRecentPayments;
-renderRecentPayments=()=>{approvedRecentRender();const count=recentPayments.filter(p=>recentPaymentFilter==='All'||p.status===recentPaymentFilter).length;const button=document.querySelector('.recent-view-all');if(button){button.hidden=count<=3;button.setAttribute('aria-expanded',String(recentShowAll));}};
+renderRecentPayments=()=>{approvedRecentRender();const button=document.querySelector('.recent-view-all');if(button){button.hidden=recentPaymentTotal<=5;button.setAttribute('aria-expanded',String(recentShowAll));}};
 const approvedRecentFilter=setRecentPaymentFilter;
-setRecentPaymentFilter=value=>{recentShowAll=false;approvedRecentFilter(value);};
+setRecentPaymentFilter=value=>{recentShowAll=false;recentPaymentLimit=5;approvedRecentFilter(value);};
 const approvedDisbursementRows=disbursementRows;
 disbursementRows=()=>{const host=document.createElement('div');host.innerHTML=approvedDisbursementRows();const rows=[...host.querySelectorAll(':scope > .disbursement-row')];return rows.length?expandableRowsHTML('disbursements',rows.map(el=>el.outerHTML),5):host.innerHTML;};
 const approvedFilterDisbursements=filterDisbursements;
@@ -100,6 +108,7 @@ const approvedMessages=messages;
 messages=()=>{const host=document.createElement('div');host.innerHTML=approvedMessages();const thread=host.querySelector('#chatMessages');if(thread){const rows=[...thread.querySelectorAll('.chat-row')];rows.slice(0,Math.max(0,rows.length-stagingMessageVisible)).forEach(row=>row.remove());if(rows.length>20){const button=document.createElement('button');button.className='list-more-button';button.type='button';button.textContent=stagingMessageVisible<rows.length?'Show more messages':'Show fewer messages';button.setAttribute('onclick',stagingMessageVisible<rows.length?'stagingMessageVisible+=20;render()':'stagingMessageVisible=20;render()');thread.prepend(button);}}return host.innerHTML;};
 localToday=()=>accountDayKey(new Date());
 let finderCacheSource=null,finderRecordCache=[],finderQueryTimer=null,finderResultOffset=0;
+let finderMatchSource=null,finderMatchQuery=null,finderMatchCache=[];
 const normalizeFinder=value=>String(value||'').normalize('NFKD').toLowerCase().replace(/,/g,'').replace(/[^a-z0-9]+/g,' ').trim();
 const originalFinderRecords=finderRecords;
 finderRecords=()=>{
@@ -109,9 +118,17 @@ finderRecords=()=>{
  }
  return finderRecordCache;
 };
-finderResults=(query,ignoreFilters=false)=>{const words=normalizeFinder(query.slice(0,200)).split(/\s+/).filter(Boolean);if(!words.length)return [];return finderRecords().filter(r=>words.every(w=>r._search.includes(w))&&(ignoreFilters||((finderFilter==='All'||r._type===finderFilter)&&(finderStatusFilter==='All'||r._status===finderStatusFilter))));};
+finderResults=(query,ignoreFilters=false)=>{
+ const normalized=normalizeFinder(String(query).slice(0,200));if(!normalized)return [];
+ const records=finderRecords();
+ if(finderMatchSource!==records||finderMatchQuery!==normalized){
+  const words=normalized.split(/\s+/);finderMatchCache=records.filter(r=>words.every(w=>r._search.includes(w)));
+  finderMatchSource=records;finderMatchQuery=normalized;
+ }
+ return ignoreFilters?finderMatchCache:finderMatchCache.filter(r=>(finderFilter==='All'||r._type===finderFilter)&&(finderStatusFilter==='All'||r._status===finderStatusFilter));
+};
 function renderStagingFinderResults(){
- if(page!=='dashboard'||!finderQuery.trim()||finderCompact)return;
+ if(!borrowerShortcutsVisible()||!finderQuery.trim()||finderCompact)return;
  const matches=finderResults(finderQuery),total=finderResults(finderQuery,true).length,size=50;
  finderResultOffset=Math.min(finderResultOffset,Math.max(0,Math.floor((matches.length-1)/size)*size));
  let overlay=document.querySelector('#finderResultsOverlay');
@@ -124,9 +141,9 @@ function pageFinderResults(direction){finderResultOffset=Math.max(0,finderResult
 updateFinderResults=query=>{clearTimeout(finderQueryTimer);finderQuery=String(query).slice(0,200);finderResultOffset=0;if(!finderQuery.trim()){closeFinderResults(true);return;}finderQueryTimer=setTimeout(renderStagingFinderResults,150);};
 const oldCloseFinder=closeFinderResults;
 closeFinderResults=(immediate=false)=>{clearTimeout(finderQueryTimer);oldCloseFinder(immediate);};
-function collapseUnfocusedFinder(event){if(page==='dashboard'&&!finderCompact&&!event.target.closest('#accountFinder,.finder-results-dialog'))setFinderCompact(true);}
+function collapseUnfocusedFinder(event){if(borrowerShortcutsVisible()&&!finderCompact&&!event.target.closest('#accountFinder,.finder-results-dialog'))setFinderCompact(true);}
 document.addEventListener('pointerdown',collapseUnfocusedFinder);
-document.addEventListener('focusout',event=>{if(event.target.id==='finderInput')setTimeout(()=>{if(page==='dashboard'&&!finderCompact&&!document.activeElement?.closest('#accountFinder,#finderResultsOverlay'))setFinderCompact(true);},0);});
+document.addEventListener('focusout',event=>{if(event.target.id==='finderInput')setTimeout(()=>{if(borrowerShortcutsVisible()&&!finderCompact&&!document.activeElement?.closest('#accountFinder,#finderResultsOverlay'))setFinderCompact(true);},0);});
 let stagingChatSize=null,stagingChatResize=null;
 const stagingChatSizeKey=()=>'loanledger-chat-size-'+(stagingData?.user.id||'signed-out');
 function saveStagingChatSize(){try{localStorage.setItem(stagingChatSizeKey(),JSON.stringify(stagingChatSize))}catch{}}
@@ -222,7 +239,7 @@ const enhancementRender=render;
 render=()=>{
  if(stagingData){
   if(stagingListOwner!==stagingData.user.id){
-   stagingListOwner=stagingData.user.id;txSort='Newest';expandedLists={};recentShowAll=false;notificationExpanded=false;stagingMessageVisible=20;installmentCategoryFilter='all';stagingBalanceScope='all';dashboardDuesExpanded=false;
+   stagingListOwner=stagingData.user.id;txSort='Newest';expandedLists={};recentShowAll=false;recentPaymentLimit=5;notificationExpanded=false;stagingMessageVisible=20;installmentCategoryFilter='all';stagingBalanceScope='all';dashboardDuesExpanded=false;
    try{const saved=JSON.parse(localStorage.getItem(stagingChatSizeKey())||'null');stagingChatSize=saved&&Number.isFinite(saved.width)&&Number.isFinite(saved.height)&&saved.width>0&&saved.height>0?saved:null;}catch{stagingChatSize=null;}
   }
   profilePhotoData=stagingData.preference?.use_profile_photo===false?'':stagingData.user.avatarUrl||'';

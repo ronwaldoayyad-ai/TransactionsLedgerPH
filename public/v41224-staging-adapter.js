@@ -112,7 +112,7 @@ window.addEventListener('message',event=>{
     const key=JSON.stringify(message.data);if(key===stagingSnapshotKey)return;stagingSnapshotKey=key;
     const sameOwner=stagingData?.user.id===message.data.user.id,focused=document.activeElement;
     const focus=sameOwner&&focused?.id?{id:focused.id,start:focused.selectionStart,end:focused.selectionEnd}:null;
-    const scroll=sameOwner?['.phone-screen','#app','#chatMessages'].map(selector=>({selector,top:document.querySelector(selector)?.scrollTop||0})):[];
+    const scroll=sameOwner?['.phone-screen','#app','#chatMessages','.quick-access-section .quickgrid'].map(selector=>({selector,top:document.querySelector(selector)?.scrollTop||0,left:document.querySelector(selector)?.scrollLeft||0})):[];
     const previousUser=stagingData?.user.id;stagingData=message.data;
     const user=stagingData.user;
     if(!personalInfoEditing||previousUser!==user.id)personalInfo={fullName:[user.firstName,user.lastName].filter(Boolean).join(' ')||user.name,preferredDisplayName:user.nickname||'',email:user.email,phone:user.phone,birthDate:'',address:'',occupation:''};profilePhotoData=user.avatarUrl||'';
@@ -124,7 +124,7 @@ window.addEventListener('message',event=>{
     loanRequests=stagingData.requests.map(r=>({...r,id:r.requestNumber||r.id,amount:r.amount,term:r.termMonths,rate:r.monthlyRate,bank:r.bankName,accountNumber:r.bankAccountNumber,accountName:r.bankAccountName,status:r.status,createdAt:r.createdAt,fees:{processing:r.processingFee,dst:r.dst,notarial:r.notarialFee},schedule:(r.schedule||[]).map(row=>({month:row.month,payment:row.totalPayment,remaining:row.remainingBalance}))}));
     if(previousUser!==user.id||page==='login'){dashboardGreetingChoice=null;dashboardGreetingLanguage=null;dashboardGreetingTranslation=null;finderCompact=true;page='dashboard';previousPage='login';}
     stagingBusy=false;render();
-    for(const saved of scroll){const target=document.querySelector(saved.selector);if(target)target.scrollTop=saved.top;}
+    for(const saved of scroll){const target=document.querySelector(saved.selector);if(target){target.scrollTop=saved.top;target.scrollLeft=saved.left;}}
     if(focus){const target=document.getElementById(focus.id);if(target){target.focus({preventScroll:true});try{target.setSelectionRange(focus.start,focus.end)}catch{}}}
   }
   if(message.type==='proof'&&message.url){const url=new URL(message.url);if(url.origin!=='http://127.0.0.1:54321')return;closeRecentProofModal();const modal=document.createElement('div');modal.id='recentProofModal';modal.className='recent-proof-overlay';modal.innerHTML='<div class="recent-proof-dialog" role="dialog" aria-modal="true"><button class="recent-proof-close" onclick="closeRecentProofModal()">×</button><h2>Payment proof</h2>'+(message.mime==='pdf'?'<iframe class="proof-real-preview" title="Payment proof"></iframe>':'<img class="proof-real-preview" alt="Payment proof">')+'</div>';modal.querySelector('iframe,img').src=url.href;document.body.appendChild(modal);}

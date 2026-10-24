@@ -1,4 +1,4 @@
-let installmentPresentation='list',installmentPresentationOwner=null;
+let installmentPresentation='cards',installmentPresentationOwner=null;
 const installmentDeckSelections=new Map();
 function installmentStatusBadge(g){const paid=Number(g[3])>=100,past=!paid&&installmentPastDueCount(g)>0;return '<span class="installment-deck-status '+(paid?'is-paid':past?'is-overdue':'')+'">'+(paid?'Fully paid':past?'Past Due':'In progress')+'</span>';}
 function decorateInstallmentList(host){host.querySelectorAll('.installment-group-row,.settings-row[onclick^="openInstallment("]').forEach(row=>{const index=Number(row.getAttribute('onclick')?.match(/openInstallment\((\d+)\)/)?.[1]),g=stagingGroups()[index];if(!g)return;row.querySelector('.schedule-overdue-label')?.remove();const copy=row.querySelector('.itext,.settings-copy'),title=copy?.querySelector('b');if(!title)return;const oldStatus=copy.querySelector('small[style^="color:"]');oldStatus?.remove();const heading=document.createElement('span');heading.className='installment-list-heading';title.before(heading);heading.append(title);heading.insertAdjacentHTML('beforeend',installmentStatusBadge(g));});}
@@ -54,4 +54,4 @@ function initializeInstallmentDecks(){
  });
 }
 const renderBeforeInstallmentDecks=render;
-render=()=>{const owner=stagingData?.user?.id||null;if(owner!==installmentPresentationOwner){installmentPresentationOwner=owner;installmentPresentation='list';installmentDeckSelections.clear();}renderBeforeInstallmentDecks();initializeInstallmentDecks();};
+render=()=>{const owner=stagingData?.user?.id||null;if(owner!==installmentPresentationOwner){installmentPresentationOwner=owner;installmentPresentation='cards';installmentDeckSelections.clear();}renderBeforeInstallmentDecks();initializeInstallmentDecks();};
