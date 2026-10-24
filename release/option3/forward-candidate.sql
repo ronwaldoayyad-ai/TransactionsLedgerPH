@@ -2591,7 +2591,7 @@ end
 $$;
 
 
--- 20261024174502_telegram_proof_alerts.sql
+-- 20261024180858_telegram_proof_alerts.sql
 
 set local lock_timeout='5s';
 create table mobile_private.telegram_settings(
