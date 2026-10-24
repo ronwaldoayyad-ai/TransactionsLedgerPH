@@ -1,12 +1,14 @@
 import {useEffect} from 'react'
-import {Link} from 'react-router-dom'
+import {Link, useLocation} from 'react-router-dom'
 import legal from '../../public/legal-content.json'
 
 // Both public routes and the borrower frame use this same policy source.
 export default function PrivacyPolicy({kind='privacy'}) {
+  const {hash}=useLocation()
   const isTerms=kind==='terms',title=isTerms?'Terms & Conditions':'Privacy Policy'
   const sections=isTerms?legal.terms:legal.privacy
   useEffect(()=>{const previous=document.title;document.title=title+' | LoanLedger PH';return()=>{document.title=previous}},[title])
+  useEffect(()=>{const frame=requestAnimationFrame(()=>{const target=hash&&document.getElementById(hash.slice(1));if(target)target.scrollIntoView({block:'start'});else window.scrollTo(0,0)});return()=>cancelAnimationFrame(frame)},[kind,hash])
   return <div className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 sm:py-12">
     <article className="mx-auto w-full max-w-3xl rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
       <Link to="/login" className="text-sm font-medium text-blue-700 underline underline-offset-2">Back to app</Link>
