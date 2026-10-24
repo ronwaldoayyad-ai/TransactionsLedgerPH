@@ -10,6 +10,7 @@ import Pagination from '../../components/Pagination'
 import { usePagination } from '../../hooks/usePagination'
 import { downloadCSV, formatDate, formatPeso, toISODate } from '../../lib/amortization'
 import { STATUS_LABELS, effectiveStatus } from '../../lib/transactions'
+import { presentationFeeKind } from '../../lib/feePresentation'
 import { parseCSV, parseCSVAmount, parseCSVDate } from '../../lib/csv'
 import InstallmentGroupEditor from '../../components/admin/InstallmentGroupEditor'
 import TransactionEntryForm from '../../components/admin/TransactionEntryForm'
@@ -670,13 +671,13 @@ export default function Transactions() {
               return (
                 <button
                   key={t.id}
-                  data-fee-kind={t.feeKind||undefined}
+                  data-fee-kind={presentationFeeKind(t)||undefined}
                   type="button"
                   onClick={() => setActionTxn(t)}
                   className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50 active:bg-slate-100 ${
                     idx > 0 ? 'border-t border-slate-100' : 'border-t border-slate-200'
                   } ${
-                    t.amount < 0 || eff === 'paid' ? 'bg-emerald-50/50' : t.feeKind ? 'bg-red-50/50' : eff === 'past_due' ? 'bg-red-50/50' : ''
+                    t.amount < 0 || eff === 'paid' ? 'bg-emerald-50/50' : presentationFeeKind(t) ? 'bg-red-50/50' : eff === 'past_due' ? 'bg-red-50/50' : ''
                   }`}
                 >
                   <div className="min-w-0 flex-1">
