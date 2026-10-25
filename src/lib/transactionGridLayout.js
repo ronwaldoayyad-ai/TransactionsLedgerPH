@@ -4,6 +4,7 @@ export const TRANSACTION_GRID_COLUMNS=Object.freeze([
   {key:'description',label:'Item description',width:280,min:150},
   {key:'amount',label:'Amount',width:138,min:116},
   {key:'type',label:'Type',width:130,min:112},
+  {key:'group',label:'Group',width:170,min:145},
   {key:'dueDate',label:'Due date',width:124,min:118},
   {key:'datePaid',label:'Date paid',width:124,min:118},
   {key:'status',label:'Status',width:132,min:116},

@@ -2,16 +2,17 @@ import { useRef, useState } from 'react'
 import { useApp } from '../../context/AppContext'
 import { formatPeso, toISODate } from '../../lib/amortization'
 import { prepareManualTransaction, TRANSACTION_TYPES } from '../../lib/transactionEditing'
+import {groupOptions,defaultInstallmentGroup,TRANSACTION_GROUPS} from '../../lib/transactionGroups'
 import { STATUS_LABELS } from '../../lib/transactions'
 import { Button, Field, Modal, inputClass } from '../ui'
 
 export default function TransactionEntryForm({onClose,onSaved}) {
   const {users,loans,transactions,archivedTransactions,createTransaction}=useApp()
   const today=toISODate(new Date()),inFlight=useRef(false)
-  const [entry,setEntry]=useState(()=>({id:'manual-'+crypto.randomUUID(),userId:'',loanId:'',description:'',amount:'',type:'Straight',txnDate:today,dueDate:today,status:'unpaid',datePaid:''}))
+  const [entry,setEntry]=useState(()=>({id:'manual-'+crypto.randomUUID(),userId:'',loanId:'',description:'',amount:'',transactionGroup:'',type:'Straight',txnDate:today,dueDate:today,status:'unpaid',datePaid:''}))
   const [busy,setBusy]=useState(false),[error,setError]=useState('')
   const borrowers=users.filter(user=>user.role==='user'),availableLoans=loans.filter(loan=>loan.userId===entry.userId)
-  const field=(key,value)=>{setEntry(previous=>({...previous,[key]:value,...(key==='userId'?{loanId:''}:{})}));setError('')}
+  const field=(key,value)=>{setEntry(previous=>({...previous,[key]:value,...(key==='userId'?{loanId:''}:{}),...(key==='type'?{transactionGroup:''}:{})}));setError('')}
   const submit=async event=>{
     event.preventDefault();if(inFlight.current)return
     try{prepareManualTransaction(entry,borrowers,today,loans,[...transactions,...archivedTransactions])}catch(failure){setError(failure.message);return}
@@ -31,6 +32,7 @@ export default function TransactionEntryForm({onClose,onSaved}) {
         <Field label="Status" htmlFor="entry-status"><select id="entry-status" className={inputClass} value={entry.status} disabled={busy} onChange={event=>field('status',event.target.value)}>{Object.entries(STATUS_LABELS).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></Field>
         {['paid','refunded'].includes(entry.status)&&<Field label="Date paid" htmlFor="entry-paid"><input id="entry-paid" type="date" className={inputClass} required={entry.status==='paid'} value={entry.datePaid|| (entry.status==='paid'?today:'')} disabled={busy} onChange={event=>field('datePaid',event.target.value)}/></Field>}
       </div>
+      <Field label="Group"><select className={inputClass} disabled={busy||(entry.type==='Installment'&&!!entry.loanId)} value={entry.type==='Installment'&&entry.loanId?defaultInstallmentGroup(availableLoans.find(l=>l.id===entry.loanId)):entry.transactionGroup} onChange={e=>field('transactionGroup',e.target.value)}><option value="">Automatic from transaction details</option>{groupOptions(entry.type).map(option=><option key={option.value} value={option.value}>{option.label}</option>)}</select>{entry.type==='Installment'&&entry.loanId&&<p className="text-xs text-slate-500">Inherits {TRANSACTION_GROUPS[defaultInstallmentGroup(availableLoans.find(l=>l.id===entry.loanId))]} from this loan.</p>}</Field>
       <div className={`rounded-xl p-3 text-sm ${Number(entry.amount)<0?'bg-emerald-50 text-emerald-900':'bg-blue-50 text-blue-900'}`}><strong>{Number.isFinite(Number(entry.amount))?formatPeso(Number(entry.amount)):'—'}</strong><p className="mt-1 text-xs">Positive entries add to ledger dues. Negative entries reduce ledger dues and do not add to the separate account credit balance.</p></div>
       {error&&<p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
     </form>

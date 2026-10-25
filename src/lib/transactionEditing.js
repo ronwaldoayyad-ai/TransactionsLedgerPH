@@ -1,3 +1,4 @@
+import {parseTransactionGroup} from './transactionGroups.js'
 export const TRANSACTION_TYPES = ['Straight', 'Installment']
 export const TRANSACTION_STATUSES = ['paid', 'unpaid', 'refunded', 'cancelled', 'past_due']
 
@@ -50,7 +51,7 @@ export function prepareManualTransaction(input,borrowers,today,loans=[],transact
   const n=loanId?transactions.reduce((max,t)=>t.loanId===loanId?Math.max(max,Number(t.n)||0):max,0)+1:1
   const status=input.status||'unpaid',datePaid=['paid','refunded'].includes(status)?(input.datePaid||null):null
   const {next}=prepareTransactionEdit({id:input.id,userId:input.userId,loanId,n,paidAmount:0,status:'unpaid',datePaid:null},{description:input.description,amount:input.amount,type:input.type,txnDate:input.txnDate,dueDate:input.dueDate,status,datePaid:status==='paid'?(datePaid||today):datePaid},today)
-  return next
+  return {...next,transactionGroup:parseTransactionGroup(input.transactionGroup,input.type,{description:input.description,amount:next.amount,loan:input.type==='Installment'?loans.find(l=>l.id===loanId):null})}
 }
 
 export async function persistTransactionEdit(client,current,patch,today) {

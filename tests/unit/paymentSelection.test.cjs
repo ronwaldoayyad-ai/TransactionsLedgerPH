@@ -6,7 +6,7 @@ function fixture(){
  const el=()=>({checked:true,disabled:false,value:'',textContent:'',classList:{remove(){},add(){},toggle(){}}});
  const elements=Object.fromEntries(['allocationConfirm','paymentItems','selectAllItems','paymentSuccess','submitPayment','amount','date','ref','amountValidation','paymentError','allocationTotal','submitGate'].map(id=>['#'+id,el()]));
  const c={paymentRows:[positive,negative,zero],paymentSelected:new Set(),paymentDueKeys:new Set(),$:s=>elements[s],clearPaymentProof(){},renderPaymentDates(){},clearResolvedSubmitHighlights(){},updatePaymentSteps(){},isDuplicatePaymentReference:()=>false,paymentMethodValid:()=>false,file:null,proofScanBusy:false,borrowerPayableRecords:()=>[positive,negative,zero],paymentDates:()=>[new Date()],dueKey:()=> '2026-10-19',cash:n=>'₱'+n,htmlSafe:String,expandableRowsHTML:(_,rows)=>rows.join('')};
- vm.createContext(c);vm.runInContext(['paymentItemSelectable','paymentSelectableIndexes','sanitizePaymentSelection','choosePaymentDue','renderPaymentItems','togglePaymentItem','toggleAllPaymentItems','paymentAllocationChanged'].map(fn).join('\n'),c);return {c,elements};
+ c.document={};vm.createContext(c);vm.runInContext(fs.readFileSync('public/v41224-money-inputs.js','utf8').split('// Browser integration')[0],c);vm.runInContext(['paymentItemSelectable','paymentSelectableIndexes','sanitizePaymentSelection','choosePaymentDue','renderPaymentItems','togglePaymentItem','toggleAllPaymentItems','paymentAllocationChanged'].map(fn).join('\n'),c);return {c,elements};
 }
 
 test('negative, zero, missing and invalid amounts cannot be payable selections',()=>{

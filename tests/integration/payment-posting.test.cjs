@@ -713,3 +713,35 @@ test('deleted borrower messages are not sent and attachment-only previews do not
  try{await svc.run();assert.equal(sent,0);assert.equal((await db.query('select status from mobile_private.telegram_deliveries where source_message_id=$1',[mid])).rows[0].status,'cancelled')}
  finally{await db.query('update mobile_private.telegram_settings set enabled=false,message_enabled=false where singleton')}
 });
+
+const groupPayload=(f,target,expected='retail_installment',extra={})=>({id:f.due,group:target,expectedGroup:expected,expectedType:'Installment',expectedLoanId:f.loan,expectedUserId:f.borrower,reason:'Synthetic group classification review',reviewed:true,key:crypto.randomUUID(),...extra});
+const setGroup=(f,payload)=>f.client.query('select public.admin_set_transaction_group($1) result',[payload]);
+test('classification changes a whole linked installment loan without changing paid rows, balances, postings or credit; retries are idempotent',async()=>{
+ const f=await fixture();try{await post(f);const snapshot=async()=> (await f.client.query("select jsonb_build_object('transaction',(select to_jsonb(t) from public.transactions t where id=$1),'profile',(select to_jsonb(p) from public.profiles p where id=$2),'postings',(select jsonb_agg(to_jsonb(p) order by id) from public.payment_postings p where user_id=$2),'allocations',(select jsonb_agg(to_jsonb(a) order by posting_id,transaction_id) from public.payment_allocations a where user_id=$2)) value",[f.due,f.borrower])).rows[0].value;
+ const before=await snapshot(),payload=groupPayload(f,'cash_loan'),signal=(await f.client.query('select version from public.ledger_change_signals where borrower_id=$1',[f.borrower])).rows[0].version;
+ const first=(await setGroup(f,payload)).rows[0].result;assert.equal(first.scope,'loan');assert.equal(first.group,'cash_loan');assert.equal((await f.client.query('select loan_category from public.loans where id=$1',[f.loan])).rows[0].loan_category,'cash_loan');assert.deepEqual(await snapshot(),before);assert.notEqual((await f.client.query('select version from public.ledger_change_signals where borrower_id=$1',[f.borrower])).rows[0].version,signal);
+ assert.deepEqual((await setGroup(f,payload)).rows[0].result,first);await f.client.query('reset role');assert.equal((await f.client.query("select count(*)::int n from mobile_private.operation_keys where actor_id=$1 and key=$2",[f.admin,payload.key])).rows[0].n,1);
+ }finally{await release(f)}
+});
+test('straight group changes save only metadata, retain amount/status, and emit borrower-scoped ledger signals',async()=>{
+ const f=await fixture();try{await f.client.query('reset role');await f.client.query("update public.transactions set type='Straight',loan_id=null,transaction_group=null,description='Legacy custom charge' where id=$1",[f.due]);await f.client.query('set local role authenticated');const before=(await f.client.query('select to_jsonb(t) value from public.transactions t where id=$1',[f.due])).rows[0].value;const payload=groupPayload(f,'fees','straight_retail',{expectedType:'Straight',expectedLoanId:null});await setGroup(f,payload);const after=(await f.client.query('select to_jsonb(t) value from public.transactions t where id=$1',[f.due])).rows[0].value;assert.equal(after.transaction_group,'fees');after.transaction_group=null;assert.deepEqual(after,before);
+ const signal=(await f.client.query('select version from public.ledger_change_signals where borrower_id=$1',[f.borrower])).rows[0].version;await setGroup(f,{...payload,key:crypto.randomUUID(),expectedGroup:'fees',group:'adjustments'});assert.notEqual((await f.client.query('select version from public.ledger_change_signals where borrower_id=$1',[f.borrower])).rows[0].version,signal);
+ }finally{await release(f)}
+});
+test('group edits reject stale borrower/type/group/loan, invalid type-group combinations and changed retries',async()=>{
+ const f=await fixture();try{for(const patch of [{expectedUserId:crypto.randomUUID()},{expectedType:'Straight'},{expectedLoanId:null},{expectedGroup:'cash_loan'},{group:'fees'},{reviewed:false}]){await f.client.query('savepoint group_bad');await assert.rejects(setGroup(f,groupPayload(f,'cash_loan','retail_installment',patch)));await f.client.query('rollback to group_bad');}
+ const payload=groupPayload(f,'cash_loan');await setGroup(f,payload);await f.client.query('savepoint changed_retry');await assert.rejects(setGroup(f,{...payload,group:'retail_installment'}),/Retry details changed/);await f.client.query('rollback to changed_retry');
+ }finally{await release(f)}
+});
+test('borrowers cannot change group metadata through either RPC entry point and cannot read another borrower row',async()=>{
+ const f=await fixture();try{await f.client.query('reset role');const sid=crypto.randomUUID();await f.client.query('insert into auth.sessions(id,user_id) values($1,$2)',[sid,f.borrower]);await f.client.query("select set_config('request.jwt.claims',$1,true)",[JSON.stringify({sub:f.borrower,role:'authenticated',session_id:sid})]);await f.client.query('set local role authenticated');
+ for(const fn of ['public.admin_set_transaction_group','mobile_private.set_transaction_group']){await f.client.query('savepoint borrower_group');await assert.rejects(f.client.query('select '+fn+'($1)',[groupPayload(f,'cash_loan')]),e=>e.code==='42501');await f.client.query('rollback to borrower_group');}
+ await f.client.query('savepoint direct_group');assert.equal((await f.client.query("update public.transactions set transaction_group='cash_loan' where id=$1",[f.due])).rowCount,0);await f.client.query('rollback to direct_group');
+ }finally{await release(f)}
+});
+test('group classification parity and validation protect legacy data and reset incompatible metadata after a type correction',async()=>{
+ const f=await fixture();try{await f.client.query('reset role');const cases=[['Straight','3% Finance Charge - October 10',300,null,null,null,'fees'],['Straight','Late Payment Fee',1500,null,null,null,'fees'],['Straight','Partial Payment',-500,null,null,null,'adjustments'],['Straight','Overpayment Credit',100,null,null,null,'adjustments'],['Straight','Phone',100,null,null,null,'straight_retail'],['Installment','PAYPAL SEND',100,null,null,null,'cash_loan'],['Installment','Cash Loan',100,null,null,'retail_installment','retail_installment']];
+ for(const [type,description,amount,fee,explicit,loan,want]of cases)assert.equal((await f.client.query('select mobile_private.transaction_group_key($1,$2,$3,$4,$5,$6) value',[type,description,amount,fee,explicit,loan])).rows[0].value,want);
+ await f.client.query("update public.transactions set transaction_group='cash_loan' where id=$1",[f.due]);await f.client.query("update public.transactions set type='Straight' where id=$1",[f.due]);assert.equal((await f.client.query('select transaction_group from public.transactions where id=$1',[f.due])).rows[0].transaction_group,null);
+ }finally{await release(f)}
+});

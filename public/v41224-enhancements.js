@@ -188,7 +188,7 @@ function stagingCompareLatestTransactions(a,b){return stagingCompareValues({date
 function stagingCompareProfileGroups(a,b){const x=stagingLoans()[a.index],y=stagingLoans()[b.index];return stagingCompareValues({date:Date.parse(x.txnDate),amount:x.principal,id:x.id},{date:Date.parse(y.txnDate),amount:y.principal,id:y.id},'Newest');}
 function stagingTransactionDate(timestamp){return Number.isFinite(timestamp)?stagingDate(new Date(timestamp).toISOString()):'—';}
 const stagingLoanActive=loan=>!['cancelled','refunded','completed'].includes(String(loan.status).toLowerCase())&&stagingRows().some(t=>t.loanId===loan.id&&stagingOwed(t));
-const stagingCategory=loan=>loan.loanCategory||'unclassified';
+const stagingCategory=loan=>TransactionGroups.defaultInstallmentGroup(loan);
 const stagingVisibleGroups=()=>stagingGroups().map((group,index)=>({group,index,loan:stagingLoans()[index]})).filter(({loan,group})=>(!excludeFullyPaidInstallments||stagingLoanActive(loan))&&(installmentCategoryFilter==='all'||stagingCategory(loan)===installmentCategoryFilter)&&(!txSearch||`${group[0]} ${loan.loanCategory==='cash_loan'?'Cash Loan':'Retail Installments'} ${group[2]} ${group[4]}`.toLowerCase().includes(txSearch.toLowerCase()))).sort((a,b)=>stagingCompareValues({date:Date.parse(a.loan.txnDate),amount:Number(a.loan.principal)||0,id:a.loan.id},{date:Date.parse(b.loan.txnDate),amount:Number(b.loan.principal)||0,id:b.loan.id}));
 loanProfileCategory=group=>({cash_loan:'Cash Loan',retail_installment:'Retail Installments'}[stagingCategory(stagingLoans().find(l=>l.id===group[5])||{})]||'Unclassified');
 function setInstallmentCategory(value){if(!['all','cash_loan','retail_installment'].includes(value))return;installmentCategoryFilter=value;render();}
@@ -239,7 +239,7 @@ const enhancementRender=render;
 render=()=>{
  if(stagingData){
   if(stagingListOwner!==stagingData.user.id){
-   stagingListOwner=stagingData.user.id;txSort='Newest';expandedLists={};recentShowAll=false;recentPaymentLimit=5;notificationExpanded=false;stagingMessageVisible=20;installmentCategoryFilter='all';stagingBalanceScope='all';dashboardDuesExpanded=false;
+   stagingListOwner=stagingData.user.id;straightGroupFilter='all';txSort='Newest';expandedLists={};recentShowAll=false;recentPaymentLimit=5;notificationExpanded=false;stagingMessageVisible=20;installmentCategoryFilter='all';stagingBalanceScope='all';dashboardDuesExpanded=false;
    try{const saved=JSON.parse(localStorage.getItem(stagingChatSizeKey())||'null');stagingChatSize=saved&&Number.isFinite(saved.width)&&Number.isFinite(saved.height)&&saved.width>0&&saved.height>0?saved:null;}catch{stagingChatSize=null;}
   }
   profilePhotoData=stagingData.preference?.use_profile_photo===false?'':stagingData.user.avatarUrl||'';

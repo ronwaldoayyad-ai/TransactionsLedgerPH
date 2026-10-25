@@ -14,12 +14,14 @@ import { presentationFeeKind } from '../../lib/feePresentation'
 import { parseCSV, parseCSVAmount, parseCSVDate } from '../../lib/csv'
 import InstallmentGroupEditor from '../../components/admin/InstallmentGroupEditor'
 import TransactionEntryForm from '../../components/admin/TransactionEntryForm'
+import TransactionGroupCell from '../../components/admin/TransactionGroupCell'
+import {transactionGroup,parseTransactionGroup,TRANSACTION_GROUPS} from '../../lib/transactionGroups'
 import TransactionGrid from '../../components/admin/TransactionGrid'
 import TransactionFieldCell from '../../components/admin/TransactionFieldCell'
 import TransactionCorrectionReview from '../../components/admin/TransactionCorrectionReview'
 import { TransactionAmountCell, TransactionTypeCell, TransactionStatusCell } from '../../components/admin/TransactionValueCells'
 
-const IMPORT_HEADERS = ['Borrower', 'Txn Date', 'Item Description', 'Amount', 'Type', 'Due Date', 'Date Paid', 'Status']
+const IMPORT_HEADERS = ['Borrower', 'Txn Date', 'Item Description', 'Amount', 'Type', 'Group', 'Due Date', 'Date Paid', 'Status']
 // Loan-level columns (repeat per row; first non-empty value per loan wins).
 // When present, the import creates a real loan per group so it appears in
 // My Loan Schedules with a full Loan Disclosure Statement.
@@ -78,7 +80,7 @@ function computeReplacement(desc, { find, replace, mode, matchCase }) {
 // Status written here is the same store the borrower views read from.
 export default function Transactions() {
   const {
-    session, users, transactions, setTransactionStatus, correctTransaction, archiveTransactions,
+    session, users, loans, transactions, setTransactionStatus, correctTransaction, archiveTransactions,
     replaceTransactionDescriptions, importTransactions, importLoans,
   } = useApp()
   const borrowers = users.filter((u) => u.role === 'user')
@@ -281,7 +283,7 @@ export default function Transactions() {
       )
       if (!borrower) return errors.push(`Row ${rowNo}: no borrower matches "${cells[idx.borrower]}" (use the exact name or email)`)
       const amount = parseCSVAmount(cells[idx.amount])
-      if (amount == null || amount < 0) return errors.push(`Row ${rowNo}: invalid amount "${cells[idx.amount]}"`)
+      if (amount == null) return errors.push(`Row ${rowNo}: invalid amount "${cells[idx.amount]}"`)
       const txnDate = parseCSVDate(cells[idx.txnDate])
       if (!txnDate) return errors.push(`Row ${rowNo}: invalid Txn Date "${cells[idx.txnDate]}"`)
       const dueDate = parseCSVDate(cells[idx.dueDate])
@@ -292,7 +294,9 @@ export default function Transactions() {
       if (status === 'paid' && !datePaid) datePaid = dueDate
       if (['unpaid', 'cancelled', 'past_due'].includes(status)) datePaid = null
       const description = String(cells[idx.description] ?? '').trim() || 'Imported item'
-      const isStraight = /straight/i.test(String(cells[idx.type] ?? ''))
+      const typeText=String(cells[idx.type]??'').trim().toLowerCase();if(!['straight','installment'].includes(typeText))return errors.push('Row '+rowNo+': Type must be Straight or Installment.');
+      const isStraight=typeText==='straight'
+      let transactionGroupValue;try{transactionGroupValue=parseTransactionGroup(col('Group')<0?'':cells[col('Group')],isStraight?'Straight':'Installment',{description,amount})}catch(e){return errors.push('Row '+rowNo+': '+e.message)}
       const row = {
         id: `imp-${stamp}-${i + 1}`,
         loanId: null,
@@ -301,6 +305,7 @@ export default function Transactions() {
         description,
         amount,
         type: isStraight ? 'Straight' : 'Installment',
+        transactionGroup: transactionGroupValue,
         txnDate,
         dueDate,
         status,
@@ -312,6 +317,7 @@ export default function Transactions() {
 
       const lv = (h) => String(cells[loanIdx[h]] ?? '').trim()
       const startsLoan = lv('Principal Amount') !== ''
+      if(isStraight&&!startsLoan){loanGroups.push({standalone:true,loan:{userId:borrower.id,label:description,principal:Math.abs(amount),straight:true},rows:[row]});return}
 
       if (startsLoan) {
         const principal = parseCSVAmount(lv('Principal Amount'))
@@ -338,6 +344,7 @@ export default function Transactions() {
             // Net Proceeds < principal ⇒ fees were deducted from proceeds.
             deductFromProceeds: netProceeds == null ? true : netProceeds < principal - 0.005,
             straight: isStraight,
+            loanCategory:isStraight?null:transactionGroupValue,
           },
           rows: [],
         }
@@ -349,6 +356,8 @@ export default function Transactions() {
         return
       }
       // Sequential numbering within the loan guarantees a unique (loan, n).
+      if(current.loan.userId!==borrower.id||current.loan.straight!==isStraight)return errors.push('Row '+rowNo+': Borrower and Type must match the opened loan.');
+      if(!isStraight){if(col('Group')>=0&&String(cells[col('Group')]??'').trim()&&transactionGroupValue!==current.loan.loanCategory)return errors.push('Row '+rowNo+': All installments of a linked loan must use the same Group.');row.transactionGroup=current.loan.loanCategory;}
       current.rows.push({ ...row, n: current.rows.length + 1 })
     })
 
@@ -360,6 +369,7 @@ export default function Transactions() {
     // Finalize each group: duration defaults to the row count; straight loans
     // are single-payment. Build the final loan shape importLoans expects.
     const finalGroups = loanGroups.map((g) => {
+      if(g.standalone)return g;
       const { durationCol, straight, ...loanRest } = g.loan
       const isStraight = straight && g.rows.length === 1
       return {
@@ -379,14 +389,15 @@ export default function Transactions() {
   // disclosure statement (values repeat on each row of the same loan).
   const downloadTemplate = () => {
     const borrowers = users.filter((u) => u.role === 'user')
-    const name = (i) => borrowers[i % Math.max(borrowers.length, 1)]?.name ?? 'Juan Dela Cruz'
+    const name = (i) => '"'+String(borrowers[i % Math.max(borrowers.length, 1)]?.name ?? 'Juan Dela Cruz').replaceAll('"','""')+'"'
     const lines = [
       [...IMPORT_HEADERS, ...LOAN_HEADERS].join(','),
-      `${name(0)},2026-01-01,"HENRY'S-FUJIFILM XA5 (1 of 3)","2,499.17",Installment,2026-06-10,2026-06-10,Paid,"7,200.00",1.8934,3,2026-06-10,54.00,150.00,0.00,204.00,"6,996.00"`,
-      `${name(0)},2026-01-01,"HENRY'S-FUJIFILM XA5 (2 of 3)","2,499.17",Installment,2026-07-10,,Unpaid,,,,,,,,,`,
-      `${name(0)},2026-01-01,"HENRY'S-FUJIFILM XA5 (3 of 3)","2,499.17",Installment,2026-08-10,,Unpaid,,,,,,,,,`,
-      `${name(1)},2026-01-04,GRAB,"1,000.00",Straight,2026-02-10,2026-02-08,Paid,"1,000.00",0,1,2026-02-10,0.00,0.00,0.00,0.00,"1,000.00"`,
+      `${name(0)},2026-01-01,"HENRY'S-FUJIFILM XA5 (1 of 3)","2,499.17",Installment,Retail Installment,2026-06-10,2026-06-10,Paid,"7,200.00",1.8934,3,2026-06-10,54.00,150.00,0.00,204.00,"6,996.00"`,
+      `${name(0)},2026-01-01,"HENRY'S-FUJIFILM XA5 (2 of 3)","2,499.17",Installment,Retail Installment,2026-07-10,,Unpaid,,,,,,,,,`,
+      `${name(0)},2026-01-01,"HENRY'S-FUJIFILM XA5 (3 of 3)","2,499.17",Installment,Retail Installment,2026-08-10,,Unpaid,,,,,,,,,`,
+      `${name(1)},2026-01-04,GRAB,"1,000.00",Straight,Straight Retail,2026-02-10,2026-02-08,Paid,"1,000.00",0,1,2026-02-10,0.00,0.00,0.00,0.00,"1,000.00"`,
     ]
+    lines.push(`${name(0)},2026-01-04,Cash Loan (1 of 1),5000.00,Installment,Cash Loan,2026-03-10,,Unpaid,5000.00,0,1,2026-03-10,0,0,0,0,5000.00`,`${name(0)},2026-01-04,Late Payment Fee,1500.00,Straight,Fees,2026-03-10,,Unpaid,,,,,,,,,`,`${name(0)},2026-01-04,Partial Payment adjustment,-1000.00,Straight,Adjustments,2026-03-10,,Unpaid,,,,,,,,,`);
     downloadCSV('transactions-import-template.csv', lines.join('\n'))
   }
 
@@ -411,12 +422,12 @@ export default function Transactions() {
   }
 
   const exportCSV = () => {
-    const header = 'Borrower,Loan,Item Description,Txn Date,Amount,Type,Due Date,Date Paid,Status'
+    const header = 'Borrower,Loan,Item Description,Txn Date,Amount,Type,Group,Due Date,Date Paid,Status'
     const rows = filtered.map(
       (t) =>
-        `"${nameOf(t.userId)}",${t.loanId ?? ''},"${t.description}",${t.txnDate},${(t.originalAmount??t.amount).toFixed(2)},${t.type},${t.dueDate},${t.datePaid ?? ''},${STATUS_LABELS[effectiveStatus(t, today)]}`,
+        `"${nameOf(t.userId)}",${t.loanId ?? ''},"${t.description}",${t.txnDate},${(t.originalAmount??t.amount).toFixed(2)},${t.type},${TRANSACTION_GROUPS[transactionGroup(t,loans.find(l=>l.id===t.loanId))]},${t.dueDate},${t.datePaid ?? ''},${STATUS_LABELS[effectiveStatus(t, today)]}`,
     )
-    rows.push(`FILTERED TOTAL,,,,${filteredTotal.toFixed(2)},,,,`)
+    rows.push(`FILTERED TOTAL,,,,${filteredTotal.toFixed(2)},,,,,`)
     downloadCSV(
       `overall-transactions-${today}.csv`,
       [header, ...rows].join('\n'),
@@ -708,6 +719,7 @@ export default function Transactions() {
             case 'borrower':return <TransactionFieldCell transaction={t} field="userId" label="Borrower" options={borrowers.map(b=>({value:b.id,label:b.name}))} onSave={patch=>reviewEdit(t,patch)}/>
             case 'description':return <TransactionFieldCell transaction={t} field="description" label="Item description" onSave={patch=>reviewEdit(t,patch)}/>
             case 'amount':return <TransactionAmountCell transaction={t} allowOverride formatted onSave={patch=>reviewEdit(t,patch)}/>
+            case 'group':return <TransactionGroupCell transaction={t} loan={loans.find(l=>l.id===t.loanId)}/>
             case 'type':return <TransactionTypeCell transaction={t} allowOverride onSave={patch=>reviewEdit(t,patch)}/>
             case 'status':return <TransactionStatusCell transaction={t} allowOverride onSave={patch=>reviewEdit(t,patch)}/>
             default:return <TransactionFieldCell transaction={t} field={key} label={key==='txnDate'?'Transaction date':key==='dueDate'?'Due date':'Date paid'} onSave={patch=>reviewEdit(t,patch)}/>
@@ -743,7 +755,7 @@ export default function Transactions() {
               onClick={confirmImport}
               disabled={
                 importing ||
-                !importPreview ||
+                !importPreview || importPreview.errors.length>0 ||
                 (importPreview.mode === 'loans'
                   ? importPreview.groups.length === 0
                   : importPreview.rows.length === 0)
@@ -753,7 +765,7 @@ export default function Transactions() {
               {importing
                 ? 'Importing…'
                 : importPreview?.mode === 'loans'
-                  ? `Import ${importPreview.groups.length} loan${importPreview.groups.length === 1 ? '' : 's'}`
+                  ? `Import ${importPreview.rows.length} record${importPreview.rows.length === 1 ? '' : 's'}`
                   : `Import ${importPreview?.rows.length ?? 0} record${importPreview?.rows.length === 1 ? '' : 's'}`}
             </Button>
           </>
@@ -762,14 +774,14 @@ export default function Transactions() {
         {importPreview && (
           <div className="space-y-4">
             <p className="text-sm text-slate-600">
-              Borrowers are matched by exact name or email.{' '}
+              Borrowers are matched by exact name or email. Group accepts Cash Loan, Retail Installment, Straight Retail, Fees or Adjustments. Older files may omit Group. Negative entries reduce ledger dues and do not add to the separate account credit balance.{' '}
               {importPreview.mode === 'loans'
                 ? 'Loan columns detected — a row carrying a Principal Amount starts a new loan; the rows below it (with loan columns left blank) are its installments. Each loan gets a full Loan Disclosure Statement on the borrower’s dashboard, and amounts are imported verbatim.'
                 : 'No loan columns found — records import as standalone ledger entries (visible in Consolidated Transactions, not in My Loan Schedules). Use the Template to include loan-level columns.'}
             </p>
             <p className="rounded-lg bg-navy-50 px-3 py-2.5 text-sm font-medium text-navy-900">
               {importPreview.mode === 'loans'
-                ? `${importPreview.groups.length} loan${importPreview.groups.length === 1 ? '' : 's'} (${importPreview.groups.reduce((s, g) => s + g.rows.length, 0)} installment${importPreview.groups.reduce((s, g) => s + g.rows.length, 0) === 1 ? '' : 's'}) ready to import`
+                ? `${importPreview.groups.filter(g=>!g.standalone).length} loans (${importPreview.groups.reduce((s, g) => s + g.rows.length, 0)} records) ready to import`
                 : `${importPreview.rows.length} row${importPreview.rows.length === 1 ? '' : 's'} ready to import`}
               {importPreview.errors.length > 0 &&
                 ` · ${importPreview.errors.length} issue${importPreview.errors.length === 1 ? '' : 's'}`}
@@ -779,8 +791,8 @@ export default function Transactions() {
                 {importPreview.groups.map((g, gi) => (
                   <li key={gi} className="truncate">
                     <span className="font-medium text-slate-800">{g.loan.label}</span> ·{' '}
-                    {nameOf(g.loan.userId)} · {formatPeso(g.loan.principal)} ·{' '}
-                    {g.rows.length} {g.loan.txnType === 'straight' ? 'payment' : 'installments'}
+                    {nameOf(g.loan.userId)} · {formatPeso(g.standalone?g.rows.reduce((sum,row)=>sum+row.amount,0):g.loan.principal)} ·{' '}
+                    {g.rows.length} {g.standalone?'standalone record':g.loan.txnType === 'straight' ? 'payment' : 'installments'} · {TRANSACTION_GROUPS[g.rows[0]?.transactionGroup]}
                   </li>
                 ))}
               </ul>

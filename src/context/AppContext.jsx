@@ -1,3 +1,4 @@
+import {transactionGroup,groupOptions} from '../lib/transactionGroups'
 import { prepareManualTransaction, prepareTransactionEdit, persistTransactionEdit, prepareAdminCorrection } from '../lib/transactionEditing'
 import { companionEnabled } from '../lib/serviceEndpoint'
 import { authenticatePassword } from '../lib/loginAccess'
@@ -1127,6 +1128,7 @@ export function AppProvider({ children }) {
           description: r.description,
           amount: r.amount,
           type: r.type,
+          transaction_group:r.transactionGroup??null,
           txn_date: r.txnDate,
           due_date: r.dueDate,
           status: r.status,
@@ -1157,12 +1159,14 @@ export function AppProvider({ children }) {
       let txnCount = 0
       if (isLive) {
         for (const g of groups) {
+          if(g.standalone){const result=await supabase.from('transactions').insert(g.rows.map(r=>({...toDbTransaction({...r,loanId:null}),id:r.id}))).select();if(result.error)return {error:result.error.message};setTransactions(prev=>[...prev,...result.data.map(mapTransaction)]);txnCount+=result.data.length;continue}
           const { data: loanRow, error } = await supabase
             .from('loans')
             .insert({
               user_id: g.loan.userId,
               label: g.loan.label,
               txn_type: g.loan.txnType,
+              loan_category:g.loan.loanCategory??null,
               principal: g.loan.principal,
               monthly_rate: g.loan.monthlyRate,
               duration_months: g.loan.durationMonths,
@@ -1185,6 +1189,7 @@ export function AppProvider({ children }) {
             description: r.description,
             amount: r.amount,
             type: r.type,
+          transaction_group:r.transactionGroup??null,
             txn_date: r.txnDate,
             due_date: r.dueDate,
             status: r.status,
@@ -1205,6 +1210,7 @@ export function AppProvider({ children }) {
         }
       } else {
         for (const g of groups) {
+          if(g.standalone){setTransactions(prev=>[...prev,...g.rows]);txnCount+=g.rows.length;continue}
           const id = nextId('ln')
           const loan = { ...g.loan, id, status: 'active', paidMonths: 0 }
           loan.disclosure = buildDisclosure(loan)
@@ -1728,6 +1734,18 @@ export function AppProvider({ children }) {
     return ()=>{++generationRef.current;stop()}
   }, [isLive, pdoListenerId,pdoIsAdmin, refreshPaymentDueOverrides])
 
+  const changeTransactionGroup=useCallback(async payload=>{
+    try{
+      if(session?.user?.role!=='admin')throw Error('Only the lender can change transaction groups.')
+      const current=transactions.find(t=>t.id===payload.id),loan=loans.find(l=>l.id===current?.loanId)
+      if(!current||current.userId!==payload.expectedUserId||current.type!==payload.expectedType||(current.loanId??null)!==(payload.expectedLoanId??null)||transactionGroup(current,loan)!==payload.expectedGroup)throw Error('The transaction changed. Refresh and review again.')
+      if(!groupOptions(current.type).some(option=>option.value===payload.group)||!payload.reviewed||payload.reason.trim().length<10)throw Error('Choose a matching group, enter a reason and review the change.')
+      if(isLive){const {data,error}=await supabase.rpc('admin_set_transaction_group',{p_payload:payload});if(error)throw Error(error.message);if(!data?.id)throw Error('The saved group could not be confirmed. Keep this form open and retry.');await refreshData()}
+      else{if(current.type==='Installment'&&current.loanId)setLoans(previous=>previous.map(l=>l.id===current.loanId?{...l,loanCategory:payload.group}:l));else setTransactions(previous=>previous.map(t=>t.id===current.id?{...t,transactionGroup:payload.group}:t));log(actor,'TXN_UPDATED','Group changed for '+current.id+': '+payload.group+'. '+payload.reason)}
+      return {error:null}
+    }catch(error){return {error:error.message||'Unable to save this group. Please retry.'}}
+  },[session,transactions,loans,isLive,refreshData,log,actor])
+
   const value = useMemo(
     () => ({
       session: effectiveSession,
@@ -1742,7 +1760,7 @@ export function AppProvider({ children }) {
       refreshOwnProfile,
       syncError,
       getProofUrl,
-      importLoans,
+      importLoans,changeTransactionGroup,
       updateMyProfile,
       setMyAvatar,
       users,
@@ -1800,7 +1818,7 @@ export function AppProvider({ children }) {
     }),
     [
       session, effectiveSession, isViewingAs, startViewAs, stopViewAs, authLoading,
-      dataReady, refreshing, refreshData, refreshOwnProfile, syncError, getProofUrl, importLoans, updateMyProfile, setMyAvatar,
+      dataReady, refreshing, refreshData, refreshOwnProfile, syncError, getProofUrl, importLoans,changeTransactionGroup, updateMyProfile, setMyAvatar,
       users, loans, payments, paymentLogs,paymentPostings,hiddenPaymentBreakdowns,setPaymentBreakdownVisibility,postCredit,reversePayment, createPaymentLog, updatePaymentLog, deletePaymentLog,
       arbitrageLoans, interestRates, createArbitrageLoan, deleteArbitrageLoan,
       addInterestRate, deleteInterestRate,

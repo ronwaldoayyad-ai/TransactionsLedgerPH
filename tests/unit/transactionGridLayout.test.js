@@ -5,7 +5,7 @@ import {clampColumnWidth,gridLayoutKey,moveGridColumn,normalizeGridLayout,readGr
 const keys=TRANSACTION_GRID_COLUMNS.map(column=>column.key)
 test('grid restores only known unique columns and clamps saved widths',()=>{
   const layout=normalizeGridLayout({order:['status','status','unknown','amount'],widths:{amount:-3,status:10000,type:'broken',borrower:170.4}})
-  assert.deepEqual(layout.order,['status','amount',...keys.filter(key=>!['status','amount'].includes(key))]);assert.equal(new Set(layout.order).size,8)
+  assert.deepEqual(layout.order,['status','amount',...keys.filter(key=>!['status','amount'].includes(key))]);assert.equal(new Set(layout.order).size,keys.length)
   assert.equal(layout.widths.amount,116);assert.equal(layout.widths.status,800);assert.equal(layout.widths.type,130);assert.equal(layout.widths.borrower,170)
   assert.equal(clampColumnWidth('description',600),600);assert.throws(()=>clampColumnWidth('unknown',600))
 })

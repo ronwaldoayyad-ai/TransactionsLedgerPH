@@ -1,6 +1,6 @@
 // Fee identification comes from persisted metadata, never guessed from a title.
 let feePresentationSource=null,feePresentationTitles=new Set();
-function isAssessedFeeTitle(title){if(feePresentationSource!==stagingData){feePresentationSource=stagingData;feePresentationTitles=new Set(stagingRows().filter(t=>t.feeKind&&t.feeAssessmentId).map(t=>htmlSafe(t.description)));}return feePresentationTitles.has(title);}
+function isAssessedFeeTitle(title){if(feePresentationSource!==stagingData){feePresentationSource=stagingData;feePresentationTitles=new Set(stagingRows().filter(t=>TransactionGroups.transactionGroup(t)==='fees'||t.feeKind).map(t=>htmlSafe(t.description)));}return feePresentationTitles.has(title);}
 const itemBeforeAssessedFees=transactionItem;
 transactionItem=(icon,title,sub,amount,color='',kind='',status='',extraClass='',dateText='')=>itemBeforeAssessedFees(icon,title,sub,amount,color,kind,status,(extraClass+' '+(isAssessedFeeTitle(title)?'assessed-fee-entry':'')).trim(),dateText);
 function assessedFeeHistory(){

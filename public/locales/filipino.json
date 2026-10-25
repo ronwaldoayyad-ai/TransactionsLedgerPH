@@ -1,6 +1,6 @@
 {
   "locale": "fil-PH",
-  "version": "2026-10-25.4",
+  "version": "2026-10-25.5",
   "strings": {
     "Dashboard": "Buod ng account",
     "Transactions": "Mga transaksyon",
@@ -1542,7 +1542,12 @@
     "Download submission confirmation": "I-download ang kumpirmasyon ng pagsusumite",
     "Payment downloads": "Mga download ng bayad",
     "Receipt unavailable for this payment": "Walang available na resibo para sa bayad na ito",
-    "Unable to prepare this submission confirmation. Please try again.": "Hindi maihanda ang kumpirmasyon ng pagsusumite. Pakisubukang muli."
+    "Unable to prepare this submission confirmation. Please try again.": "Hindi maihanda ang kumpirmasyon ng pagsusumite. Pakisubukang muli.",
+    "All groups": "Lahat ng grupo",
+    "Straight Retail": "Tuwirang retail",
+    "Fees": "Mga singil",
+    "Adjustments": "Mga pagsasaayos",
+    "Filter straight transactions by group": "Salain ang mga tuwirang transaksyon ayon sa grupo"
   },
   "terminology": {
     "installment": "planong hulugan",
