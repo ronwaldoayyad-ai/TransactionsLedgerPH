@@ -17,6 +17,8 @@ import TransactionEntryForm from '../../components/admin/TransactionEntryForm'
 import TransactionGroupCell from '../../components/admin/TransactionGroupCell'
 import {transactionGroup,parseTransactionGroup,TRANSACTION_GROUPS} from '../../lib/transactionGroups'
 import TransactionGrid from '../../components/admin/TransactionGrid'
+import RetailBrandManager from '../../components/admin/RetailBrandManager'
+import RetailBrandLogo from '../../components/RetailBrandLogo'
 import TransactionFieldCell from '../../components/admin/TransactionFieldCell'
 import TransactionCorrectionReview from '../../components/admin/TransactionCorrectionReview'
 import { TransactionAmountCell, TransactionTypeCell, TransactionStatusCell } from '../../components/admin/TransactionValueCells'
@@ -113,6 +115,7 @@ export default function Transactions() {
   const [actionTxn, setActionTxn] = useState(null)
   const liveActionTxn=transactions.find(transaction=>transaction.id===actionTxn?.id)||actionTxn
   const [addOpen,setAddOpen]=useState(false)
+  const [brandTargets,setBrandTargets]=useState(null)
   const [correction,setCorrection]=useState(null)
   const pendingCorrection=useRef(null)
   useEffect(()=>()=>{pendingCorrection.current?.({error:'Correction cancelled.'});pendingCorrection.current=null},[])
@@ -508,6 +511,7 @@ export default function Transactions() {
 
   return (
     <>
+      {brandTargets&&<RetailBrandManager transactions={transactions.filter(t=>brandTargets.some(target=>target.id===t.id))} onClose={()=>setBrandTargets(null)}/>}
       <PageHeader
         title="Overall Transactions"
         subtitle="Every amortization installment across all borrowers. Status changes here update each borrower's dashboard instantly."
@@ -515,6 +519,7 @@ export default function Transactions() {
           <div className="flex flex-wrap gap-2">
             <Button onClick={()=>setAddOpen(true)}><Icon name="plus" className="h-4 w-4" />Add transaction</Button>
             <InstallmentGroupEditor />
+            <Button variant="secondary" onClick={()=>setBrandTargets(filtered)}>Brand logos</Button>
             <RefreshButton />
             <input
               ref={importInputRef}
@@ -629,6 +634,7 @@ export default function Transactions() {
               <Icon name="trash" className="h-4 w-4" />
               Delete (move to Archives)
             </Button>
+            <Button variant="secondary" onClick={()=>setBrandTargets(filtered.filter(t=>selected.has(t.id)))}>Assign brand logos</Button>
           </div>
         </div>
       )}
@@ -725,6 +731,7 @@ export default function Transactions() {
         )}
         <TransactionGrid filters={groupPills} key={session?.user?.id||'anonymous'} ownerId={session?.user?.id||'anonymous'} items={pag.pageItems} total={filteredTotal} count={filtered.length} statusCounts={statusCounts} today={today} query={query} onQueryChange={setQuery} hideSettled={hideSettled} onHideSettledChange={setHideSettled} onExport={exportCSV} sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} allSelected={allSelected} onToggleAll={toggleAll} selected={selected} onToggleOne={toggleOne} renderCell={(key,t)=>{
           switch(key){
+            case 'brand':return <RetailBrandLogo transaction={t} loan={loans.find(l=>l.id===t.loanId)} onClick={()=>setBrandTargets([t])}/>
             case 'borrower':return <TransactionFieldCell transaction={t} field="userId" label="Borrower" options={borrowers.map(b=>({value:b.id,label:b.name}))} onSave={patch=>reviewEdit(t,patch)}/>
             case 'description':return <TransactionFieldCell transaction={t} field="description" label="Item description" onSave={patch=>reviewEdit(t,patch)}/>
             case 'amount':return <TransactionAmountCell transaction={t} allowOverride formatted onSave={patch=>reviewEdit(t,patch)}/>

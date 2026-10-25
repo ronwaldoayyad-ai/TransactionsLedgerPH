@@ -2,6 +2,7 @@ export const TRANSACTION_GRID_COLUMNS=Object.freeze([
   {key:'borrower',label:'Borrower',width:196,min:120},
   {key:'txnDate',label:'Txn date',width:124,min:118},
   {key:'description',label:'Item description',width:280,min:150},
+  {key:'brand',label:'Brand logo',width:170,min:125},
   {key:'amount',label:'Amount',width:138,min:116},
   {key:'type',label:'Type',width:130,min:112},
   {key:'group',label:'Group',width:170,min:145},

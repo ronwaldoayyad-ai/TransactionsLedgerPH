@@ -1,0 +1,12 @@
+let retailBrandSource=null,retailBrandIndex=null;
+function borrowerBrandIndex(){if(retailBrandSource!==stagingData){retailBrandSource=stagingData;retailBrandIndex={rows:new Map(stagingRows().map(t=>[t.id,t])),loans:new Map((stagingData?.loans||[]).map(l=>[l.id,l])),resolved:new Map()}}return retailBrandIndex;}
+function borrowerRetailBrand(transaction,loan){const b=stagingData?.branding;if(!b?.ready||!transaction)return null;const index=borrowerBrandIndex(),key=loan?.id&&transaction.type==='Installment'?'loan:'+loan.id:'transaction:'+transaction.id;if(!index.resolved.has(key)){const brand=RetailBrands.resolveRetailBrand(transaction,loan,b.assignments,b.rules);index.resolved.set(key,{...brand,url:RetailBrands.brandLogoUrl(brand.domain,b.clientId)})}return index.resolved.get(key);}
+function retailLogoHTML(brand){return brand?.url?'<span class="retail-logo"><span class="retail-logo-fallback" aria-hidden="true">▣</span><img src="'+htmlSafe(brand.url)+'" alt="'+htmlSafe(brand.name)+' logo" loading="lazy" decoding="async" referrerpolicy="strict-origin-when-cross-origin" onerror="this.remove()"></span>':'';}
+const recordsBeforeRetailBrands=transactionRecords;
+transactionRecords=()=>recordsBeforeRetailBrands().map(record=>{const index=borrowerBrandIndex(),txn=index.rows.get(record[8]),loan=index.loans.get(txn?.loanId),logo=retailLogoHTML(borrowerRetailBrand(txn,loan));return logo?[logo,...record.slice(1)]:record});
+function decorateRetailLogos(){
+ document.querySelectorAll('.installment-group-row,.settings-row[onclick^="openInstallment("]').forEach(row=>{const index=Number(row.getAttribute('onclick')?.match(/openInstallment\((\d+)\)/)?.[1]),loan=stagingLoans()[index],txn=stagingIndex().byLoan.get(loan?.id)?.[0],logo=retailLogoHTML(borrowerRetailBrand(txn,loan)),icon=row.querySelector('.ico,.settings-icon');if(logo&&icon){icon.innerHTML=logo;icon.classList.add('has-retail-logo')}});
+ document.querySelectorAll('.installment-deck-card:not(.installment-deck-card--cash)').forEach(card=>{const loan=stagingLoans().find(l=>l.id===card.dataset.loan),txn=stagingIndex().byLoan.get(loan?.id)?.[0],logo=retailLogoHTML(borrowerRetailBrand(txn,loan)),label=card.querySelector('.installment-deck-top>span:first-child:not(.installment-deck-status)');if(logo&&label&&!label.querySelector('.retail-logo')){label.classList.add('retail-card-brand');label.insertAdjacentHTML('afterbegin',logo)}});
+}
+const renderBeforeRetailBrands=render;
+render=()=>{renderBeforeRetailBrands();decorateRetailLogos()};

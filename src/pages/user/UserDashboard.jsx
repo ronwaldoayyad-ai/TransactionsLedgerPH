@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
+import RetailBrandLogo from '../../components/RetailBrandLogo'
 import { useNotifications } from '../../context/NotificationsContext'
 import { PageHeader } from '../../components/AppShell'
 import { Badge, Button, Card, CardHeader, EmptyState, PulseBadge, StatCard, Switch } from '../../components/ui'
@@ -425,7 +426,7 @@ export default function UserDashboard() {
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div>
                           <p className="flex items-center gap-2 font-semibold text-slate-900">
-                            {loan.label}
+                            <RetailBrandLogo compact transaction={txnsFor(loan.id)[0]} loan={loan}/>{loan.label}
                             {fullyPaid && (
                               <Badge status="paid">
                                 <Icon name="check" className="h-3 w-3" />

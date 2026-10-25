@@ -16,12 +16,14 @@ import { useRecordRefresh } from '../lib/recordRefresh'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { sessionDestination } from '../lib/sessionDestination'
 import { useReleaseAccess } from '../context/ReleaseAccessContext'
+import {useRetailBrands} from '../context/RetailBrandsContext'
 
 // The approved HTML owns presentation. React owns authenticated data and never
 // sends credentials, auth tokens or server keys into the presentation frame.
 export default function VersionedBorrower({ children }) {
   const { enabled: releaseEnabled, borrower } = useReleaseAccess()
   const app = useApp()
+  const brands=useRetailBrands()
   const messages = useMessages()
   const notifications = useNotifications()
   const invoices = useInvoices()
@@ -210,6 +212,8 @@ export default function VersionedBorrower({ children }) {
     const extra=extras?.userId===user.id?extras:null
     const data={user, integrationError:extrasError, tickets:extra?.tickets||[],notificationReactions:extra?.notificationReactions||[],ticketEvents:extra?.ticketEvents||[],hiddenMessages:extra?.hiddenMessages||[],statements:extra?.statements||[],requestRates:requests.rates,canRequest:requests.canRequest,requestEvents:own(requests.requests).flatMap(r=>requests.eventsFor(r.id)),preference:preference?.user_id===user.id?preference:null, loans:own(app.loans), transactions:own(app.transactions), payments:ownPayments, paymentLogs:own(app.paymentLogs), overrides:app.paymentDueOverrides.filter(o=>o.borrowerId===user.id), messages:messages.messagesFor(user.id), notifications:notifications.notifications.map(n=>({...n,isRead:notifications.isRead(n.id)})), invoices:own(invoices.invoices), disbursements:own(disbursements.disbursements), requests:own(requests.requests).map(r=>({...r,schedule:buildRequestSchedule(r),monthly:monthlyInstallment(r.amount,r.monthlyRate,r.termMonths)}))}
     data.notificationCategories=notifications.categoriesAll
+    const ownBrandTargets=new Set([...data.loans.map(l=>'loan:'+l.id),...data.transactions.map(t=>'transaction:'+t.id)])
+    data.branding={ready:brands.ready,clientId:brands.clientId,rules:brands.rules,assignments:brands.assignments.filter(a=>ownBrandTargets.has(a.target_key))}
     data.paymentAdjustments=buildPaymentAdjustments({ownerId:user.id,postings:app.paymentPostings,transactions:[...app.transactions,...app.archivedTransactions],logs:app.paymentLogs,hiddenPostingIds:app.hiddenPaymentBreakdowns.map(row=>row.posting_id)})
     data.creditApplications=buildCreditActivity({ownerId:user.id,postings:app.paymentPostings,transactions:[...app.transactions,...app.archivedTransactions],logs:app.paymentLogs})
     const key=JSON.stringify(data)
@@ -220,7 +224,7 @@ export default function VersionedBorrower({ children }) {
     // Group closely arriving provider updates and skip identical snapshots.
     const timer=setTimeout(()=>{lastDelivery.current=key;post({type:'snapshot',data})},80)
     return ()=>clearTimeout(timer)
-  }, [active, ready, releaseEnabled, borrower.ready, frameGeneration, preference, extras,extrasError,app.users,app.session, app.authLoading, app.dataReady, app.syncError, app.loans, app.transactions, app.archivedTransactions,app.paymentPostings,app.hiddenPaymentBreakdowns,app.payments, app.paymentLogs, app.paymentDueOverrides, messages, notifications, invoices.invoices, disbursements.disbursements, requests])
+  }, [active, ready, releaseEnabled, borrower.ready, frameGeneration, preference, extras,extrasError,app.users,app.session, app.authLoading, app.dataReady, app.syncError, app.loans, app.transactions, app.archivedTransactions,app.paymentPostings,app.hiddenPaymentBreakdowns,app.payments, app.paymentLogs, app.paymentDueOverrides, messages, notifications, invoices.invoices, disbursements.disbursements, requests,brands])
   if (!active) return children
   return <div style={{position:'fixed',inset:0,zIndex:100,display:'flex',flexDirection:'column',background:'#101a31'}}>
     {app.isViewingAs && <section aria-label="Borrower preview controls" className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950" style={{paddingTop:'max(8px, env(safe-area-inset-top))'}}>

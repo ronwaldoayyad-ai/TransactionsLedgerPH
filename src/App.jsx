@@ -1,6 +1,7 @@
 import { lazy, Suspense, useState } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AppProvider, useApp } from './context/AppContext'
+import {RetailBrandsProvider} from './context/RetailBrandsContext'
 import { MessagesProvider } from './context/MessagesContext'
 import { AnnouncementsProvider } from './context/AnnouncementsContext'
 import { LoanRequestsProvider } from './context/LoanRequestsContext'
@@ -112,6 +113,7 @@ export default function App() {
       <InvoicesProvider>
       <DisbursementsProvider>
       <NotificationsProvider>
+      <RetailBrandsProvider>
       <BrowserRouter>
         <ReleaseAccessProvider>
         <VersionedBorrower>
@@ -167,6 +169,7 @@ export default function App() {
         <ProcessingFeedback />
         </ReleaseAccessProvider>
       </BrowserRouter>
+      </RetailBrandsProvider>
       </NotificationsProvider>
       </DisbursementsProvider>
       </InvoicesProvider>

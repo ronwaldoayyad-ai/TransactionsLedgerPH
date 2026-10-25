@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
+import RetailBrandLogo from '../../components/RetailBrandLogo'
 import { PageHeader } from '../../components/AppShell'
 import BorrowerScheduleTable from '../../components/BorrowerScheduleTable'
 import RefreshButton from '../../components/RefreshButton'
@@ -112,7 +113,7 @@ export default function LoanDetail() {
         ← Back to dashboard
       </Link>
       <PageHeader
-        title={loan.label}
+        title={<span className="flex items-center gap-2"><RetailBrandLogo compact transaction={transactions.find(t=>t.loanId===loan.id)} loan={loan}/>{loan.label}</span>}
         subtitle={
           canEdit
             ? `Loan ${loan.id} · editing as ${session.user.name} — changes sync to the borrower`
