@@ -28,7 +28,7 @@ const stagingDue=(view=mode)=>{
 };
 const stagingTotal=(view=mode)=>stagingDue(view).reduce((sum,t)=>sum+t.amount,0);
 function stagingRecentActivity(){
-  const activity=stagingRows().filter(t=>['paid','refunded'].includes(t.status)).map(t=>({date:t.datePaid||t.txnDate,markup:transactionItem(t.status==='paid'?'✓':'↩',htmlSafe(t.description),stagingDate(t.datePaid),t.amount,t.status==='paid'?'green':'purple',t.status==='paid'?'Payment Received':'Refund Processed')}));
+  const activity=stagingRows().filter(t=>['paid','refunded'].includes(t.status)).map(t=>({date:t.datePaid||t.txnDate,markup:transactionItem(t.status==='paid'?'✓':'↩',htmlSafe(t.description),stagingDate(t.datePaid),t.amount,t.status==='paid'?'green':'purple',t.status==='paid'?'Payment Received':'Refund Processed').replace(/<(div|button) /,'<$1 data-staging-transaction-id="'+htmlSafe(t.id)+'" ')}));
   (stagingData?.payments||[]).forEach(p=>activity.push({date:p.submittedAt,markup:transactionItem('▣','Payment Proof Submitted',stagingDate(p.submittedAt),p.amount,'','Payment Proof Submitted')}));
   return activity.sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(a=>a.markup);
 }
@@ -64,7 +64,7 @@ dashboardDueListHTML=()=>{
 };
 transactionBreakdownItems=()=>(page==='balance'?stagingRows().filter(stagingOwed):stagingDue()).map(t=>{const index=stagingLoans().findIndex(l=>l.id===t.loanId);return payableBreakdownItem(htmlSafe(t.description),'Due '+stagingDate(t.dueDate),cash(t.amount),t.dueDate,'',index<0?null:index,'▣');});
 transactionRecords=()=>stagingRows().map(t=>{const status=stagingStatus(t),paid=['Paid','Refunded'].includes(status);return [status==='Paid'?'✓':status==='Past Due'?'!':'◷',htmlSafe(t.description),(paid?'Paid '+stagingDate(t.datePaid):'Due '+stagingDate(t.dueDate)),t.amount,status==='Paid'?'green':'orange',status==='Past Due'?'Past Dues':status,stagingLoans().some(l=>l.id===t.loanId)?'installment':'straight',Date.parse(t.txnDate),t.id];});
-historyPaymentRecords=()=>stagingRows().filter(t=>t.status==='paid').map(t=>{const index=stagingLoans().findIndex(l=>l.id===t.loanId);return ['✓',htmlSafe(t.description),'Paid '+stagingDate(t.datePaid)+' · Due '+stagingDate(t.dueDate),t.amount,'green','Payments',index>=0?'installment':'straight',stagingDate(t.txnDate),Date.parse(t.datePaid||t.txnDate),index];});
+historyPaymentRecords=()=>stagingRows().filter(t=>t.status==='paid').map(t=>{const index=stagingLoans().findIndex(l=>l.id===t.loanId);return ['✓',htmlSafe(t.description),'Paid '+stagingDate(t.datePaid)+' · Due '+stagingDate(t.dueDate),t.amount,'green','Payments',index>=0?'installment':'straight',stagingDate(t.txnDate),Date.parse(t.datePaid||t.txnDate),index,t.id];});
 historyAccountRecords=historyPaymentRecords;
 const stagingOriginalStraight=straightTransactions;
 straightTransactions=()=>head('Straight Transactions','Your direct transactions')+'<div class="glass">'+expandableRowsHTML('straight-real',transactionRecords().filter(r=>r[6]==='straight').sort(stagingCompareTransactions).map(r=>transactionItem(r[0],r[1],r[2],r[3],r[4],r[1],r[5],'transaction-row',stagingTransactionDate(r[7]))),5)+'</div>';

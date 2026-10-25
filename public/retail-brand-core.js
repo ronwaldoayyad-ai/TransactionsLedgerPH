@@ -40,7 +40,7 @@ function resolveRetailBrand(transaction,loan,assignments=[],rules=[]){
  if(saved?.mode==='manual'&&brandDomain(saved.domain))return {status:'manual',domain:saved.domain,name:saved.name,target,version}
  return {...matchRetailBrand(target.description,rules),target,version}
 }
-function brandLogoUrl(domain,clientId){return brandDomain(domain)&&clientId?'https://cdn.brandfetch.io/domain/'+domain+'/w/96/h/96/fallback/404/icon.webp?c='+encodeURIComponent(clientId):null}
+function brandLogoUrl(domain,clientId,theme){return brandDomain(domain)&&clientId?'https://cdn.brandfetch.io/domain/'+domain+'/w/160/h/160/'+(['light','dark'].includes(theme)?'theme/'+theme+'/':'')+'fallback/404/type/logo?c='+encodeURIComponent(clientId):null}
 function createRetailBrandResolver(assignments=[],rules=[]){const cache=new WeakMap();return(t,l)=>{if(!t)return {status:'ineligible',domain:null,target:null};const prior=cache.get(t);if(prior&&prior.loan===l)return prior.result;const result=resolveRetailBrand(t,l,assignments,rules);cache.set(t,{loan:l,result});return result}}
 function uniqueRetailTargets(transactions,loans){const index=new Map(loans.map(l=>[l.id,l])),seen=new Set();return transactions.flatMap(transaction=>{const loan=index.get(transaction.loanId),target=retailTarget(transaction,loan);if(!target||seen.has(target.key))return [];seen.add(target.key);return [{transaction,loan,...target}]})}
 
