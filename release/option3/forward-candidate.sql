@@ -2925,4 +2925,13 @@ revoke all on function public.admin_save_retail_brand_rule(jsonb) from public,an
 grant execute on function public.admin_save_retail_brand_rule(jsonb) to authenticated;
 
 
+-- 20261025210130_retail_brand_lookup_indexes.sql
+-- Follow-up to the applied logo metadata migration; no existing financial data changes.
+
+set local lock_timeout='3s';
+set local statement_timeout='30s';
+create index retail_brand_assignments_loan on public.retail_brand_assignments(loan_id);
+create index retail_brand_assignments_transaction on public.retail_brand_assignments(transaction_id);
+
+
 commit;
