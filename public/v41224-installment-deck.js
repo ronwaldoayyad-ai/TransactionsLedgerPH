@@ -1,6 +1,6 @@
 let installmentPresentation='cards',installmentPresentationOwner=null;
 const installmentDeckSelections=new Map();
-function installmentStatusBadge(g){const paid=Number(g[3])>=100,past=!paid&&installmentPastDueCount(g)>0;return '<span class="installment-deck-status '+(paid?'is-paid':past?'is-overdue':'')+'">'+(paid?'Fully paid':past?'Past Due':'In progress')+'</span>';}
+function installmentStatusBadge(g){const loan=stagingLoans().find(l=>l.id===g[5]),state=loan?installmentGroupState(loan,stagingIndex().byLoan.get(loan.id)||[],localToday()):Number(g[3])>=100?'Fully Paid':installmentPastDueCount(g)>0?'Past Due':'In Progress';const tone={'Fully Paid':'is-paid','Refunded':'is-refunded','Past Due':'is-overdue'}[state]||'',label={'Fully Paid':'Fully paid','In Progress':'In progress'}[state]||state;return '<span class="installment-deck-status '+tone+'">'+label+'</span>';}
 function decorateInstallmentList(host){host.querySelectorAll('.installment-group-row,.settings-row[onclick^="openInstallment("]').forEach(row=>{const index=Number(row.getAttribute('onclick')?.match(/openInstallment\((\d+)\)/)?.[1]),g=stagingGroups()[index];if(!g)return;row.querySelector('.schedule-overdue-label')?.remove();const copy=row.querySelector('.itext,.settings-copy'),title=copy?.querySelector('b');if(!title)return;const oldStatus=copy.querySelector('small[style^="color:"]');oldStatus?.remove();const heading=document.createElement('span');heading.className='installment-list-heading';title.before(heading);heading.append(title);heading.insertAdjacentHTML('beforeend',installmentStatusBadge(g));});}
 function installmentViewControl(){return '<div class="installment-view-control" role="group" aria-label="Installment view">'+[['list','List'],['cards','Cards']].map(([id,label])=>'<button type="button" aria-pressed="'+(installmentPresentation===id)+'" class="'+(installmentPresentation===id?'sel':'')+'" onclick="setInstallmentPresentation(\''+id+'\')">'+label+'</button>').join('')+'</div>';}
 function setInstallmentPresentation(value){if(!['list','cards'].includes(value)||value===installmentPresentation)return;installmentPresentation=value;render();}
@@ -17,7 +17,8 @@ installmentGroupCards=()=>{
  const tabs=host.querySelector('.installment-category-tabs');tabs?.insertAdjacentHTML('afterend',installmentViewControl());
  if(installmentPresentation==='cards'){
   host.querySelectorAll('.installment-category-section').forEach(section=>section.remove());
-  host.insertAdjacentHTML('beforeend',installmentDeckHTML(stagingVisibleGroups(),'transactions'));
+  const entries=stagingVisibleGroups(),totals=[['cash_loan','Cash Loan'],['retail_installment','Retail Installments']].filter(([key])=>installmentCategoryFilter==='all'||installmentCategoryFilter===key).map(([key,title])=>'<div><span>'+title+'</span>'+transactionTotalHTML(displayedAmountTotal(entries.filter(entry=>stagingCategory(entry.loan)===key).map(entry=>entry.loan.principal)))+'</div>').join('');
+  host.insertAdjacentHTML('beforeend','<div class="installment-card-totals" aria-label="Matching installment amounts">'+totals+'</div>'+installmentDeckHTML(entries,'transactions'));
  }
  decorateInstallmentList(host);return host.innerHTML;
 };

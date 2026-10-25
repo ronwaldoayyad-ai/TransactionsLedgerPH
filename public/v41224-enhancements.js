@@ -68,11 +68,11 @@ setmode=value=>{
  card.classList.toggle('next-due',!!mode);
  card.querySelectorAll('.switch button').forEach((button,index)=>{button.classList.toggle('sel',index===mode);button.setAttribute('aria-pressed',String(index===mode));});
  card.querySelector('.balance-content').replaceWith(template.content.querySelector('.balance-content'));
- document.querySelector('#app>.dashboard-due-advisory')?.remove();
+ document.querySelector('#app .dashboard-due-advisory')?.remove();
  const advisory=template.content.querySelector('.dashboard-due-advisory');if(advisory)card.after(advisory);
- const breakdown=document.querySelector('#app>.section .glass');if(breakdown)breakdown.innerHTML=expandableRowsHTML('dashboardTransactionBreakdown',transactionBreakdownItems(),5);
+ const breakdown=document.querySelector('#app .section .glass');if(breakdown)breakdown.innerHTML=expandableRowsHTML('dashboardTransactionBreakdown',transactionBreakdownItems(),5);
  if(!matchMedia('(prefers-reduced-motion: reduce)').matches){
-  for(const element of [card.querySelector('.balance-content'),advisory].filter(Boolean))element.animate([{opacity:.35,transform:'translateX('+direction*10+'px)'},{opacity:1,transform:'translateX(0)'}],{duration:280,easing:'cubic-bezier(.22,1,.36,1)'});
+  for(const element of [advisory].filter(Boolean))element.animate([{opacity:.35,transform:'translateX('+direction*10+'px)'},{opacity:1,transform:'translateX(0)'}],{duration:280,easing:'cubic-bezier(.22,1,.36,1)'});
  }
 };
 const approvedRenderFinder=renderFinder;
@@ -202,12 +202,12 @@ installmentGroupCards=()=>{
   const bucket=cards.filter(x=>stagingCategory(x.loan)===id);
   if(installmentCategoryFilter!=='all'&&installmentCategoryFilter!==id)return '';
   const rows=bucket.map(({group:c,index:idx})=>{const past=installmentPastDueCount(c);return '<div class="item installment-click installment-group-row" role="button" tabindex="0" onclick="openInstallment('+idx+')" onkeydown="if(event.key===\'Enter\'||event.key===\' \')openInstallment('+idx+')"><div class="ico">▣</div><div class="itext"><b>'+c[0]+(past?'<span class="schedule-overdue-label">'+past+' PAST DUE</span>':'')+'</b><small><strong class="installment-principal">'+c[1]+'</strong> · '+c[2]+'</small><small class="transaction-date-label">Transaction Date · '+c[4]+'</small><div class="group-progress" role="progressbar" aria-label="'+c[0]+' payment progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+c[3]+'"><span style="width:'+c[3]+'%"></span></div><div class="group-progress-label"><span>'+c[3]+'% paid</span><span>View schedule ›</span></div></div><span class="arrow">›</span></div>'});
-  return '<section class="installment-category-section" data-loan-category="'+id+'"><div class="sectiontitle"><h3>'+title+'</h3><span class="count">'+bucket.length+'</span></div><div class="glass">'+(rows.length?expandableRowsHTML('installmentGroups-'+id,rows,5):'<div class="empty-state">No '+title.toLowerCase()+' to show.</div>')+'</div></section>';
+  return '<section class="installment-category-section" data-loan-category="'+id+'"><div class="sectiontitle"><div class="transaction-group-heading"><h3>'+title+'</h3>'+transactionTotalHTML(displayedAmountTotal(bucket.map(entry=>entry.loan.principal)))+'</div><span class="count">'+bucket.length+'</span></div><div class="glass">'+(rows.length?expandableRowsHTML('installmentGroups-'+id,rows,5):'<div class="empty-state">No '+title.toLowerCase()+' to show.</div>')+'</div></section>';
  }).join('');return control+tabs+sections;
 };
 const oldTransactions=transactions;
 transactions=()=>{const container=document.createElement('div');container.innerHTML=oldTransactions();const sections=[...container.querySelectorAll(':scope > .transaction-group')],straight=sections[0],installment=sections[1];if(straight&&installment){container.insertBefore(installment,straight);installment.querySelector('.transaction-count').textContent=stagingVisibleGroups().length;}return container.innerHTML;};
-straightTransactions=()=>{const host=document.createElement('div');host.innerHTML=transactions();return '<button type="button" class="screen-back" onclick="goBack()"><span aria-hidden="true">‹</span> Back</button>'+head('Straight Transactions','Your direct transactions')+host.querySelector('.transaction-tools').outerHTML+[...host.querySelectorAll('.transaction-group')].find(section=>section.querySelector('h2')?.textContent==='Straight Transactions').outerHTML;};
+straightTransactions=()=>{const host=document.createElement('div');host.innerHTML=transactions();return '<button type="button" class="screen-back" onclick="goBack()"><span aria-hidden="true">‹</span> Back</button>'+head('Straight Transactions','Your direct transactions')+host.querySelector('.transaction-tools').outerHTML+host.querySelector('.transaction-group[data-transaction-group="straight"]').outerHTML;};
 const oldHead=head;
 head=(title,subtitle='')=>oldHead(title,subtitle).replace('<i class="notification-unread-dot"></i>',unreadNotificationCount()?'<span class="notification-unread-count" aria-hidden="true">'+unreadNotificationCount()+'</span>':'');
 const approvedNotificationInbox=notificationInbox;
