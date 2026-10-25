@@ -10,13 +10,14 @@ async function downloadPaymentConfirmation(id){
  const owner=paymentConfirmationOwner(),isCurrent=()=>!!owner&&owner===paymentConfirmationOwner()&&stagingData?.payments?.some(payment=>String(payment.id)===String(id)&&(!payment.userId||payment.userId===owner));
  try{
   const model=savedPaymentConfirmation(id,owner);
+  const unchanged=()=>isCurrent()&&JSON.stringify(savedPaymentConfirmation(id,owner))===JSON.stringify(model);
   const filename='Payment-submission-'+(model.receipt||model.id).replace(/[^a-z0-9_-]/gi,'-').slice(0,90)+'.png';
   return await downloadAppFile(async()=>{
-   if(!isCurrent())throw Error('This submission confirmation is no longer available.');
+   if(!unchanged())throw Error('This submission confirmation changed. Please download it again.');
    const image=await paymentConfirmationImage(model);
    if(!isCurrent())throw Error('This submission confirmation is no longer available.');
    return image;
-  },filename,'image/png',null,isCurrent);
+  },filename,'image/png',null,unchanged);
  }catch{toast('Unable to prepare this submission confirmation. Please try again.');return false;}
 }
 function decorateConfirmationDownloads(){

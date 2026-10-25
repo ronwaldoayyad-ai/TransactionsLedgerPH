@@ -97,6 +97,9 @@ export default function Transactions() {
   // Type filter (Installment / Straight): surfaced in the mobile filter sheet;
   // empty set = all, so it's inert on desktop where no control exposes it.
   const [typeSel, setTypeSel] = usePersistedState('txn.typeSel', () => new Set())
+  const [groupFilter,setGroupFilter]=usePersistedState('txn.groupFilter','all')
+  const selectedGroup=Object.hasOwn(TRANSACTION_GROUPS,groupFilter)?groupFilter:'all'
+  const groupKeys=useMemo(()=>{const byLoan=new Map(loans.map(loan=>[loan.id,loan]));return new Map(transactions.map(row=>[row.id,transactionGroup(row,byLoan.get(row.loanId))]))},[transactions,loans])
   // Sorting applies after filtering, so it works on any filtered view.
   const [sortKey, setSortKey] = usePersistedState('txn.sortKey', 'dueDate') // dueDate | txnDate
   const [sortDir, setSortDir] = usePersistedState('txn.sortDir', 'asc')
@@ -131,7 +134,7 @@ export default function Transactions() {
 
   const nameOf = (userId) => users.find((u) => u.id === userId)?.name ?? userId
 
-  const filtered = useMemo(
+  const filterBase = useMemo(
     () =>
       transactions
         .filter((t) => {
@@ -157,6 +160,9 @@ export default function Transactions() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- nameOf derives from users
     [transactions, borrowerSel, statusSel, typeSel, txnDateSel, dueDateSel, datePaidSel, query, users, today, sortKey, sortDir, hideSettled],
   )
+
+  const filtered=useMemo(()=>selectedGroup==='all'?filterBase:filterBase.filter(row=>groupKeys.get(row.id)===selectedGroup),[filterBase,selectedGroup,groupKeys])
+  const groupCounts=useMemo(()=>{const counts={};for(const row of filterBase){const key=groupKeys.get(row.id);counts[key]=(counts[key]||0)+1}return counts},[filterBase,groupKeys])
 
   // Distinct date options come from the full ledger, not the filtered view.
   const dateOptions = useMemo(() => {
@@ -190,7 +196,7 @@ export default function Transactions() {
   // (A Set carrying a desktop multi-selection collapses to "All" here.)
   const activeFilterCount =
     borrowerSel.size + statusSel.size + typeSel.size +
-    txnDateSel.size + dueDateSel.size + datePaidSel.size
+    txnDateSel.size + dueDateSel.size + datePaidSel.size + (selectedGroup==='all'?0:1)
 
   // Paginate the visible rows; select-all / totals still operate on the full
   // filtered set, so paging never changes what an action applies to.
@@ -498,6 +504,8 @@ export default function Transactions() {
     setTimeout(() => setImportNotice(''), 6000)
   }
 
+  const groupPills=<div className="transaction-group-pills" role="group" aria-label="Filter transactions by group">{[['all','All groups'],...Object.entries(TRANSACTION_GROUPS)].map(([value,label])=><button type="button" key={value} aria-pressed={selectedGroup===value} onClick={()=>{setGroupFilter(value);pag.setPage(1)}}>{label}<span>{value==='all'?filterBase.length:groupCounts[value]||0}</span></button>)}</div>
+
   return (
     <>
       <PageHeader
@@ -629,6 +637,7 @@ export default function Transactions() {
         {/* Mobile toolbar: search + filter-sheet trigger, then record count
             and the hide-settled toggle (mirrors the mobile app's header). */}
         <div className="md:hidden">
+          {groupPills}
           <div className="flex items-center gap-2 px-4 pt-4">
             <label htmlFor="txn-search-mobile" className="sr-only">
               Search transactions
@@ -714,7 +723,7 @@ export default function Transactions() {
 
           </>
         )}
-        <TransactionGrid key={session?.user?.id||'anonymous'} ownerId={session?.user?.id||'anonymous'} items={pag.pageItems} total={filteredTotal} count={filtered.length} statusCounts={statusCounts} today={today} query={query} onQueryChange={setQuery} hideSettled={hideSettled} onHideSettledChange={setHideSettled} onExport={exportCSV} sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} allSelected={allSelected} onToggleAll={toggleAll} selected={selected} onToggleOne={toggleOne} renderCell={(key,t)=>{
+        <TransactionGrid filters={groupPills} key={session?.user?.id||'anonymous'} ownerId={session?.user?.id||'anonymous'} items={pag.pageItems} total={filteredTotal} count={filtered.length} statusCounts={statusCounts} today={today} query={query} onQueryChange={setQuery} hideSettled={hideSettled} onHideSettledChange={setHideSettled} onExport={exportCSV} sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} allSelected={allSelected} onToggleAll={toggleAll} selected={selected} onToggleOne={toggleOne} renderCell={(key,t)=>{
           switch(key){
             case 'borrower':return <TransactionFieldCell transaction={t} field="userId" label="Borrower" options={borrowers.map(b=>({value:b.id,label:b.name}))} onSave={patch=>reviewEdit(t,patch)}/>
             case 'description':return <TransactionFieldCell transaction={t} field="description" label="Item description" onSave={patch=>reviewEdit(t,patch)}/>

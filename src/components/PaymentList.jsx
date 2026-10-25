@@ -1,3 +1,4 @@
+import {sortPaymentProofs} from '../lib/paymentProofSorting'
 import { companionEnabled } from '../lib/serviceEndpoint'
 import { useState } from 'react'
 import { useApp } from '../context/AppContext'
@@ -73,12 +74,11 @@ export default function PaymentList({
 
   const base = payments.filter((p) => filter === 'all' || p.status === filter && !p.retractedAt)
   const q = query.trim().toLowerCase()
-  const dir = sortDir === 'asc' ? 1 : -1
   // Search + sort only when the host opts in (My Payments); otherwise the list
   // keeps the caller's original order (dashboard preview, admin queue).
   const list = !showControls
     ? base
-    : base
+    : sortPaymentProofs(base
         .filter((p) => {
           if (!q) return true
           const borrower = users.find((u) => u.id === p.userId)?.name ?? ''
@@ -86,13 +86,7 @@ export default function PaymentList({
           const hay = `${borrower} ${loan} ${p.method ?? ''} ${p.reference ?? ''} ${p.fileName ?? ''} ${p.amount}`.toLowerCase()
           return hay.includes(q)
         })
-        .sort((a, b) => {
-          const cmp =
-            sortKey === 'amount'
-              ? (Number(a.amount) || 0) - (Number(b.amount) || 0)
-              : String(a.submittedAt || '').localeCompare(String(b.submittedAt || ''))
-          return (cmp || String(a.id).localeCompare(String(b.id))) * dir
-        })
+      ,users,sortKey,sortDir)
   const pendingCount = payments.filter((p) => p.status === 'pending' && !p.retractedAt).length
   const paginate = pageSize > 0
   const pag = usePagination(list, paginate ? pageSize : 1)
@@ -159,7 +153,7 @@ export default function PaymentList({
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search reference, method, loan…"
+            placeholder={showBorrower?"Search borrower, reference, method…":"Search reference, method, loan…"}
             aria-label="Search payments"
             className={`${inputClass} sm:max-w-[16rem]`}
           />
@@ -169,6 +163,7 @@ export default function PaymentList({
               {[
                 ['date', 'Date'],
                 ['amount', 'Amount'],
+                ...(showBorrower?[['borrower','Borrower']]:[]),
               ].map(([k, t]) => (
                 <button
                   key={k}

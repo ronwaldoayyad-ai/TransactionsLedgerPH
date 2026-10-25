@@ -1,6 +1,6 @@
 {
   "locale": "fil-PH",
-  "version": "2026-10-25.5",
+  "version": "2026-10-25.6",
   "strings": {
     "Dashboard": "Buod ng account",
     "Transactions": "Mga transaksyon",
@@ -327,7 +327,7 @@
     "Proof of Payment Submitted!": "Naisumite na ang katibayan ng bayad!",
     "Proof of Payment Submitted": "Naisumite na ang katibayan ng bayad",
     "Payment Proof Submitted": "Naisumite na ang katibayan ng bayad",
-    "Your submission is being verified.": "Sinusuri pa ang iyong isinumite.",
+    "Your submission is being verified.": "Sinusuri ang iyong isinumite.",
     "Submitted for lender review": "Naisumite para suriin ng nagpapautang",
     "Proof submitted for lender review. View it in Recent Payments.": "Naisumite na ang katibayan para suriin. Makikita ito sa Mga pinakahuling bayad.",
     "Proof submitted; awaiting review.": "Naisumite na ang katibayan; hinihintay ang pagsusuri.",
@@ -1547,7 +1547,20 @@
     "Straight Retail": "Tuwirang retail",
     "Fees": "Mga singil",
     "Adjustments": "Mga pagsasaayos",
-    "Filter straight transactions by group": "Salain ang mga tuwirang transaksyon ayon sa grupo"
+    "Filter straight transactions by group": "Salain ang mga tuwirang transaksyon ayon sa grupo",
+    "Proof of Payment Approved!": "Naaprubahan na ang katibayan ng bayad!",
+    "Your submission has been approved.": "Naaprubahan na ang iyong isinumite.",
+    "Approved on": "Naaprubahan noong",
+    "Borrower workspace": "Account ng borrower",
+    "YOUR ACCOUNT": "IYONG ACCOUNT",
+    "DOCUMENTS & SUPPORT": "MGA DOKUMENTO AT TULONG",
+    "Invoices & statements": "Mga invoice at statement",
+    "More & settings": "Iba pa at mga setting",
+    "View profile": "Tingnan ang profile",
+    "About Documentary Stamp Tax": "Tungkol sa Documentary Stamp Tax",
+    "About Processing Fee": "Tungkol sa Processing Fee",
+    "About Notarial Fee": "Tungkol sa Notarial Fee",
+    "Close fee information": "Isara ang impormasyon ng singil"
   },
   "terminology": {
     "installment": "planong hulugan",
