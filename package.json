@@ -19,7 +19,6 @@
   },
   "dependencies": {
     "@napi-rs/image": "1.15.0",
-    "@paper-design/shaders": "0.0.82",
     "@remotion/player": "4.0.534",
     "@supabase/supabase-js": "^2.108.1",
     "@tailwindcss/vite": "^4.3.0",
