@@ -28,6 +28,7 @@ export const workspaceNavigation = [
     { to: '/admin/wallet', label: 'Cards & bills', icon: 'wallet' },
     { to: '/admin/arbitrage', label: 'Interest & arbitrage', icon: 'trendingUp' },
     { to: '/admin/logs', label: 'Reports & logs', icon: 'scroll' },
+    { to: '/admin/documentation', label: 'Documentation', icon: 'file' },
     { to: '/admin/settings', label: 'Settings', icon: 'sliders' },
   ] },
 ]

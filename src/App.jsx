@@ -57,6 +57,7 @@ const Invoices = lazy(() => import('./pages/admin/Invoices'))
 const Disbursements = lazy(() => import('./pages/admin/Disbursements'))
 const AdminNotifications = lazy(() => import('./pages/admin/Notifications'))
 const AdminSettings = lazy(() => import('./pages/admin/Settings'))
+const Documentation = lazy(() => import('./pages/admin/Documentation'))
 
 function AdminLanding() {
   const { classicAdmin } = useReleaseAccess()
@@ -142,6 +143,7 @@ export default function App() {
           <Route path="/admin" element={<Protected role="admin"><AdminLanding /></Protected>} />
           <Route path="/admin/classic" element={<Protected role="admin"><PortfolioDetail /></Protected>} />
           <Route path="/admin/settings" element={<Protected role="admin"><AdminSettings /></Protected>} />
+          <Route path="/admin/documentation" element={<Protected role="admin"><Documentation /></Protected>} />
           <Route path="/admin/portfolio" element={<Protected role="admin"><PortfolioDetail /></Protected>} />
           <Route path="/admin/support" element={<Protected role="admin"><AdminSupport /></Protected>} />
           <Route path="/admin/transactions" element={<Protected role="admin"><Transactions /></Protected>} />

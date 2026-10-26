@@ -56,6 +56,7 @@ const adminNav = [
       { to: '/admin/queue', label: 'Verification Queue', icon: 'inbox' },
       { to: '/admin/users', label: 'User Management', icon: 'users' },
       { to: '/admin/logs', label: 'Reports & Logs', icon: 'scroll' },
+      { to: '/admin/documentation', label: 'Documentation', icon: 'file' },
       { to: '/admin/settings', label: 'Settings', icon: 'sliders' },
     ],
   },
