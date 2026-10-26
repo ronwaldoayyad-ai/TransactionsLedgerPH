@@ -3,6 +3,11 @@ let paymentConfirmationState=null,paymentConfirmationGeneration=0;
 const paymentConfirmationOwner=()=>stagingData?.user?.id||null;
 const paymentConfirmationMoney=cents=>'PHP '+(cents/100).toLocaleString('en-PH',{minimumFractionDigits:2,maximumFractionDigits:2});
 function paymentConfirmationDate(value,time=false){if(!value)return '';if(time&&/^\d{4}-\d{2}-\d{2}$/.test(String(value)))time=false;const date=new Date(time?value:String(value).slice(0,10)+'T00:00:00');if(!Number.isFinite(date.getTime()))return '';return date.toLocaleString('en-PH',time?{month:'short',day:'numeric',year:'numeric',hour:'numeric',minute:'2-digit',timeZone:'Asia/Manila'}:{month:'short',day:'numeric',year:'numeric'});}
+function paymentConfirmationApprovalDate(record){
+ const values=[record.reviewedAt,record.approvedAt,record.postedAt],timestamp=values.find(value=>/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(String(value))&&Number.isFinite(new Date(value).getTime()));
+ if(timestamp)return paymentConfirmationDate(timestamp,true);
+ const date=values.map(value=>paymentConfirmationDate(value)).find(Boolean);return date?date+' · Time not recorded':'Not recorded';
+}
 function paymentConfirmationModel(record){
  const paid=Math.round(Number(record.amount)*100);if(!record.id||!Number.isSafeInteger(paid)||paid<=0)throw Error('The saved payment confirmation is incomplete.');
  const rows=record.requestedAllocations??record.allocations,known=Array.isArray(rows)&&rows.length>0&&rows.every(item=>Number.isFinite(Number(item.amount))&&Number(item.amount)>0);
@@ -12,7 +17,7 @@ function paymentConfirmationModel(record){
  const status=approved?'Approved':rejected?'Rejected':withdrawn?'Withdrawn':'Submitted for review';
  const title=approved?'Proof of Payment Approved!':rejected?'Proof of Payment Rejected':withdrawn?'Proof of Payment Withdrawn':'Proof of Payment Submitted!';
  const subtitle=approved?'Your submission has been approved.':rejected?'Your submission was not approved. Please review the lender’s note.':withdrawn?'This submission has been withdrawn.':'Your submission is being verified.';
- const approvedAt=approved?(paymentConfirmationDate(record.reviewedAt||record.approvedAt||record.postedAt,true)||'Not recorded'):'';
+ const approvedAt=approved?paymentConfirmationApprovalDate(record):'';
  return Object.freeze({id:String(record.id),receipt:String(record.receiptNumber||''),paid,selected,difference,coverage:difference===null?'':difference>0?'Partially covered':difference<0?'Excess submitted':'Fully covered',paymentDate:paymentConfirmationDate(record.paidDate),submittedAt:paymentConfirmationDate(record.submittedAt,true),approvedAt,approved,title,subtitle,statusKey,reference:String(record.reference||''),channel:({bank_transfer:'Bank Transfer',gcash:'GCash',maya:'Maya',cash:'Cash Deposit'}[record.method]||String(record.method||'')),status,reconciliationNote:approved?'Based on your submitted amount. Refer to your transaction ledger for the reviewed allocation.':'Based on the submitted amount. Dues update after lender approval.'});
 }
 function paymentConfirmationRows(model){return [model.channel&&['Payment channel',model.channel],['Amount paid',paymentConfirmationMoney(model.paid)],['Transaction status',model.status]].filter(Boolean);}

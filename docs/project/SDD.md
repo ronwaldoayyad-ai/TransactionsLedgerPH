@@ -1,6 +1,6 @@
 # Design Document
 
-Reviewed October 26, 2026. This is the implemented software and interaction design.
+Reviewed October 27, 2026. This is the implemented software and interaction design.
 
 ## Responsibilities
 | Layer | Responsibility | Boundary |
@@ -23,6 +23,7 @@ Realtime invalidation refreshes relevant read models rather than replacing the w
 - Installment cards use a compact layout with a single-line status badge and a separate borderless logo below it. Card spacing reserves the logo area and adapts for narrow screens and translated labels. Borrower History places Installment Transactions before Straight Transactions while retaining its existing category filters and per-section expansion. Cash Loan cards retain the dedicated artwork and can also show the shared uploaded Cash Loan logo. Cash Loan (including PayPal Send), Fees and Adjustments use admin-uploaded SVG or transparent PNG group logos across transaction lists, breakdowns, activity and history; retail logos continue to use Brandfetch. Unknown/removed logos retain the existing fallback.
 - Payments and Finder share the animated gradient border. Navigation uses a cancellable entrance, avoids duplicate positioning and respects reduced motion.
 - Fees retain red styling; paid/credit activity retains the appropriate green cue with textual labels.
+- Approved proof confirmations show the saved approval/posting timestamp in the same Manila date/time format as submission. A date-only legacy review never overrides an available exact timestamp; missing historic times are explicitly labelled rather than invented. Acknowledgement items resolve their own installment schedule transaction date, with saved submission/transaction dates as fallbacks. Multi-loan receipts retain a distinct date per selected item and never reuse the first loan's date for unmatched rows. These are read-only document changes.
 
 ## Failure and concurrency design
 Idempotent requests reuse their UUID when retrying identical details. Reviewed financial changes compare expected ownership, balances, amounts and versions. Stable manual logo associations override automatic matching; ambiguous names are never silently resolved to competing brands. Missing external assets must not block account access.

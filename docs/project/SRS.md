@@ -15,7 +15,7 @@ Reviewed October 26, 2026. Requirements describe current behavior and its verifi
 | S08 | Loan requests | Lender-controlled per-borrower switch controls visibility; processing follows recorded request states. |
 | S09 | Live communication | Messages, notifications, due changes and transaction changes refresh affected borrower data without a full-page reload. |
 | S10 | Notification administration | Rules/canvas, categories, sent-item filters/linking, individual/bulk deletion and rule restoration follow current tools. |
-| S11 | Documents | Proof, receipt and confirmation differ; approval updates confirmation status and approval time. |
+| S11 | Documents | Proof, receipt and confirmation differ; approval shows the saved date and time in Manila. Each acknowledgement item uses its linked installment transaction date, with recorded-date fallbacks for unavailable historical rows. |
 | S12 | Shared branding | Clear retail matches auto-resolve; uncertain matches need review; manual choices apply to their record/loan and reach borrowers. |
 | S13 | Documentation | Fourteen sections, current build inventory, schema metadata, search, navigation, print and Markdown export. |
 

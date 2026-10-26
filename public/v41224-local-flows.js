@@ -14,7 +14,15 @@ async function mobileSave(action,payload,onSuccess,errorHost){
 }
 const mobilePaymentRecord=p=>({id:p.id,amount:p.amount,paidDate:p.paidDate||'Not recorded',submittedAt:p.submittedAt,dueDate:p.allocations?.map(x=>stagingDate(x.dueDate)).filter((x,i,a)=>a.indexOf(x)===i).join(', ')||'See lender allocation',reference:p.reference,proofName:p.fileName,method:({bank_transfer:'Bank Transfer',gcash:'GCASH',maya:'MAYA',cash:'Cash Deposit'}[p.method]||p.method),status:p.retractedAt?'Withdrawn':p.status[0].toUpperCase()+p.status.slice(1),reviewedDate:stagingDate(p.reviewedAt),format:p.fileType==='pdf'?'PDF':'IMAGE',note:p.note,allocations:p.allocations,correctionNote:p.correctionNote,retractedAt:p.retractedAt});
 const priorAcknowledgement=stagingAcknowledgement;
-stagingAcknowledgement=p=>{const receipt=priorAcknowledgement(p);return {...receipt,number:p.receiptNumber||receipt.number,items:p.allocations?.map(x=>({...x,title:x.description||x.title||'Transaction '+x.id}))||receipt.items,entryMode:p.allocations?'submitted':'copied',allocationsKnown:Array.isArray(p.allocations),notes:[p.submissionNotes,p.correctionNote,p.note].filter(Boolean).join(' · '),status:p.retractedAt?'Withdrawn':p.status};};
+let acknowledgementDateSource=null,acknowledgementDateIndex=null;
+function acknowledgementTransactionDates(){
+ if(acknowledgementDateSource!==stagingData){const own=row=>!row.userId||row.userId===stagingData?.user.id;acknowledgementDateSource=stagingData;acknowledgementDateIndex={transactions:new Map((stagingData?.transactions||[]).filter(own).map(row=>[row.id,row])),loans:new Map((stagingData?.loans||[]).filter(own).map(row=>[row.id,row]))};}return acknowledgementDateIndex;
+}
+stagingAcknowledgement=p=>{
+ const receipt=priorAcknowledgement(p),index=acknowledgementTransactionDates(),requested=new Map((p.requestedAllocations||[]).map(row=>[row.id,row]));
+ const items=p.allocations?.map(x=>{const row=index.transactions.get(x.id),saved=requested.get(x.id),loan=index.loans.get(row?.loanId||saved?.loanId||x.loanId),date=[loan?.txnDate,x.transactionDate,x.txnDate,saved?.transactionDate,saved?.txnDate,row?.txnDate].find(value=>/^\d{4}-\d{2}-\d{2}(?:$|T)/.test(String(value)));return {...x,title:x.description||x.title||'Transaction '+x.id,transactionDate:date?String(date).slice(0,10):'Not recorded'};})||receipt.items;
+ return {...receipt,number:p.receiptNumber||receipt.number,items,entryMode:p.allocations?'submitted':'copied',allocationsKnown:Array.isArray(p.allocations),notes:[p.submissionNotes,p.correctionNote,p.note].filter(Boolean).join(' · '),status:p.retractedAt?'Withdrawn':p.status};
+};
 isDuplicatePaymentReference=reference=>!!stagingData?.payments.some(p=>!p.retractedAt&&['pending','approved'].includes(p.status)&&normalizeSupportIssue(p.reference).replace(/\s/g,'')===normalizeSupportIssue(reference).replace(/\s/g,''));
 submitproof=async()=>{
  const error=$('#paymentError');error.textContent='';if(mobileProofSubmitting||mobileBusy.has('payment-submit'))return;

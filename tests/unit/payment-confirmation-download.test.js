@@ -20,6 +20,15 @@ test('pending, rejected and withdrawn confirmations never claim approval; missin
 test('approval preserves requested submission totals even when reviewed allocations differ',()=>{
  const {context,record}=fixture();record.requestedAllocations=[{amount:1000}];record.allocations=[{amount:3209.96}];const model=vm.runInContext("savedPaymentConfirmation('payment-1')",context);assert.equal(model.selected,100000);assert.equal(model.difference,-220996);assert.equal(model.status,'Approved');
 });
+
+test('date-only review fields use the exact saved posting timestamp, with the same Manila time format as submission',()=>{
+ const {context,record}=fixture();record.reviewedAt='2026-10-19';record.postedAt='2026-10-19T15:42:33Z';const model=vm.runInContext("savedPaymentConfirmation('payment-1')",context);assert.equal(model.approvedAt,'Oct 19, 2026, 11:42 PM');assert.equal(model.submittedAt,'Oct 18, 2026, 10:25 PM');
+ record.reviewedAt='invalid';assert.equal(vm.runInContext("savedPaymentConfirmation('payment-1')",context).approvedAt,model.approvedAt);
+});
+
+test('historic approvals without a saved time never invent midnight or reuse the submission timestamp',()=>{
+ const {context,record}=fixture();record.reviewedAt='2026-10-19';delete record.postedAt;const model=vm.runInContext("savedPaymentConfirmation('payment-1')",context);assert.equal(model.approvedAt,'Oct 19, 2026 · Time not recorded');assert.notEqual(model.approvedAt,model.submittedAt);
+});
 test('a review change during image creation cancels an outdated confirmation download',async()=>{
  const {context,record}=fixture();record.status='pending';context.paymentConfirmationImage=async()=>{record.status='approved';return {}};assert.equal(await context.downloadPaymentConfirmation(record.id),false);assert.equal(context.downloads.length,0);
 });
