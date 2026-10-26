@@ -20,12 +20,16 @@ Realtime invalidation refreshes relevant read models rather than replacing the w
 ## Interaction patterns
 - Admin workspace: persistent navigation on larger screens, compact navigation/drawer on small screens, page/borrower search and contextual actions.
 - Borrower: desktop sidebar; mobile bottom navigation; card/list installments, horizontal Quick Access, positive-only proof selection and progressively expanded lists.
-- Installment cards show status and a large borderless retail logo beneath it. Cash Loan cards retain the dedicated artwork. Unknown/removed logos retain a generic fallback.
+- Installment cards show status and a large borderless logo beneath it. Cash Loan cards retain the dedicated artwork and can also show the shared uploaded Cash Loan logo. Cash Loan (including PayPal Send), Fees and Adjustments use admin-uploaded SVG group logos across transaction lists, breakdowns, activity and history; retail logos continue to use Brandfetch. Unknown/removed logos retain the existing fallback.
 - Payments and Finder share the animated gradient border. Navigation uses a cancellable entrance, avoids duplicate positioning and respects reduced motion.
 - Fees retain red styling; paid/credit activity retains the appropriate green cue with textual labels.
 
 ## Failure and concurrency design
 Idempotent requests reuse their UUID when retrying identical details. Reviewed financial changes compare expected ownership, balances, amounts and versions. Stable manual logo associations override automatic matching; ambiguous names are never silently resolved to competing brands. Missing external assets must not block account access.
+
+Shared group-logo uploads use server-side SVG validation, preview and explicit group-wide review. Only self-contained paths, fills and local gradients are retained; scripts, linked content and unsupported elements are rejected. The settings table is readable to active sessions but not directly writable through the Data API. Version checks and retry keys protect concurrent/repeated saves. The server changes presentation metadata only, never loan/transaction rows.
+
+Installment disclosure information icons use the effective Cash Loan/Retail Installment group. Cash Loan and Request a Loan retain their existing fee descriptions. Retail Installments explain that DST/Notarial Fee are not applicable and that Processing Fee depends on amount and how the purchase became an installment. This help copy does not recalculate or erase recorded fees.
 
 ## Documentation design
 The Documentation route is admin-guarded and lazy-loaded. Canonical Markdown lives in docs/project; legal sections read the same legal-content.json as public/borrower pages. A build-time inventory supplies routes, package versions, test-suite names, source fingerprint and schema metadata. No live borrower records, credentials or secret configuration values are bundled.

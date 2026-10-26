@@ -61,6 +61,8 @@ async function guestSupport(req,body){
  }catch(error){await client.query('rollback');if(uploaded)await fetch(api+'/storage/v1/object/mobile-attachments',{method:'DELETE',headers:{...supabaseHeaders(jwt('anon'),jwt('service_role')),'Content-Type':'application/json'},body:JSON.stringify({prefixes:[uploaded]})}).catch(()=>{});throw error;}finally{client.release();}
 }
 const telegram=require('./telegram.cjs')({db,active,origin,...telegramConfig});
+const groupLogoModule=require('./group-logos.cjs');
+const groupLogoHandler=groupLogoModule.createGroupLogoHandler({service:groupLogoModule.createGroupLogos({db,active}),origin});
 const telegramHandler=require('./telegram-http.cjs')({service:telegram,origin});
 const notificationRules=require('./notification-rules.cjs')({db,active,wakeEnabled:backgroundWorkers});
 const notificationRulesHandler=require('./notification-rules-http.cjs')({service:notificationRules,origin});
@@ -76,6 +78,7 @@ const localHandler=async(req,res)=>{
   }catch(error){respondError(res,error);}return;
  }
  if(req.url.startsWith('/telegram/'))return telegramHandler(req,res);
+ if(req.url.startsWith('/group-logos/'))return groupLogoHandler(req,res);
  if(req.url.startsWith('/release-access/'))return releaseAccessHandler(req,res);
  if(req.url.startsWith('/notification-rules/'))return notificationRulesHandler(req,res);
  if(req.url!=='/guest-support')return handler(req,res);

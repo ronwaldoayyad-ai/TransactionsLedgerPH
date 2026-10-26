@@ -1,10 +1,8 @@
-// The loan request and installment disclosure share the same explanatory copy.
+// Request-a-loan copy remains Cash Loan; schedule help follows its actual loan group.
 function loanFeeDescription(label){
- return ({
-  'Documentary Stamp Tax':'Documentary Stamp Tax (DST) is auto-calculated at ₱1.50 per ₱200 of the loan amount, applied when the amount is ₱500,000 or more.',
-  'Processing Fee':'A fixed processing fee of '+cash(1500)+' is billed one-time on the first monthly amortization.',
-  'Notarial Fee':'A notarial fee of 0.35% of the loan amount is charged one-time on the first monthly amortization, applied when the amount is ₱500,000 or more.'
- })[label]||'';
+ const loan=typeof page!=='undefined'&&page==='installmentDetail'&&typeof stagingLoans==='function'?stagingLoans()[selectedInstallmentIndex]:null;
+ const group=loan?TransactionGroups.defaultInstallmentGroup(loan):'cash_loan';
+ return LoanFeeHelp.loanFeeHelp(label,group,cash(1500));
 }
 function loanFeeInfoButton(label){
  return loanFeeDescription(label)?'<button type="button" class="loan-fee-info" aria-label="About '+htmlSafe(label)+'" aria-haspopup="dialog" onclick="showLoanFeeInfo('+htmlSafe(JSON.stringify(label))+',this)"><span aria-hidden="true">i</span></button>':'';

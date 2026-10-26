@@ -1,7 +1,7 @@
 {
   "status": "rehearsal candidate; production approval required",
   "classic_commit": "db08a917120a6455b8d2d0d42ddf981c5b3cbd63",
-  "sha256": "cea091955f09fc7f026822c9f33ed0285158e5133e9bc4ee190951d2d7cebb6d",
+  "sha256": "34c26a9f2a35b92cac45d4e1f6f16575e6420c3263b4a67953bc8c131d8cf082",
   "transaction_boundaries": [
     {
       "file": "release/option3/foundation.sql",
@@ -177,6 +177,11 @@
       "file": "supabase/migrations/20261025210130_retail_brand_lookup_indexes.sql",
       "begins": 1,
       "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261026133642_transaction_group_logos.sql",
+      "begins": 1,
+      "commits": 1
     }
   ],
   "sources": [
@@ -319,6 +324,10 @@
     {
       "file": "supabase/migrations/20261025210130_retail_brand_lookup_indexes.sql",
       "sha256": "8b02cb3e4163906973d341affa481339b5773f8e07c46004037e74a5eefdff86"
+    },
+    {
+      "file": "supabase/migrations/20261026133642_transaction_group_logos.sql",
+      "sha256": "2623296c32ad05c658197a94b96ec20ce987b4c282652e3e352d69a3c6e1e5e9"
     }
   ],
   "adaptations": [

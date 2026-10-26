@@ -28,6 +28,8 @@ API route families include login/access, upload validation, guest support, suppo
 Amounts are handled as validated cent values in financial calculations and displayed with thousands separators and two decimal places. Saved postings/allocations remain the accounting evidence. Display-only payment breakdowns do not subtract funds twice. Negative adjustments cannot be selected as positive dues for proof submission. Dates are explicit calendar dates or timestamps; formatting must not silently change the account day.
 
 ## Quality requirements
+- Installment fee-help text follows the effective installment group. Preserve Cash Loan copy; retail DST/Notarial Fee are not applicable and retail Processing Fee describes checkout versus later conversion. Recorded fee values are unchanged by help text.
+- Shared Cash Loan/Fees/Adjustments SVG logos are admin-managed global presentation settings with validated preview, explicit review, optimistic version checks and safe retries. Active borrowers read the shared logos; direct Data API writes are denied. Updates refresh borrower views without editing their ledger records.
 - Lazy-load secondary screens and Documentation; preserve focused forms/drafts during background updates.
 - Mobile controls must fit supported small widths; desktop borrowers use a persistent workspace navigation.
 - Use visible field boundaries, keyboard access, text status labels, readable contrast and reduced-motion alternatives.

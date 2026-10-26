@@ -18,6 +18,9 @@ Use the per-borrower Loan Requests switch to show/hide access. Borrowers → Vie
 In Reports & Logs, distinguish archive/restore from permanent purge. Hiding Payment Breakdown is not a payment reversal. The current grid bulk archive control lacks a dedicated confirmation; verify the selected count before using that separate action.
 
 ## Developer guide
+
+Admins manage Cash Loan, Fees and Adjustments artwork in Settings → Group logos or Transactions → Group logos. Upload SVG, review its preview and confirm the shared change. The artwork automatically follows the current group on all applicable borrower transaction views. Retail groups continue to use Brandfetch. Replacing/removing a group logo does not archive records, change amounts or create payments/credit.
+
 Use Node and the exact package lock, documented public build flags and separate isolated test credentials. VITE values are public. Store privileged keys, database URIs, bot tokens and SMTP/AI secrets only in approved secret configuration; never in docs, exports, screenshots or commit history.
 
 Trace requirements to routes, providers, service handlers, RPCs and tests. Preserve idempotency keys and expected-state validation. Never bypass RLS by adding a privileged public function to solve a UI error. Frame-origin checks complement, rather than replace, server authorization.

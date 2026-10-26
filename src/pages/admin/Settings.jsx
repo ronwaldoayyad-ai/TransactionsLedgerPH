@@ -3,6 +3,7 @@ import { useReleaseAccess } from '../../context/ReleaseAccessContext'
 import { releaseAccessEnabled, releaseAccessRequest } from '../../lib/releaseAccess'
 import Icon from '../../components/Icon'
 import TelegramSettings from '../../components/TelegramSettings'
+import GroupLogoSettings from '../../components/admin/GroupLogoSettings'
 import { MagneticDots } from '../../components/ProcessingFeedback'
 import './release-access.css'
 
@@ -87,7 +88,7 @@ export default function Settings() {
 
   return <div className="release-access">
     <header className="release-heading"><div><h1>Settings</h1><p>Manage release access and admin notification preferences.</p></div><button type="button" disabled={loading || saving} onClick={() => { setNotice(''); load() }}><Icon name="refresh" />Refresh</button></header>
-    <nav className="release-tabs" aria-label="Settings sections"><a href="#release-access-panel">Release access</a><a href="#telegram-alerts">Telegram alerts</a></nav>
+    <nav className="release-tabs" aria-label="Settings sections"><a href="#release-access-panel">Release access</a><a href="#telegram-alerts">Telegram alerts</a><a href="#group-logos">Group logos</a></nav>
     <div id="release-access-panel">
       <section className="release-card release-admin-card"><div><h2>Your admin workspace</h2><p>You are using {classicAdmin ? 'classic admin' : 'the new admin workspace'}. Switching keeps your sign-in and records.</p></div><button type="button" onClick={() => chooseAdminInterface(classicAdmin ? 'new' : 'classic')}><Icon name="dashboard" />{classicAdmin ? 'Use new admin workspace' : 'Return to classic admin'}</button></section>
       {!releaseAccessEnabled && <p className="release-error" role="alert">Release access is not connected in this environment yet.</p>}
@@ -110,6 +111,7 @@ export default function Settings() {
       </>}
     </div>
     <TelegramSettings />
+    <GroupLogoSettings />
     {change && <ReviewChange change={change} saving={saving} onCancel={() => setChange(null)} onConfirm={save} />}
   </div>
 }

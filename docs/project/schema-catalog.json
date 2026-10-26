@@ -242,7 +242,7 @@
       "foreign_keys": [
         {
           "name": "arbitrage_loans_user_id_fkey",
-          "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE"
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE"
         }
       ]
     },
@@ -267,7 +267,7 @@
         },
         {
           "name": "action",
-          "type": "audit_action",
+          "type": "public.audit_action",
           "nullable": false
         },
         {
@@ -402,7 +402,7 @@
       "foreign_keys": [
         {
           "name": "borrower_preferences_user_id_fkey",
-          "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE"
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE"
         }
       ]
     },
@@ -488,7 +488,7 @@
       "foreign_keys": [
         {
           "name": "borrower_statements_user_id_fkey",
-          "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id)"
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id)"
         }
       ]
     },
@@ -642,15 +642,15 @@
       "foreign_keys": [
         {
           "name": "fee_assessments_actor_id_fkey",
-          "definition": "FOREIGN KEY (actor_id) REFERENCES profiles(id) ON DELETE RESTRICT"
+          "definition": "FOREIGN KEY (actor_id) REFERENCES public.profiles(id) ON DELETE RESTRICT"
         },
         {
           "name": "fee_assessments_user_id_fkey",
-          "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE RESTRICT"
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE RESTRICT"
         },
         {
           "name": "fee_assessments_voided_by_fkey",
-          "definition": "FOREIGN KEY (voided_by) REFERENCES profiles(id) ON DELETE RESTRICT"
+          "definition": "FOREIGN KEY (voided_by) REFERENCES public.profiles(id) ON DELETE RESTRICT"
         }
       ]
     },
@@ -665,7 +665,7 @@
         },
         {
           "name": "kind",
-          "type": "rate_kind",
+          "type": "public.rate_kind",
           "nullable": false
         },
         {
@@ -831,7 +831,7 @@
       "foreign_keys": [
         {
           "name": "invoices_user_id_fkey",
-          "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE"
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE"
         }
       ]
     },
@@ -875,7 +875,7 @@
       "foreign_keys": [
         {
           "name": "ledger_change_signals_borrower_id_fkey",
-          "definition": "FOREIGN KEY (borrower_id) REFERENCES profiles(id) ON DELETE CASCADE"
+          "definition": "FOREIGN KEY (borrower_id) REFERENCES public.profiles(id) ON DELETE CASCADE"
         }
       ]
     },
@@ -1072,15 +1072,15 @@
       "foreign_keys": [
         {
           "name": "loan_disbursements_acknowledged_by_fkey",
-          "definition": "FOREIGN KEY (acknowledged_by) REFERENCES profiles(id) ON DELETE SET NULL"
+          "definition": "FOREIGN KEY (acknowledged_by) REFERENCES public.profiles(id) ON DELETE SET NULL"
         },
         {
           "name": "loan_disbursements_request_id_fkey",
-          "definition": "FOREIGN KEY (request_id) REFERENCES loan_requests(id) ON DELETE SET NULL"
+          "definition": "FOREIGN KEY (request_id) REFERENCES public.loan_requests(id) ON DELETE SET NULL"
         },
         {
           "name": "loan_disbursements_user_id_fkey",
-          "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE"
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE"
         }
       ]
     },
@@ -1131,7 +1131,7 @@
       "foreign_keys": [
         {
           "name": "loan_request_access_user_id_fkey",
-          "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE"
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE"
         }
       ]
     },
@@ -1197,7 +1197,7 @@
       "foreign_keys": [
         {
           "name": "loan_request_events_request_id_fkey",
-          "definition": "FOREIGN KEY (request_id) REFERENCES loan_requests(id) ON DELETE CASCADE"
+          "definition": "FOREIGN KEY (request_id) REFERENCES public.loan_requests(id) ON DELETE CASCADE"
         }
       ]
     },
@@ -1388,7 +1388,7 @@
       "foreign_keys": [
         {
           "name": "loan_requests_user_id_fkey",
-          "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE"
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE"
         }
       ]
     },
@@ -1413,7 +1413,7 @@
         },
         {
           "name": "txn_type",
-          "type": "loan_txn_type",
+          "type": "public.loan_txn_type",
           "nullable": false
         },
         {
@@ -1463,7 +1463,7 @@
         },
         {
           "name": "status",
-          "type": "loan_status",
+          "type": "public.loan_status",
           "nullable": false
         },
         {
@@ -1511,7 +1511,7 @@
       "foreign_keys": [
         {
           "name": "loans_user_id_fkey",
-          "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id) ON UPDATE CASCADE ON DELETE CASCADE"
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON UPDATE CASCADE ON DELETE CASCADE"
         }
       ]
     },
@@ -1555,7 +1555,7 @@
       "foreign_keys": [
         {
           "name": "message_change_signals_borrower_id_fkey",
-          "definition": "FOREIGN KEY (borrower_id) REFERENCES profiles(id) ON UPDATE CASCADE ON DELETE CASCADE"
+          "definition": "FOREIGN KEY (borrower_id) REFERENCES public.profiles(id) ON UPDATE CASCADE ON DELETE CASCADE"
         }
       ]
     },
@@ -1594,11 +1594,11 @@
       "foreign_keys": [
         {
           "name": "message_hidden_message_id_fkey",
-          "definition": "FOREIGN KEY (message_id) REFERENCES messages(id) ON DELETE CASCADE"
+          "definition": "FOREIGN KEY (message_id) REFERENCES public.messages(id) ON DELETE CASCADE"
         },
         {
           "name": "message_hidden_user_id_fkey",
-          "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id)"
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id)"
         }
       ]
     },
@@ -1742,11 +1742,11 @@
       "foreign_keys": [
         {
           "name": "messages_notification_id_fkey",
-          "definition": "FOREIGN KEY (notification_id) REFERENCES notifications(id) ON DELETE SET NULL"
+          "definition": "FOREIGN KEY (notification_id) REFERENCES public.notifications(id) ON DELETE SET NULL"
         },
         {
           "name": "messages_reply_to_id_fkey",
-          "definition": "FOREIGN KEY (reply_to_id) REFERENCES messages(id) ON DELETE SET NULL"
+          "definition": "FOREIGN KEY (reply_to_id) REFERENCES public.messages(id) ON DELETE SET NULL"
         }
       ]
     },
@@ -1815,11 +1815,11 @@
       "foreign_keys": [
         {
           "name": "mobile_login_tokens_issued_by_fkey",
-          "definition": "FOREIGN KEY (issued_by) REFERENCES profiles(id)"
+          "definition": "FOREIGN KEY (issued_by) REFERENCES public.profiles(id)"
         },
         {
           "name": "mobile_login_tokens_user_id_fkey",
-          "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id)"
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id)"
         }
       ]
     },
@@ -1898,7 +1898,7 @@
       "foreign_keys": [
         {
           "name": "notification_categories_updated_by_fkey",
-          "definition": "FOREIGN KEY (updated_by) REFERENCES profiles(id) ON DELETE SET NULL"
+          "definition": "FOREIGN KEY (updated_by) REFERENCES public.profiles(id) ON DELETE SET NULL"
         }
       ]
     },
@@ -1937,7 +1937,7 @@
       "foreign_keys": [
         {
           "name": "notification_change_signals_user_id_fkey",
-          "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE"
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE"
         }
       ]
     },
@@ -1993,11 +1993,11 @@
       "foreign_keys": [
         {
           "name": "notification_reactions_notification_id_fkey",
-          "definition": "FOREIGN KEY (notification_id) REFERENCES notifications(id) ON DELETE CASCADE"
+          "definition": "FOREIGN KEY (notification_id) REFERENCES public.notifications(id) ON DELETE CASCADE"
         },
         {
           "name": "notification_reactions_user_id_fkey",
-          "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE"
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE"
         }
       ]
     },
@@ -2062,11 +2062,11 @@
       "foreign_keys": [
         {
           "name": "notification_reads_notification_id_fkey",
-          "definition": "FOREIGN KEY (notification_id) REFERENCES notifications(id) ON DELETE CASCADE"
+          "definition": "FOREIGN KEY (notification_id) REFERENCES public.notifications(id) ON DELETE CASCADE"
         },
         {
           "name": "notification_reads_user_id_fkey",
-          "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE"
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE"
         }
       ]
     },
@@ -2130,11 +2130,11 @@
       "foreign_keys": [
         {
           "name": "notification_templates_category_reference",
-          "definition": "FOREIGN KEY (category) REFERENCES notification_categories(value)"
+          "definition": "FOREIGN KEY (category) REFERENCES public.notification_categories(value)"
         },
         {
           "name": "notification_templates_created_by_fkey",
-          "definition": "FOREIGN KEY (created_by) REFERENCES profiles(id) ON DELETE SET NULL"
+          "definition": "FOREIGN KEY (created_by) REFERENCES public.profiles(id) ON DELETE SET NULL"
         }
       ]
     },
@@ -2264,7 +2264,7 @@
       "foreign_keys": [
         {
           "name": "notifications_category_reference",
-          "definition": "FOREIGN KEY (category) REFERENCES notification_categories(value)"
+          "definition": "FOREIGN KEY (category) REFERENCES public.notification_categories(value)"
         }
       ]
     },
@@ -2318,15 +2318,15 @@
       "foreign_keys": [
         {
           "name": "payment_allocation_releases_correction_id_fkey",
-          "definition": "FOREIGN KEY (correction_id) REFERENCES transaction_corrections(id) ON DELETE RESTRICT"
+          "definition": "FOREIGN KEY (correction_id) REFERENCES public.transaction_corrections(id) ON DELETE RESTRICT"
         },
         {
           "name": "payment_allocation_releases_posting_id_transaction_id_fkey",
-          "definition": "FOREIGN KEY (posting_id, transaction_id) REFERENCES payment_allocations(posting_id, transaction_id) ON DELETE RESTRICT"
+          "definition": "FOREIGN KEY (posting_id, transaction_id) REFERENCES public.payment_allocations(posting_id, transaction_id) ON DELETE RESTRICT"
         },
         {
           "name": "payment_allocation_releases_user_id_fkey",
-          "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE RESTRICT"
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE RESTRICT"
         }
       ]
     },
@@ -2380,15 +2380,15 @@
       "foreign_keys": [
         {
           "name": "payment_allocations_posting_id_fkey",
-          "definition": "FOREIGN KEY (posting_id) REFERENCES payment_postings(id) ON DELETE RESTRICT"
+          "definition": "FOREIGN KEY (posting_id) REFERENCES public.payment_postings(id) ON DELETE RESTRICT"
         },
         {
           "name": "payment_allocations_transaction_id_fkey",
-          "definition": "FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE RESTRICT"
+          "definition": "FOREIGN KEY (transaction_id) REFERENCES public.transactions(id) ON DELETE RESTRICT"
         },
         {
           "name": "payment_allocations_user_id_fkey",
-          "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE RESTRICT"
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE RESTRICT"
         }
       ]
     },
@@ -2437,11 +2437,11 @@
       "foreign_keys": [
         {
           "name": "payment_breakdown_visibility_posting_id_fkey",
-          "definition": "FOREIGN KEY (posting_id) REFERENCES payment_postings(id) ON DELETE RESTRICT"
+          "definition": "FOREIGN KEY (posting_id) REFERENCES public.payment_postings(id) ON DELETE RESTRICT"
         },
         {
           "name": "payment_breakdown_visibility_user_id_fkey",
-          "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE"
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE"
         }
       ]
     },
@@ -2485,7 +2485,7 @@
       "foreign_keys": [
         {
           "name": "payment_due_change_signals_borrower_id_fkey",
-          "definition": "FOREIGN KEY (borrower_id) REFERENCES profiles(id) ON UPDATE CASCADE ON DELETE CASCADE"
+          "definition": "FOREIGN KEY (borrower_id) REFERENCES public.profiles(id) ON UPDATE CASCADE ON DELETE CASCADE"
         }
       ]
     },
@@ -2561,7 +2561,7 @@
         },
         {
           "name": "kind",
-          "type": "pay_log_kind",
+          "type": "public.pay_log_kind",
           "nullable": false
         },
         {
@@ -2591,7 +2591,7 @@
         },
         {
           "name": "method",
-          "type": "pay_log_method",
+          "type": "public.pay_log_method",
           "nullable": true
         },
         {
@@ -2606,7 +2606,7 @@
         },
         {
           "name": "alloc_status",
-          "type": "pay_log_alloc",
+          "type": "public.pay_log_alloc",
           "nullable": false
         },
         {
@@ -2684,23 +2684,23 @@
       "foreign_keys": [
         {
           "name": "payment_logs_consumed_by_fkey",
-          "definition": "FOREIGN KEY (consumed_by) REFERENCES payment_logs(id) ON DELETE SET NULL"
+          "definition": "FOREIGN KEY (consumed_by) REFERENCES public.payment_logs(id) ON DELETE SET NULL"
         },
         {
           "name": "payment_logs_correction_id_fkey",
-          "definition": "FOREIGN KEY (correction_id) REFERENCES transaction_corrections(id) ON DELETE RESTRICT"
+          "definition": "FOREIGN KEY (correction_id) REFERENCES public.transaction_corrections(id) ON DELETE RESTRICT"
         },
         {
           "name": "payment_logs_parent_id_fkey",
-          "definition": "FOREIGN KEY (parent_id) REFERENCES payment_logs(id) ON DELETE SET NULL"
+          "definition": "FOREIGN KEY (parent_id) REFERENCES public.payment_logs(id) ON DELETE SET NULL"
         },
         {
           "name": "payment_logs_source_posting_id_fkey",
-          "definition": "FOREIGN KEY (source_posting_id) REFERENCES payment_postings(id) ON DELETE RESTRICT"
+          "definition": "FOREIGN KEY (source_posting_id) REFERENCES public.payment_postings(id) ON DELETE RESTRICT"
         },
         {
           "name": "payment_logs_user_id_fkey",
-          "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE"
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE"
         }
       ]
     },
@@ -2804,23 +2804,23 @@
       "foreign_keys": [
         {
           "name": "payment_postings_actor_id_fkey",
-          "definition": "FOREIGN KEY (actor_id) REFERENCES profiles(id) ON DELETE RESTRICT"
+          "definition": "FOREIGN KEY (actor_id) REFERENCES public.profiles(id) ON DELETE RESTRICT"
         },
         {
           "name": "payment_postings_log_id_fkey",
-          "definition": "FOREIGN KEY (log_id) REFERENCES payment_logs(id) DEFERRABLE INITIALLY DEFERRED"
+          "definition": "FOREIGN KEY (log_id) REFERENCES public.payment_logs(id) DEFERRABLE INITIALLY DEFERRED"
         },
         {
           "name": "payment_postings_payment_id_fkey",
-          "definition": "FOREIGN KEY (payment_id) REFERENCES payments(id) ON DELETE RESTRICT"
+          "definition": "FOREIGN KEY (payment_id) REFERENCES public.payments(id) ON DELETE RESTRICT"
         },
         {
           "name": "payment_postings_reversal_of_fkey",
-          "definition": "FOREIGN KEY (reversal_of) REFERENCES payment_postings(id) ON DELETE RESTRICT"
+          "definition": "FOREIGN KEY (reversal_of) REFERENCES public.payment_postings(id) ON DELETE RESTRICT"
         },
         {
           "name": "payment_postings_user_id_fkey",
-          "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE RESTRICT"
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE RESTRICT"
         }
       ]
     },
@@ -2850,7 +2850,7 @@
         },
         {
           "name": "method",
-          "type": "payment_method",
+          "type": "public.payment_method",
           "nullable": false
         },
         {
@@ -2880,7 +2880,7 @@
         },
         {
           "name": "status",
-          "type": "payment_status",
+          "type": "public.payment_status",
           "nullable": false
         },
         {
@@ -3011,15 +3011,15 @@
       "foreign_keys": [
         {
           "name": "payments_correction_of_fkey",
-          "definition": "FOREIGN KEY (correction_of) REFERENCES payments(id)"
+          "definition": "FOREIGN KEY (correction_of) REFERENCES public.payments(id)"
         },
         {
           "name": "payments_loan_id_fkey",
-          "definition": "FOREIGN KEY (loan_id) REFERENCES loans(id) ON DELETE CASCADE"
+          "definition": "FOREIGN KEY (loan_id) REFERENCES public.loans(id) ON DELETE CASCADE"
         },
         {
           "name": "payments_user_id_fkey",
-          "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id) ON UPDATE CASCADE ON DELETE CASCADE"
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON UPDATE CASCADE ON DELETE CASCADE"
         }
       ]
     },
@@ -3049,12 +3049,12 @@
         },
         {
           "name": "role",
-          "type": "user_role",
+          "type": "public.user_role",
           "nullable": false
         },
         {
           "name": "status",
-          "type": "user_status",
+          "type": "public.user_status",
           "nullable": false
         },
         {
@@ -3220,15 +3220,15 @@
       "foreign_keys": [
         {
           "name": "retail_brand_assignments_loan_id_fkey",
-          "definition": "FOREIGN KEY (loan_id) REFERENCES loans(id) ON DELETE CASCADE"
+          "definition": "FOREIGN KEY (loan_id) REFERENCES public.loans(id) ON DELETE CASCADE"
         },
         {
           "name": "retail_brand_assignments_transaction_id_fkey",
-          "definition": "FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE CASCADE"
+          "definition": "FOREIGN KEY (transaction_id) REFERENCES public.transactions(id) ON DELETE CASCADE"
         },
         {
           "name": "retail_brand_assignments_user_id_fkey",
-          "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE CASCADE"
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE"
         }
       ]
     },
@@ -3353,11 +3353,11 @@
       "foreign_keys": [
         {
           "name": "support_ticket_events_actor_id_fkey",
-          "definition": "FOREIGN KEY (actor_id) REFERENCES profiles(id)"
+          "definition": "FOREIGN KEY (actor_id) REFERENCES public.profiles(id)"
         },
         {
           "name": "support_ticket_events_ticket_id_fkey",
-          "definition": "FOREIGN KEY (ticket_id) REFERENCES support_tickets(id)"
+          "definition": "FOREIGN KEY (ticket_id) REFERENCES public.support_tickets(id)"
         }
       ]
     },
@@ -3468,7 +3468,7 @@
       "foreign_keys": [
         {
           "name": "support_tickets_user_id_fkey",
-          "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id)"
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id)"
         }
       ]
     },
@@ -3631,17 +3631,66 @@
       "foreign_keys": [
         {
           "name": "transaction_corrections_actor_id_fkey",
-          "definition": "FOREIGN KEY (actor_id) REFERENCES profiles(id) ON DELETE RESTRICT"
+          "definition": "FOREIGN KEY (actor_id) REFERENCES public.profiles(id) ON DELETE RESTRICT"
         },
         {
           "name": "transaction_corrections_transaction_id_fkey",
-          "definition": "FOREIGN KEY (transaction_id) REFERENCES transactions(id) ON DELETE RESTRICT"
+          "definition": "FOREIGN KEY (transaction_id) REFERENCES public.transactions(id) ON DELETE RESTRICT"
         },
         {
           "name": "transaction_corrections_user_id_fkey",
-          "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id) ON DELETE RESTRICT"
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE RESTRICT"
         }
       ]
+    },
+    {
+      "rls": true,
+      "name": "transaction_group_logos",
+      "columns": [
+        {
+          "name": "group_key",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "svg",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "filename",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "version",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "group_logo_reference",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        },
+        {
+          "name": "mobile_valid_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (group_key)",
+      "foreign_keys": null
     },
     {
       "rls": true,
@@ -3694,7 +3743,7 @@
         },
         {
           "name": "status",
-          "type": "txn_status",
+          "type": "public.txn_status",
           "nullable": false
         },
         {
@@ -3762,15 +3811,15 @@
       "foreign_keys": [
         {
           "name": "transactions_fee_assessment_id_fkey",
-          "definition": "FOREIGN KEY (fee_assessment_id) REFERENCES fee_assessments(id) ON DELETE RESTRICT"
+          "definition": "FOREIGN KEY (fee_assessment_id) REFERENCES public.fee_assessments(id) ON DELETE RESTRICT"
         },
         {
           "name": "transactions_loan_id_fkey",
-          "definition": "FOREIGN KEY (loan_id) REFERENCES loans(id) ON DELETE CASCADE"
+          "definition": "FOREIGN KEY (loan_id) REFERENCES public.loans(id) ON DELETE CASCADE"
         },
         {
           "name": "transactions_user_id_fkey",
-          "definition": "FOREIGN KEY (user_id) REFERENCES profiles(id) ON UPDATE CASCADE ON DELETE CASCADE"
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON UPDATE CASCADE ON DELETE CASCADE"
         }
       ]
     },
@@ -3849,7 +3898,7 @@
       "foreign_keys": [
         {
           "name": "wallet_account_txns_account_id_fkey",
-          "definition": "FOREIGN KEY (account_id) REFERENCES wallet_accounts(id) ON DELETE CASCADE"
+          "definition": "FOREIGN KEY (account_id) REFERENCES public.wallet_accounts(id) ON DELETE CASCADE"
         }
       ]
     },
@@ -4002,7 +4051,7 @@
       "foreign_keys": [
         {
           "name": "wallet_bills_card_id_fkey",
-          "definition": "FOREIGN KEY (card_id) REFERENCES wallet_cards(id) ON DELETE CASCADE"
+          "definition": "FOREIGN KEY (card_id) REFERENCES public.wallet_cards(id) ON DELETE CASCADE"
         }
       ]
     },
@@ -4052,17 +4101,17 @@
         },
         {
           "name": "network",
-          "type": "wallet_network",
+          "type": "public.wallet_network",
           "nullable": false
         },
         {
           "name": "tier",
-          "type": "wallet_tier",
+          "type": "public.wallet_tier",
           "nullable": false
         },
         {
           "name": "category",
-          "type": "wallet_category",
+          "type": "public.wallet_category",
           "nullable": true
         },
         {
@@ -4210,16 +4259,16 @@
       "foreign_keys": [
         {
           "name": "wallet_payments_account_id_fkey",
-          "definition": "FOREIGN KEY (account_id) REFERENCES wallet_accounts(id) ON DELETE SET NULL"
+          "definition": "FOREIGN KEY (account_id) REFERENCES public.wallet_accounts(id) ON DELETE SET NULL"
         },
         {
           "name": "wallet_payments_bill_id_fkey",
-          "definition": "FOREIGN KEY (bill_id) REFERENCES wallet_bills(id) ON DELETE CASCADE"
+          "definition": "FOREIGN KEY (bill_id) REFERENCES public.wallet_bills(id) ON DELETE CASCADE"
         }
       ]
     }
   ],
-  "captured_at": "2026-10-26T01:38:55.197688+00:00",
+  "captured_at": "2026-10-26T14:22:28.886Z",
   "public_rpcs": [
     "acknowledge_loan_disbursement",
     "activate_my_account",
@@ -4273,13 +4322,14 @@
     "retail_brand_assignments",
     "retail_brand_rules",
     "support_ticket_events",
-    "support_tickets"
+    "support_tickets",
+    "transaction_group_logos"
   ],
   "storage_buckets": [
     {
       "name": "avatars",
       "public": true,
-      "file_size_limit": 2097152,
+      "file_size_limit": "2097152",
       "allowed_mime_types": [
         "image/jpeg",
         "image/png",
@@ -4289,7 +4339,7 @@
     {
       "name": "mobile-attachments",
       "public": false,
-      "file_size_limit": 5242880,
+      "file_size_limit": "5242880",
       "allowed_mime_types": [
         "image/jpeg",
         "image/png",
@@ -4305,7 +4355,7 @@
     {
       "name": "payment-proofs",
       "public": false,
-      "file_size_limit": 5242880,
+      "file_size_limit": "5242880",
       "allowed_mime_types": [
         "image/jpeg",
         "image/png",
