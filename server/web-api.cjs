@@ -19,7 +19,7 @@ module.exports=function createApiHandler(getRuntime){return async function handl
   try{return json(200,{processed:true,...await service.runNotifications()})}catch{return json(503,{error:'Notification processing failed. Queued events remain available for retry.'});}
  }
  try{
-  const limit=route==='/guest-support'?4194304:route.startsWith('/group-logos/')?262144:65536,chunks=[];let size=0;
+  const limit=route==='/guest-support'?4194304:route.startsWith('/group-logos/')?3145728:65536,chunks=[];let size=0;
   if(request.body)for await(const chunk of request.body){size+=chunk.byteLength;if(size>limit)return json(413,{error:'Request is too large.'});chunks.push(Buffer.from(chunk));}
   const req=Readable.from(chunks);req.url=route;req.method=request.method;req.headers=Object.fromEntries(request.headers);
   // Nested handlers use the canonical origin. Normalize only after matching the

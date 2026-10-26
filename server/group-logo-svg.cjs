@@ -10,7 +10,7 @@ const fail=message=>{throw Object.assign(Error(message),{status:400})};
 function sanitizeGroupLogo(raw){
  if(typeof raw!=='string'||!raw.trim()||Buffer.byteLength(raw,'utf8')>MAX_UPLOAD)fail('Choose an SVG file up to 128 KB.');
  let source=raw.replace(/^\uFEFF/,'').trim().replace(/^<\?xml\s[^?]*\?>\s*/i,'').replace(/<!--[\s\S]*?-->/g,'');
- if(/<!|<\?|[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(source)||XMLValidator.validate(source)!==true)fail('Choose a valid, self-contained SVG without document declarations or external entities.');
+ if(/<!(?!\[CDATA\[)|<\?|[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(source)||XMLValidator.validate(source)!==true)fail('Choose a valid, self-contained SVG without document declarations or external entities.');
  let nodes;try{nodes=new XMLParser({preserveOrder:true,ignoreAttributes:false,processEntities:false,parseTagValue:false,trimValues:false}).parse(source)}catch{fail('The SVG could not be read. Export it as a plain SVG and try again.')}
  const roots=nodes.filter(n=>!('#text'in n&&String(n['#text']).trim()===''));if(roots.length!==1||!Array.isArray(roots[0].svg))fail('The file must contain one SVG image.');
  let count=0;const ids=new Set(),refs=[];
@@ -26,18 +26,36 @@ function sanitizeGroupLogo(raw){
   if(key==='transform'||key==='gradientTransform'){if(!/^(?:(?:matrix|translate|scale|rotate|skewX|skewY)\([\d.eE,+\-\s]+\)\s*)+$/.test(v))fail('The SVG contains an unsupported transform.');return v}
   if(key==='preserveAspectRatio'){if(!/^(?:none|x(?:Min|Mid|Max)Y(?:Min|Mid|Max)(?:\s+(?:meet|slice))?)$/.test(v))fail('The SVG contains an invalid aspect ratio.');return v}
   if(options[key]?.includes(v))return v;
-  fail('The SVG contains unsupported content ('+key+'). Export a plain SVG using paths, fills and local gradients; scripts, images, text, style sheets and external links are not supported.');
+  fail('The SVG contains unsupported content ('+key+'). Use vector paths, fills and local gradients, or upload a PNG instead.');
  }
+ // Flatten ordinary exported class/id/tag rules into SVG presentation attributes.
+ // The original stylesheet is never returned to the browser.
+ const rules=[];
+ function declarations(text){
+  if(/[\\@{}]/.test(text))fail('The SVG contains unsupported CSS. Try a PNG instead.');
+  return text.split(';').filter(s=>s.trim()).map(entry=>{const pos=entry.indexOf(':');if(pos<1)fail('The SVG has invalid styling.');const key=entry.slice(0,pos).trim();let value=entry.slice(pos+1).trim();const important=/\s*!important\s*$/i.test(value);value=value.replace(/\s*!important\s*$/i,'');if(key==='enable-background')return null;if(!paints.has(key)&&!numbers.has(key)&&!options[key]&&!['clip-path','mask','transform'].includes(key))fail('The SVG contains unsupported CSS ('+key+'). Try a PNG instead.');return {key,value:attribute(key,value),important}}).filter(Boolean);
+ }
+ function collect(nodes,depth=0){if(depth>24)fail('The SVG is too complex.');for(const node of nodes){const tag=Object.keys(node).find(k=>k!==':@');if(tag==='metadata'||tag?.startsWith('sodipodi:'))continue;if(tag==='style'){
+   for(const [key,value]of Object.entries(node[':@']||{}))if(key!=='@_type'||value!=='text/css')fail('The SVG stylesheet contains unsupported attributes.');
+   const css=node[tag].map(n=>{if(typeof n['#text']!=='string')fail('The SVG stylesheet is invalid.');return n['#text']}).join('').replace(/\/\*[\s\S]*?\*\//g,'');
+   const rest=css.replace(/([^{}]+)\{([^{}]*)\}/g,(_,selectors,body)=>{const values=declarations(body);for(const selector of selectors.split(',')){const match=selector.trim().match(/^(?:([A-Za-z][\w-]*))?(?:([.#])([\w-]+))?$/);if(!match||(!match[1]&&!match[2])||rules.length>=256)fail('The SVG uses unsupported CSS selectors. Try a PNG instead.');rules.push({tag:match[1],kind:match[2],name:match[3],specificity:(match[1]?1:0)+(match[2]==='#'?100:match[2]?10:0),values})}return ''});if(rest.trim())fail('The SVG stylesheet contains unsupported rules. Try a PNG instead.');
+  }else if(Array.isArray(node[tag]))collect(node[tag],depth+1)}}
+ collect(roots);
  function render(node,depth,parent){
   if(depth>24||++count>2000)fail('The SVG is too complex. Export a simplified plain SVG.');
   const tag=Object.keys(node).find(k=>k!==':@');
+  if(tag==='style'||tag==='metadata'||tag?.startsWith('sodipodi:'))return '';
   if(tag==='#text'){const text=String(node[tag]);if(['title','desc'].includes(parent))return escape(text.slice(0,1000));if(text.trim())fail('Convert SVG text to vector outlines before uploading.');return ''}
   if(!elements.has(tag)||(tag==='svg'&&depth!==0))fail('The SVG contains unsupported elements. Export a plain SVG with text converted to outlines.');
-  const attrs={};for(const [name,value]of Object.entries(node[':@']||{})){
-   const key=name.replace(/^@_/,'');if(key==='style'){for(const entry of String(value).split(';').filter(s=>s.trim())){const pos=entry.indexOf(':');if(pos<1)fail('The SVG has an invalid inline style.');const prop=entry.slice(0,pos).trim(),v=entry.slice(pos+1).trim();if(!paints.has(prop)&&!numbers.has(prop)&&!options[prop])fail('The SVG contains unsupported inline styling. Export a plain SVG.');attrs[prop]=attribute(prop,v)}continue}
+  const attrs={},raw=node[':@']||{},classes=String(raw['@_class']||'').trim().split(/\s+/),priorities=new Map();if(String(raw['@_class']||'').length>512||classes.some(c=>c&&!/^[\w-]+$/.test(c)))fail('The SVG contains invalid class names.');
+  for(const [name,value]of Object.entries(raw)){
+   const key=name.replace(/^@_/,'');if(key==='style'||key==='class'||key==='enable-background'||/^xmlns:|^inkscape:|^sodipodi:/.test(key))continue;
    if(/^(?:aria-[\w-]+|role|version|xml:space|data-[\w-]+)$/.test(key))continue;
    attrs[key]=attribute(key,value);
   }
+  const apply=(values,specificity)=>{for(const v of values){const score=specificity+(v.important?10000:0);if(score>=(priorities.get(v.key)??-1)){attrs[v.key]=v.value;priorities.set(v.key,score)}}};
+  for(const rule of rules)if((!rule.tag||rule.tag===tag)&&(!rule.kind||rule.kind==='.'&&classes.includes(rule.name)||rule.kind==='#'&&raw['@_id']===rule.name))apply(rule.values,rule.specificity);
+  if(raw['@_style'])apply(declarations(String(raw['@_style'])),1000);
   if(tag==='svg'){
    if(!attrs.viewBox){const w=Number(String(attrs.width||'').replace(/px$/,'')),h=Number(String(attrs.height||'').replace(/px$/,''));if(!Number.isFinite(w)||!Number.isFinite(h)||w<=0||h<=0||w>100000||h>100000)fail('Export the SVG with a viewBox or numeric width and height.');attrs.viewBox='0 0 '+w+' '+h}
    attrs.xmlns='http://www.w3.org/2000/svg';delete attrs.width;delete attrs.height;

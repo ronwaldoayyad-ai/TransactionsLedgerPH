@@ -19,7 +19,7 @@ In Reports & Logs, distinguish archive/restore from permanent purge. Hiding Paym
 
 ## Developer guide
 
-Admins manage Cash Loan, Fees and Adjustments artwork in Settings → Group logos or Transactions → Group logos. Upload SVG, review its preview and confirm the shared change. The artwork automatically follows the current group on all applicable borrower transaction views. Retail groups continue to use Brandfetch. Replacing/removing a group logo does not archive records, change amounts or create payments/credit.
+Admins manage Cash Loan, Fees and Adjustments artwork in Settings → Group logos or Transactions → Group logos. Upload SVG (up to 128 KB) or transparent PNG (up to 2 MB), review its preview and confirm the shared change. Ordinary class-based SVG colours/styles are supported; complex SVG effects can be exported as PNG instead. PNG transparency is retained and artwork is optimized automatically. The artwork automatically follows the current group on all applicable borrower transaction views. Retail groups continue to use Brandfetch. Replacing/removing a group logo does not archive records, change amounts or create payments/credit.
 
 Use Node and the exact package lock, documented public build flags and separate isolated test credentials. VITE values are public. Store privileged keys, database URIs, bot tokens and SMTP/AI secrets only in approved secret configuration; never in docs, exports, screenshots or commit history.
 

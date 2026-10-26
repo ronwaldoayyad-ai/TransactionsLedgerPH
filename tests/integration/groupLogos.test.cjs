@@ -31,3 +31,10 @@ test('borrowers read global logos but neither borrowers nor admins can bypass va
 test('removing a group logo restores its default appearance without editing transactions',async()=>{
  const f=await fixture(),before=await finance(),p={...await payload(),svg:null,filename:null},result=await f.service.save(f.req,p);assert.equal(result.svg,null);assert.equal(result.filename,null);assert.deepEqual(await finance(),before)
 });
+
+test('transparent PNG saves through existing metadata, retries safely and leaves every financial row unchanged',async()=>{
+ const sharp=require('sharp'),{sanitizeGroupLogoImage}=require('../../server/group-logo-image.cjs'),f=await fixture(),before=await finance();
+ const png=await sharp({create:{width:32,height:32,channels:4,background:{r:16,g:185,b:129,alpha:0.5}}}).png().toBuffer(),p={...await payload('fees'),svg:'data:image/png;base64,'+png.toString('base64'),filename:'transparent.png'};
+ const saved=await f.service.save(f.req,p);assert.match(saved.svg,/<image.*data:image\/png;base64,/);assert.ok(Buffer.byteLength(saved.svg)<=65536);assert.equal(saved.svg,await sanitizeGroupLogoImage(p.svg));
+ assert.deepEqual(JSON.parse(JSON.stringify(await f.service.save(f.req,p))),JSON.parse(JSON.stringify(saved)));const canonical={...await payload('fees'),svg:saved.svg,filename:'transparent.png'};assert.equal((await f.service.save(f.req,canonical)).svg,saved.svg);assert.deepEqual(await finance(),before);
+});

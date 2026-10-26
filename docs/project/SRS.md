@@ -29,7 +29,7 @@ Amounts are handled as validated cent values in financial calculations and displ
 
 ## Quality requirements
 - Installment fee-help text follows the effective installment group. Preserve Cash Loan copy; retail DST/Notarial Fee are not applicable and retail Processing Fee describes checkout versus later conversion. Recorded fee values are unchanged by help text.
-- Shared Cash Loan/Fees/Adjustments SVG logos are admin-managed global presentation settings with validated preview, explicit review, optimistic version checks and safe retries. Active borrowers read the shared logos; direct Data API writes are denied. Updates refresh borrower views without editing their ledger records.
+- Shared Cash Loan/Fees/Adjustments SVG or transparent PNG logos are admin-managed global presentation settings with validated preview, explicit review, optimistic version checks and safe retries. SVG supports ordinary exported class styling (128 KB input maximum); static PNG preserves transparency and is optimized automatically (2 MB input maximum). Active borrowers read the shared logos; direct Data API writes are denied. Updates refresh borrower views without editing their ledger records.
 - Lazy-load secondary screens and Documentation; preserve focused forms/drafts during background updates.
 - Mobile controls must fit supported small widths; desktop borrowers use a persistent workspace navigation.
 - Use visible field boundaries, keyboard access, text status labels, readable contrast and reduced-motion alternatives.

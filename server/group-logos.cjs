@@ -1,12 +1,12 @@
-const crypto=require('node:crypto'),{sanitizeGroupLogo}=require('./group-logo-svg.cjs'),publicError=require('./public-service-error.cjs');
+const crypto=require('node:crypto'),{sanitizeGroupLogoImage,MAX_REQUEST}=require('./group-logo-image.cjs'),publicError=require('./public-service-error.cjs');
 const groups=new Set(['cash_loan','fees','adjustments']),uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const fail=(message,status=400)=>Object.assign(Error(message),{status});
 function createGroupLogos({db,active}){
  async function actor(req){const user=await active(req,true);if(user.role!=='admin'||user.status!=='active')throw fail('An active lender is required.',403);return user}
- async function preview(req,body){await actor(req);if(!groups.has(body.group))throw fail('Choose Cash Loan, Fees or Adjustments.');return {svg:sanitizeGroupLogo(body.svg)}}
+ async function preview(req,body){await actor(req);if(!groups.has(body.group))throw fail('Choose Cash Loan, Fees or Adjustments.');return {svg:await sanitizeGroupLogoImage(body.svg)}}
  async function save(req,body){
   const lender=await actor(req);if(!groups.has(body.group)||!uuid.test(body.key||'')||!uuid.test(body.expectedVersion||'')||body.reviewed!==true)throw fail('Reload and review the shared group-logo change before saving.');
-  const svg=body.svg===null?null:sanitizeGroupLogo(body.svg),filename=svg?String(body.filename||'group-logo.svg').replace(/[\u0000-\u001f\u007f<>]/g,'').slice(0,120):null;
+  const svg=body.svg===null?null:await sanitizeGroupLogoImage(body.svg),filename=svg?String(body.filename||'group-logo.svg').replace(/[\u0000-\u001f\u007f<>]/g,'').slice(0,120):null;
   const digest=crypto.createHash('sha256').update(JSON.stringify({group:body.group,svg,filename,expectedVersion:body.expectedVersion})).digest('hex'),client=await db.connect();
   try{
    await client.query('begin');await client.query('select pg_advisory_xact_lock(724022)');
@@ -26,6 +26,6 @@ function createGroupLogos({db,active}){
 function createGroupLogoHandler({service,origin}){return async(req,res)=>{
  res.setHeader('Content-Type','application/json');res.setHeader('Cache-Control','no-store');res.setHeader('Vary','Origin');
  if(req.headers.origin&&req.headers.origin!==origin){res.writeHead(403);res.end(JSON.stringify({error:'Origin is not allowed.'}));return}
- try{const action=req.url.slice('/group-logos/'.length);if(req.method!=='POST'||!['preview','save'].includes(action))throw fail('Unsupported group-logo action.',404);const chunks=[];let size=0;for await(const chunk of req){size+=chunk.length;if(size>262144)throw fail('The SVG upload is too large.',413);chunks.push(chunk)}const result=await service[action](req,JSON.parse(Buffer.concat(chunks).toString()||'{}'));res.end(JSON.stringify(result))}catch(error){const result=publicError(error,{fallback:'Group logos are temporarily unavailable. Please retry.'});res.writeHead(result.status);res.end(JSON.stringify(result.body))}
+ try{const action=req.url.slice('/group-logos/'.length);if(req.method!=='POST'||!['preview','save'].includes(action))throw fail('Unsupported group-logo action.',404);const chunks=[];let size=0;for await(const chunk of req){size+=chunk.length;if(size>MAX_REQUEST)throw fail('The logo upload is too large.',413);chunks.push(chunk)}const result=await service[action](req,JSON.parse(Buffer.concat(chunks).toString()||'{}'));res.end(JSON.stringify(result))}catch(error){const result=publicError(error,{fallback:'Group logos are temporarily unavailable. Please retry.'});res.writeHead(result.status);res.end(JSON.stringify(result.body))}
 }}
 module.exports={createGroupLogos,createGroupLogoHandler};
