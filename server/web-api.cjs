@@ -4,7 +4,7 @@ module.exports=function createApiHandler(getRuntime){return async function handl
  const url=new URL(request.url),route=url.pathname==='/api'?'/'+(url.searchParams.get('__route')||''):url.pathname.slice('/api'.length);
  const json=(status,value)=>Response.json(value,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
  if(url.pathname!=='/api'&&!url.pathname.startsWith('/api/'))return json(404,{error:'Unsupported request.'});
- if(!routes.has(route)&&!/^\/(release-access|notification-rules|telegram)\/[a-z-]+$/.test(route)&&!/^\/group-logos\/(preview|save)$/.test(route)&&!/^\/support-tracking\/(capabilities|request|verify|read|end)$/.test(route)&&!['/pawcheebels/ask','/notification-worker','/health'].includes(route))return json(404,{error:'Unsupported request.'});
+ if(!routes.has(route)&&!/^\/(release-access|notification-rules|telegram)\/[a-z-]+$/.test(route)&&!/^\/(group-logos|retail-logos)\/(preview|save)$/.test(route)&&!/^\/support-tracking\/(capabilities|request|verify|read|end)$/.test(route)&&!['/pawcheebels/ask','/notification-worker','/health'].includes(route))return json(404,{error:'Unsupported request.'});
  if(request.method!=='POST'&&!(route==='/health'&&request.method==='GET'))return json(405,{error:'Unsupported request method.'});
  let runtime;try{runtime=getRuntime()}catch{return json(503,{error:'The service is not configured yet. Please contact support.'});}
  const {service,assistant,origin,deploymentOrigin,workerSecret}=runtime;
@@ -19,7 +19,7 @@ module.exports=function createApiHandler(getRuntime){return async function handl
   try{return json(200,{processed:true,...await service.runNotifications()})}catch{return json(503,{error:'Notification processing failed. Queued events remain available for retry.'});}
  }
  try{
-  const limit=route==='/guest-support'?4194304:route.startsWith('/group-logos/')?3145728:65536,chunks=[];let size=0;
+  const limit=route==='/guest-support'?4194304:/^\/(group-logos|retail-logos)\//.test(route)?3145728:65536,chunks=[];let size=0;
   if(request.body)for await(const chunk of request.body){size+=chunk.byteLength;if(size>limit)return json(413,{error:'Request is too large.'});chunks.push(Buffer.from(chunk));}
   const req=Readable.from(chunks);req.url=route;req.method=request.method;req.headers=Object.fromEntries(request.headers);
   // Nested handlers use the canonical origin. Normalize only after matching the

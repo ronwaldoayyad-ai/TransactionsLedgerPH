@@ -190,7 +190,7 @@ export default function CardForm({ open, initial, onClose, onSave }) {
                 {form.naffl ? 'Annual fee waived for life.' : 'This card has an annual membership fee.'}
               </span>
             </span>
-            <Switch checked={form.naffl} onChange={(v) => set({ naffl: v })} label="No Annual Fee for Life" />
+            <Switch stateLabels={{"on":"Annual fee is waived for life","off":"Standard annual fee applies"}} checked={form.naffl} onChange={(v) => set({ naffl: v })} label="No Annual Fee for Life" />
           </label>
           {!form.naffl && (
             <div className="mt-3 grid grid-cols-2 gap-4">

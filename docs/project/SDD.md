@@ -34,3 +34,13 @@ Installment disclosure information icons use the effective Cash Loan/Retail Inst
 
 ## Documentation design
 The Documentation route is admin-guarded and lazy-loaded. Canonical Markdown lives in docs/project; legal sections read the same legal-content.json as public/borrower pages. A build-time inventory supplies routes, package versions, test-suite names, source fingerprint and schema metadata. No live borrower records, credentials or secret configuration values are bundled.
+
+## Uploaded artwork and control feedback
+
+Retail items support a manually uploaded SVG or transparent PNG when Brandfetch is missing or ambiguous. Admins can preview, name and explicitly review one image for up to 200 selected targets. Installment assignments cover the entire linked loan; straight retail assignments cover one transaction. Uploaded choices take priority over automatic matching. Choosing Brandfetch, automatic or no logo clears the custom reference. These actions write artwork/assignment metadata and an audit event only. They do not archive transactions, alter amounts/statuses or create credit.
+
+The immutable retail_brand_assets table deduplicates canonical artwork by SHA-256. Borrowers receive only assignments for their own target keys and referenced assets; both database RLS and the admin-preview snapshot enforce this boundary. Existing assignment realtime invalidations reload referenced artwork. Uploaded artwork has no external Brandfetch icon fallback.
+
+The fourth shared-artwork setting, Payment Proof Submitted, decorates borrower Recent Activity and a separate Payment proof submissions History section. Submission events show their current review status and stay separate from posted-payment records and totals. They are not new financial records.
+
+Switches retain stable accessible feature names and expose current-result text, including pending or unavailable states where applicable. All admin search fields use the Finder gradient border, native input behavior, visible keyboard focus and a still reduced-motion alternative.

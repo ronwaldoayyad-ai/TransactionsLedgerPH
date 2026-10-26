@@ -1,6 +1,6 @@
 # User and Developer Guidelines
 
-Reviewed October 26, 2026.
+Reviewed October 27, 2026.
 
 ## Borrower guide
 - Dashboard: switch Current/Next Balance Due and inspect the matching breakdown. Credit advice appears only when account credit exists.
@@ -29,3 +29,11 @@ Update the appropriate canonical document and tests in the same feature change. 
 
 ## Deployment and recovery
 Build/check first, then obtain required review for the exact production action. Use protected hosted Chrome acceptance and preserve deployment protection. Financial repair, migration, release promotion and borrower enablement are separate scopes. A UI rollback does not undo posted funds; use a reviewed reconciliation/recovery procedure.
+
+## Managing custom artwork
+
+Open Transactions → Brand logos, select one or more retail items, then use Upload SVG or PNG when a brand search has no suitable result. Review the preview, logo name and selected items before assigning. Use automatic returns to normal matching; Remove logo suppresses the target logo. Installment choices apply to the linked loan. These controls are separate from archiving/deleting transactions.
+
+Open Group logos (also available in Settings) to upload a shared Cash Loan, Fees, Adjustments or Payment Proof Submitted image. The proof image appears in borrower Recent Activity and the separate submission-history section. SVG and transparent PNG use the same validation as retail uploads. Replacing/removing artwork changes presentation only.
+
+Switches state the current effect rather than the next action. If a save is pending or delivery is unavailable, read its feedback before assuming the feature is active. Search borders animate only in the admin workspace and become still when reduced motion is requested.

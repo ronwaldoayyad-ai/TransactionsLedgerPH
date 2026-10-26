@@ -1,6 +1,6 @@
 # Testing and Debugging Procedures
 
-Reviewed October 26, 2026. A procedure is not a statement that every future build has passed it.
+Reviewed October 27, 2026. A procedure is not a statement that every future build has passed it.
 
 ## Local and continuous checks
 Run npm ci, npm run lint:release, npm run test:release and npm run build with the required public build configuration. Release CI also regenerates the reviewed forward candidate and exercises database migration/accounting suites against disposable PostgreSQL. Use the generated inventory below for the current suite names and [release workflow](https://github.com/ronwaldoayyad-ai/TransactionsLedgerPH/actions) for actual run results.
@@ -36,3 +36,9 @@ Known safety gap: the existing All Transactions bulk archive button acts without
 
 ## Operational limits
 Browser screenshots, synthetic mocks and simulated motion preferences are useful evidence but not proof of real account authentication, email delivery or financial settlement. Record exactly what was tested, the build, environment, inputs and unresolved limitations.
+
+## Artwork, labels and search regression
+
+Exercise individual PNG upload after an empty Brandfetch result and reviewed bulk SVG assignment through the real UI and database service. Verify previews, transparency, explicit review, live borrower refresh, automatic/Brandfetch reset and unchanged financial fingerprints. Cover early/middle/late migration failures, safe retry, concurrent/stale saves, deduplication, target eligibility, limits and admin/owner/foreign/anonymous authorization. Direct Data API writes must fail.
+
+Check proof artwork in Recent Activity and the separate submission-history section without submitting a real payment. Check current-result switch text for both states, keyboard focus, native search typing/clearing, small-screen overflow and reduced-motion CSS. Record synthetic snapshot and external search mocks as test boundaries. Never upload placeholder artwork to production merely to test persistence.

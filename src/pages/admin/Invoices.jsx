@@ -5,7 +5,7 @@ import { useNotifications } from '../../context/NotificationsContext'
 import { PageHeader } from '../../components/AppShell'
 import Icon from '../../components/Icon'
 import RefreshButton from '../../components/RefreshButton'
-import { Badge, Button, Card, CardHeader, EmptyState, Field, Modal, MultiSelect, inputClass } from '../../components/ui'
+import {SearchInput,  Badge, Button, Card, CardHeader, EmptyState, Field, Modal, MultiSelect, inputClass } from '../../components/ui'
 import { formatDate, formatPeso, parseISODate, toISODate } from '../../lib/amortization'
 import {
   borrowerDueDates,
@@ -271,7 +271,7 @@ export default function Invoices() {
           />
           {invoices.length > 0 && (
             <div className="flex flex-wrap items-center gap-2 px-5 pt-4">
-              <input
+              <SearchInput
                 type="search"
                 value={listQuery}
                 onChange={(e) => setListQuery(e.target.value)}

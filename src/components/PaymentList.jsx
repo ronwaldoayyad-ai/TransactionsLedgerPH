@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useApp } from '../context/AppContext'
 import { useAnnouncements } from '../context/AnnouncementsContext'
 import Icon from './Icon'
-import { Badge, Button, EmptyState, Field, Modal, inputClass } from './ui'
+import {SearchInput,  Badge, Button, EmptyState, Field, Modal, inputClass } from './ui'
 import { formatDate, formatPeso } from '../lib/amortization'
 import Pagination from './Pagination'
 import { usePagination } from '../hooks/usePagination'
@@ -149,7 +149,7 @@ export default function PaymentList({
 
       {showControls && payments.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 px-5 pt-3">
-          <input
+          <SearchInput
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}

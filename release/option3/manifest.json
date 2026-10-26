@@ -1,7 +1,7 @@
 {
   "status": "rehearsal candidate; production approval required",
   "classic_commit": "db08a917120a6455b8d2d0d42ddf981c5b3cbd63",
-  "sha256": "34c26a9f2a35b92cac45d4e1f6f16575e6420c3263b4a67953bc8c131d8cf082",
+  "sha256": "5c576fec0bfe808a1f068484d6a472ded445f886af63ca93fbb7a805b1a5e61f",
   "transaction_boundaries": [
     {
       "file": "release/option3/foundation.sql",
@@ -182,6 +182,11 @@
       "file": "supabase/migrations/20261026133642_transaction_group_logos.sql",
       "begins": 1,
       "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261026214552_uploaded_retail_and_proof_activity_logos.sql",
+      "begins": 1,
+      "commits": 1
     }
   ],
   "sources": [
@@ -328,6 +333,10 @@
     {
       "file": "supabase/migrations/20261026133642_transaction_group_logos.sql",
       "sha256": "2623296c32ad05c658197a94b96ec20ce987b4c282652e3e352d69a3c6e1e5e9"
+    },
+    {
+      "file": "supabase/migrations/20261026214552_uploaded_retail_and_proof_activity_logos.sql",
+      "sha256": "ca68fd12b4c65483bbe1229514630c1358ff92e45a5b64eb340e0e8745964f5a"
     }
   ],
   "adaptations": [

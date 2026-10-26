@@ -11,17 +11,20 @@ export const useRetailBrands=()=>useContext(Context)
 export function RetailBrandsProvider({children}){
  const {realSession,session,transactions}=useApp(),owner=realSession||session,id=owner?.user.id,admin=owner?.user.role==='admin',live=owner?.source==='supabase'
  const [assignments,setAssignments]=useState([]),[rules,setRules]=useState([]),[error,setError]=useState(''),[ready,setReady]=useState(false),generation=useRef(0)
+ const [assets,setAssets]=useState([])
  const [groupLogos,setGroupLogos]=useState([]),[groupError,setGroupError]=useState(''),[groupsReady,setGroupsReady]=useState(false),groupGeneration=useRef(0)
  const clientId=import.meta.env.VITE_BRANDFETCH_CLIENT_ID||''
  const refresh=useCallback(async()=>{
   const current=++generation.current;if(!id)return
   try{const read=async table=>{const rows=[];for(let from=0;;from+=1000){const r=await supabase.from(table).select('*').order(table==='retail_brand_assignments'?'target_key':'id').range(from,from+999);if(r.error)throw Error('Brand logo settings could not be loaded. Please retry.');rows.push(...r.data);if(r.data.length<1000)return rows}}
-   const [nextAssignments,nextRules]=await Promise.all([read('retail_brand_assignments'),read('retail_brand_rules')]);if(current!==generation.current)return;setAssignments(nextAssignments);setRules(nextRules);setReady(true);setError('')
+   const [nextAssignments,nextRules]=await Promise.all([read('retail_brand_assignments'),read('retail_brand_rules')]),ids=[...new Set(nextAssignments.flatMap(a=>a.logo_id?[a.logo_id]:[]))],nextAssets=[];
+   for(let from=0;from<ids.length;from+=100){const r=await supabase.from('retail_brand_assets').select('id,svg,filename').in('id',ids.slice(from,from+100));if(r.error)throw Error('Uploaded logos could not be loaded. Please retry.');nextAssets.push(...r.data)}
+   if(current!==generation.current)return;setAssignments(nextAssignments);setRules(nextRules);setAssets(nextAssets);setReady(true);setError('')
   }catch(e){if(current===generation.current){setError(e.message);setReady(false)}}
  },[id])
  const refreshGroups=useCallback(async()=>{const current=++groupGeneration.current;if(!id)return;try{const {data,error:failure}=await supabase.from('transaction_group_logos').select('group_key,svg,filename,version,updated_at').order('group_key');if(failure)throw Error('Group logos could not be loaded. Please retry.');if(current===groupGeneration.current){setGroupLogos(data);setGroupsReady(true);setGroupError('')}}catch(e){if(current===groupGeneration.current){setGroupError(e.message);setGroupsReady(false)}}},[id])
  // Owner changes clear old metadata before a different session can use it.
- useEffect(()=>{let active=true;const guard=generation;queueMicrotask(()=>{if(!active)return;setAssignments([]);setRules([]);setError('');setReady(!live);if(live)refresh()});return()=>{active=false;++guard.current}},[id,live,refresh])
+ useEffect(()=>{let active=true;const guard=generation;queueMicrotask(()=>{if(!active)return;setAssignments([]);setRules([]);setAssets([]);setError('');setReady(!live);if(live)refresh()});return()=>{active=false;++guard.current}},[id,live,refresh])
  useEffect(()=>{let active=true;const guard=groupGeneration;queueMicrotask(()=>{if(!active)return;setGroupLogos([]);setGroupError('');setGroupsReady(!live);if(live)refreshGroups()});return()=>{active=false;++guard.current}},[id,live,refreshGroups])
  useEffect(()=>{if(!id||!live)return;return subscribeToInvalidations({client:supabase,name:'transaction-group-logos-'+id,table:'transaction_group_logos',isAdmin:true,onChange:refreshGroups,onError:()=>{}})},[id,live,refreshGroups])
  const scope=useMemo(()=>transactions.map(t=>t.id+':'+t.userId).sort().join('|'),[transactions])
@@ -35,7 +38,7 @@ export function RetailBrandsProvider({children}){
   if(!admin||!live)return {error:'Sign in as the lender to manage matching rules.'}
   const {data,error:failure}=await supabase.rpc('admin_save_retail_brand_rule',{p_payload:payload});if(failure)return {error:failure.message};await refresh();return {data,error:null}
  },[admin,live,refresh])
- const resolve=useMemo(()=>{const retail=createRetailBrandResolver(assignments,rules),groups=createGroupLogoResolver(groupLogos);return(t,l)=>groups(t,l)||(ready?retail(t,l):{status:'loading',domain:null,target:retailTarget(t,l)})},[assignments,rules,ready,groupLogos])
- const value=useMemo(()=>({assignments,rules,clientId,ready,error,refresh,assign,saveRule,resolve,groupLogos,groupError,groupsReady,refreshGroups}),[assignments,rules,clientId,ready,error,refresh,assign,saveRule,resolve,groupLogos,groupError,groupsReady,refreshGroups])
+ const resolve=useMemo(()=>{const retail=createRetailBrandResolver(assignments,rules,assets),groups=createGroupLogoResolver(groupLogos);return(t,l)=>groups(t,l)||(ready?retail(t,l):{status:'loading',domain:null,target:retailTarget(t,l)})},[assignments,rules,assets,ready,groupLogos])
+ const value=useMemo(()=>({assignments,rules,assets,clientId,ready,error,refresh,assign,saveRule,resolve,groupLogos,groupError,groupsReady,refreshGroups}),[assignments,rules,assets,clientId,ready,error,refresh,assign,saveRule,resolve,groupLogos,groupError,groupsReady,refreshGroups])
  return <Context.Provider value={value}>{children}</Context.Provider>
 }

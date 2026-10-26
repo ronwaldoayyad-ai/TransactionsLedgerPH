@@ -17,6 +17,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { sessionDestination } from '../lib/sessionDestination'
 import { useReleaseAccess } from '../context/ReleaseAccessContext'
 import {useRetailBrands} from '../context/RetailBrandsContext'
+import {scopeRetailBranding} from '../lib/retailBrands'
 
 // The approved HTML owns presentation. React owns authenticated data and never
 // sends credentials, auth tokens or server keys into the presentation frame.
@@ -213,7 +214,7 @@ export default function VersionedBorrower({ children }) {
     const data={user, integrationError:extrasError, tickets:extra?.tickets||[],notificationReactions:extra?.notificationReactions||[],ticketEvents:extra?.ticketEvents||[],hiddenMessages:extra?.hiddenMessages||[],statements:extra?.statements||[],requestRates:requests.rates,canRequest:requests.canRequest,requestEvents:own(requests.requests).flatMap(r=>requests.eventsFor(r.id)),preference:preference?.user_id===user.id?preference:null, loans:own(app.loans), transactions:own(app.transactions), payments:ownPayments, paymentLogs:own(app.paymentLogs), overrides:app.paymentDueOverrides.filter(o=>o.borrowerId===user.id), messages:messages.messagesFor(user.id), notifications:notifications.notifications.map(n=>({...n,isRead:notifications.isRead(n.id)})), invoices:own(invoices.invoices), disbursements:own(disbursements.disbursements), requests:own(requests.requests).map(r=>({...r,schedule:buildRequestSchedule(r),monthly:monthlyInstallment(r.amount,r.monthlyRate,r.termMonths)}))}
     data.notificationCategories=notifications.categoriesAll
     const ownBrandTargets=new Set([...data.loans.map(l=>'loan:'+l.id),...data.transactions.map(t=>'transaction:'+t.id)])
-    data.branding={ready:brands.ready,clientId:brands.clientId,rules:brands.rules,groupLogos:brands.groupLogos,assignments:brands.assignments.filter(a=>ownBrandTargets.has(a.target_key))}
+    data.branding={ready:brands.ready,clientId:brands.clientId,rules:brands.rules,groupLogos:brands.groupLogos,...scopeRetailBranding(brands.assignments,brands.assets||[],ownBrandTargets)}
     data.paymentAdjustments=buildPaymentAdjustments({ownerId:user.id,postings:app.paymentPostings,transactions:[...app.transactions,...app.archivedTransactions],logs:app.paymentLogs,hiddenPostingIds:app.hiddenPaymentBreakdowns.map(row=>row.posting_id)})
     data.creditApplications=buildCreditActivity({ownerId:user.id,postings:app.paymentPostings,transactions:[...app.transactions,...app.archivedTransactions],logs:app.paymentLogs})
     const key=JSON.stringify(data)

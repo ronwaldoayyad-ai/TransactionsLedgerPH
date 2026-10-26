@@ -377,12 +377,11 @@ export default function UserDashboard() {
               myLoans.length > 0 && (
                 <div className="flex flex-wrap items-center gap-3">
                   <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
-                    <Switch
+                    <Switch stateLabels={{"on":"Only open loans are shown","off":"All loans are shown"}}
                       checked={hidePaid}
                       onChange={setHidePaid}
-                      label={hidePaid ? 'Show all loans' : 'Hide fully paid, refunded, or cancelled loans'}
+                      label="Hide settled loans"
                     />
-                    {hidePaid ? 'Show all transactions' : 'Hide fully paid/refunded/cancelled'}
                   </label>
                   <Link
                     to="/portal/consolidated"

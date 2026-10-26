@@ -63,6 +63,8 @@ async function guestSupport(req,body){
 const telegram=require('./telegram.cjs')({db,active,origin,...telegramConfig});
 const groupLogoModule=require('./group-logos.cjs');
 const groupLogoHandler=groupLogoModule.createGroupLogoHandler({service:groupLogoModule.createGroupLogos({db,active}),origin});
+const retailLogoModule=require('./retail-logos.cjs');
+const retailLogoHandler=retailLogoModule.createRetailLogoHandler({service:retailLogoModule.createRetailLogos({db,active}),origin});
 const telegramHandler=require('./telegram-http.cjs')({service:telegram,origin});
 const notificationRules=require('./notification-rules.cjs')({db,active,wakeEnabled:backgroundWorkers});
 const notificationRulesHandler=require('./notification-rules-http.cjs')({service:notificationRules,origin});
@@ -79,6 +81,7 @@ const localHandler=async(req,res)=>{
  }
  if(req.url.startsWith('/telegram/'))return telegramHandler(req,res);
  if(req.url.startsWith('/group-logos/'))return groupLogoHandler(req,res);
+ if(req.url.startsWith('/retail-logos/'))return retailLogoHandler(req,res);
  if(req.url.startsWith('/release-access/'))return releaseAccessHandler(req,res);
  if(req.url.startsWith('/notification-rules/'))return notificationRulesHandler(req,res);
  if(req.url!=='/guest-support')return handler(req,res);

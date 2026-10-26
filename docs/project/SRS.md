@@ -1,6 +1,6 @@
 # Software Requirements Specification
 
-Reviewed October 26, 2026. Requirements describe current behavior and its verification boundary.
+Reviewed October 27, 2026. Requirements describe current behavior and its verification boundary.
 
 ## Functional requirements
 | ID | Requirement | Acceptance |
@@ -45,3 +45,12 @@ A successful local test is not hosted acceptance. External delivery and AI depen
 - server/web-api.cjs
 - tests/unit
 - tests/integration
+
+## Artwork and control requirements
+
+- Active admins may preview and assign SVG/PNG retail artwork individually or in a reviewed batch of at most 200. Cash Loan, Fees and Adjustments continue to use shared group artwork; Payment Proof Submitted has its own shared artwork setting.
+- Enforce the existing SVG 128 KB / PNG 2 MB input limits and 64 KB canonical artwork limit on the server. Preserve PNG transparency, reject active/external SVG content and require expected target ownership, description and assignment version.
+- Saves must be atomic and idempotent. Stale selections fail without partial changes. Artwork saves must not change financial rows, archived state, paid status or account credit.
+- Restrict custom assets to active authorized sessions and borrowers with an owned current assignment. Direct client asset and assignment writes remain denied.
+- Proof artwork appears beside borrower activity/submission-history entries. Preserve installment-first posted History and keep proof submissions out of posted-payment totals.
+- Switch text describes the current result. Every admin search input retains normal typing, clearing, focus and search semantics while sharing the Finder border animation.

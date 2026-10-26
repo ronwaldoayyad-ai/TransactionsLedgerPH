@@ -1,9 +1,9 @@
 const crypto=require('node:crypto'),{sanitizeGroupLogoImage,MAX_REQUEST}=require('./group-logo-image.cjs'),publicError=require('./public-service-error.cjs');
-const groups=new Set(['cash_loan','fees','adjustments']),uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const groups=new Set(['cash_loan','fees','adjustments','payment_proof_submitted']),uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const fail=(message,status=400)=>Object.assign(Error(message),{status});
 function createGroupLogos({db,active}){
  async function actor(req){const user=await active(req,true);if(user.role!=='admin'||user.status!=='active')throw fail('An active lender is required.',403);return user}
- async function preview(req,body){await actor(req);if(!groups.has(body.group))throw fail('Choose Cash Loan, Fees or Adjustments.');return {svg:await sanitizeGroupLogoImage(body.svg)}}
+ async function preview(req,body){await actor(req);if(!groups.has(body.group))throw fail('Choose a supported shared logo.');return {svg:await sanitizeGroupLogoImage(body.svg)}}
  async function save(req,body){
   const lender=await actor(req);if(!groups.has(body.group)||!uuid.test(body.key||'')||!uuid.test(body.expectedVersion||'')||body.reviewed!==true)throw fail('Reload and review the shared group-logo change before saving.');
   const svg=body.svg===null?null:await sanitizeGroupLogoImage(body.svg),filename=svg?String(body.filename||'group-logo.svg').replace(/[\u0000-\u001f\u007f<>]/g,'').slice(0,120):null;

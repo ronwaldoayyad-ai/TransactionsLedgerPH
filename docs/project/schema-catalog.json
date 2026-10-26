@@ -3152,6 +3152,55 @@
     },
     {
       "rls": true,
+      "name": "retail_brand_assets",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "svg",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "filename",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "sha256",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "mobile_valid_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "own_retail_brand_assets",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (id)",
+      "foreign_keys": null
+    },
+    {
+      "rls": true,
       "name": "retail_brand_assignments",
       "columns": [
         {
@@ -3198,6 +3247,11 @@
           "name": "updated_at",
           "type": "timestamp with time zone",
           "nullable": false
+        },
+        {
+          "name": "logo_id",
+          "type": "uuid",
+          "nullable": true
         }
       ],
       "policies": [
@@ -3221,6 +3275,10 @@
         {
           "name": "retail_brand_assignments_loan_id_fkey",
           "definition": "FOREIGN KEY (loan_id) REFERENCES public.loans(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "retail_brand_assignments_logo_id_fkey",
+          "definition": "FOREIGN KEY (logo_id) REFERENCES public.retail_brand_assets(id)"
         },
         {
           "name": "retail_brand_assignments_transaction_id_fkey",
@@ -4268,7 +4326,7 @@
       ]
     }
   ],
-  "captured_at": "2026-10-26T14:22:28.886Z",
+  "captured_at": "2026-10-26T23:03:20.641Z",
   "public_rpcs": [
     "acknowledge_loan_disbursement",
     "activate_my_account",

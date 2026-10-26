@@ -1,0 +1,12 @@
+.admin-search-field{display:inline-flex;align-items:center;min-width:0;max-width:100%;vertical-align:middle}
+.ui-switch-with-state{display:inline-flex;align-items:center;justify-content:flex-end;gap:8px;min-width:0;max-width:100%}.ui-switch-result{min-width:0;font-size:11px;line-height:1.45;color:#536984;white-space:normal;overflow-wrap:anywhere}
+.admin-search-field .admin-search-native{width:100%;min-width:0;border:0;padding:0;background:transparent;color:inherit;font:inherit;outline:0}
+.admin-search-field[data-disabled=true]{opacity:.6;cursor:not-allowed}.admin-search-native::placeholder{color:#8295ad;opacity:1}
+.admin-search-field.animated-access-ring::before,.admin-search-field.animated-access-ring::after{visibility:hidden}
+.admin-workspace .admin-search-field.animated-access-ring{border-color:transparent;--access-ring-surface:#fff}
+.admin-workspace .admin-search-field.animated-access-ring::before,.admin-workspace .admin-search-field.animated-access-ring::after{visibility:visible}
+.admin-workspace :is(.admin-search-field,.admin-search-control).animated-access-ring::before{animation:access-ring-orbit 5s linear infinite;will-change:transform}
+.admin-workspace .admin-search-control.animated-access-ring{border-color:transparent;background:transparent;border-radius:12px;--access-ring-surface:#fff}
+.admin-workspace .admin-search-control.animated-access-ring input{background:transparent;border:0;outline:0}
+.admin-workspace :is(.admin-search-field,.admin-search-control):focus-within{box-shadow:0 0 0 3px #2463eb22}
+@media(prefers-reduced-motion:reduce){.admin-workspace :is(.admin-search-field,.admin-search-control).animated-access-ring::before{animation:none;will-change:auto}}

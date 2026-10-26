@@ -1,6 +1,6 @@
 # Theme and Color Palettes Documentation
 
-Reviewed October 26, 2026. The live swatches below are generated from the current source tokens.
+Reviewed October 27, 2026. The live swatches below are generated from the current source tokens.
 
 ## Visual foundations
 The admin app uses IBM Plex Sans for interface text and IBM Plex Mono for numeric/technical emphasis. Its light surfaces, navy hierarchy, blue primary controls and restrained gold accents are defined in src/index.css. The borrower interface has its own responsive document tokens and a selectable dark appearance; do not assume admin and borrower palette values are identical.
@@ -27,3 +27,7 @@ Animations must not cover account controls, delay authorization or imply a finan
 
 ## Responsive behavior
 Borrowers have a desktop sidebar and wider content layouts; mobile retains bottom navigation and horizontal gestures. Long titles, formatted amounts, dates and bank fields must remain visible on small screens. Information density changes with width; the account meaning does not.
+
+## Search and switch feedback
+
+All admin search boxes share the Finder animated-access-ring palette and five-second orbit. Native search inputs remain keyboard accessible inside the decorative wrapper; focus uses a visible halo. The animation is scoped to the admin workspace and is disabled for reduced-motion preference. Switch labels describe the current result, preserve a stable accessible name and can wrap without pushing the thumb off-screen. Artwork uploads remain transparent and borderless.

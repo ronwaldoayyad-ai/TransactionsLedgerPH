@@ -1,6 +1,6 @@
 {
   "locale": "fil-PH",
-  "version": "2026-10-25.6",
+  "version": "2026-10-27.1",
   "strings": {
     "Dashboard": "Buod ng account",
     "Transactions": "Mga transaksyon",
@@ -1560,7 +1560,23 @@
     "About Documentary Stamp Tax": "Tungkol sa Documentary Stamp Tax",
     "About Processing Fee": "Tungkol sa Processing Fee",
     "About Notarial Fee": "Tungkol sa Notarial Fee",
-    "Close fee information": "Isara ang impormasyon ng singil"
+    "Close fee information": "Isara ang impormasyon ng singil",
+    "Fully paid installments are hidden": "Nakatago ang mga hulugang bayad na nang buo",
+    "Fully paid installments are shown": "Ipinapakita ang mga hulugang bayad na nang buo",
+    "Push notifications enabled": "Naka-on ang mga push notification",
+    "Push notifications disabled": "Naka-off ang mga push notification",
+    "Email updates enabled": "Naka-on ang mga update sa email",
+    "Email updates disabled": "Naka-off ang mga update sa email",
+    "SMS reminders enabled": "Naka-on ang mga paalala sa SMS",
+    "SMS reminders disabled": "Naka-off ang mga paalala sa SMS",
+    "AI assistance is selected": "Napili ang tulong ng AI",
+    "AI assistance is not selected": "Hindi napili ang tulong ng AI",
+    "AI assistance requires sign-in": "Mag-sign in para magamit ang tulong ng AI",
+    "Payment proof submissions": "Mga isinumiteng patunay ng bayad",
+    "Submission records only. Posted payments are listed separately.": "Mga tala lamang ito ng pagsusumite. Hiwalay na nakalista ang mga naitalang bayad.",
+    "☾ Dark mode": "☾ Madilim na anyo",
+    "☀ Light mode": "☀ Maliwanag na anyo",
+    "Dark appearance": "Madilim na anyo"
   },
   "terminology": {
     "installment": "planong hulugan",

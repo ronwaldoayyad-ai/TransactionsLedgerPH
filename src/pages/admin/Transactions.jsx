@@ -5,7 +5,7 @@ import PaymentAdjustmentActivity from '../../components/PaymentAdjustmentActivit
 import { PageHeader } from '../../components/AppShell'
 import Icon from '../../components/Icon'
 import RefreshButton from '../../components/RefreshButton'
-import { Badge, Button, Card, EmptyState, Modal, MultiSelect, Switch, inputClass } from '../../components/ui'
+import {SearchInput,  Badge, Button, Card, EmptyState, Modal, MultiSelect, Switch, inputClass } from '../../components/ui'
 import Pagination from '../../components/Pagination'
 import { usePagination } from '../../hooks/usePagination'
 import { downloadCSV, formatDate, formatPeso, toISODate } from '../../lib/amortization'
@@ -652,7 +652,7 @@ export default function Transactions() {
             <label htmlFor="txn-search-mobile" className="sr-only">
               Search transactions
             </label>
-            <input
+            <SearchInput
               id="txn-search-mobile"
               type="search"
               value={query}
@@ -679,11 +679,10 @@ export default function Transactions() {
               {filtered.length} record{filtered.length === 1 ? '' : 's'}
             </span>
             <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-500">
-              Hide settled
-              <Switch
+              <Switch stateLabels={{"on":"Only open transactions are shown","off":"All transactions are shown"}}
                 checked={hideSettled}
                 onChange={setHideSettled}
-                label={hideSettled ? 'Show all transactions' : 'Hide paid, refunded, and cancelled transactions'}
+                label="Hide settled transactions"
               />
             </label>
           </div>
@@ -864,9 +863,9 @@ export default function Transactions() {
               <label htmlFor="fr-find" className="mb-1 block text-xs font-medium text-slate-500">
                 Find text
               </label>
-              <input
+              <SearchInput
                 id="fr-find"
-                type="text"
+                type="search"
                 value={frFind}
                 onChange={(e) => setFrFind(e.target.value)}
                 placeholder="e.g. gcash"
@@ -917,16 +916,15 @@ export default function Transactions() {
 
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
             <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-600">
-              <Switch checked={frMatchCase} onChange={setFrMatchCase} label="Match case" />
-              Match case
+              <Switch stateLabels={{"on":"Matching is case sensitive","off":"Matching ignores case"}} checked={frMatchCase} onChange={setFrMatchCase} label="Match case" />
             </label>
             <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-600">
-              <Switch
+              <Switch stateLabels={{"on":"Only filtered transactions are searched","off":"All transactions are searched"}}
                 checked={frScope === 'filtered'}
                 onChange={(v) => setFrScope(v ? 'filtered' : 'all')}
                 label="Limit to current filter"
               />
-              Only current filter ({filtered.length})
+              <span className="text-[10px]">{filtered.length} filtered records</span>
             </label>
           </div>
 

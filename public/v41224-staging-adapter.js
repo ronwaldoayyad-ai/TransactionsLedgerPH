@@ -29,7 +29,7 @@ const stagingDue=(view=mode)=>{
 const stagingTotal=(view=mode)=>stagingDue(view).reduce((sum,t)=>sum+t.amount,0);
 function stagingRecentActivity(){
   const activity=stagingRows().filter(t=>['paid','refunded'].includes(t.status)).map(t=>({date:t.datePaid||t.txnDate,markup:transactionItem(t.status==='paid'?'✓':'↩',htmlSafe(t.description),stagingDate(t.datePaid),t.amount,t.status==='paid'?'green':'purple',t.status==='paid'?'Payment Received':'Refund Processed').replace(/<(div|button) /,'<$1 data-staging-transaction-id="'+htmlSafe(t.id)+'" ')}));
-  (stagingData?.payments||[]).forEach(p=>activity.push({date:p.submittedAt,markup:transactionItem('▣','Payment Proof Submitted',stagingDate(p.submittedAt),p.amount,'','Payment Proof Submitted')}));
+  (stagingData?.payments||[]).forEach(p=>activity.push({date:p.submittedAt,markup:transactionItem('▣','Payment Proof Submitted','Submitted on '+stagingDate(p.submittedAt),p.amount,'','Proof submission').replace(/^<(div|button)\b/,'<$1 data-payment-proof-id="'+htmlSafe(p.id)+'"')}));
   return activity.sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(a=>a.markup);
 }
 const stagingPending=()=>toast('This action is not connected yet. No submission or change has been saved.');

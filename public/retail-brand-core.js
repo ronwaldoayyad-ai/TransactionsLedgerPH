@@ -1,6 +1,6 @@
-// Generated from src/lib/retailBrands.js; keep parity checks passing.
+// Generated from src/lib/retailBrands.js; parity checked in tests.
 (()=>{
-const {transactionGroup}=window.TransactionGroups
+const {transactionGroup}=window.TransactionGroups;
 
 // Reference names only. Search results and expiring search image URLs are never cached.
 const RETAIL_BRANDS=Object.freeze([
@@ -33,16 +33,19 @@ function matchRetailBrand(description,rules=[]){
  const candidates=[...hits.values()].sort((a,b)=>a.domain.localeCompare(b.domain))
  return candidates.length===1&&!ambiguous?{status:'automatic',...candidates[0],candidates}:{status:candidates.length?'review':'unmatched',domain:null,name:null,candidates}
 }
-function resolveRetailBrand(transaction,loan,assignments=[],rules=[]){
+function uploadedBrandLogoUrl(svg){return typeof svg==='string'&&svg.startsWith('<svg')&&svg.endsWith('</svg>')&&svg.length<=65536?'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg):null}
+function scopeRetailBranding(assignments=[],assets=[],targetKeys=new Set()){const own=assignments.filter(a=>targetKeys.has(a.target_key)),ids=new Set(own.map(a=>a.logo_id).filter(Boolean));return {assignments:own,assets:assets.filter(a=>ids.has(a.id))}}
+function resolveRetailBrand(transaction,loan,assignments=[],rules=[],assets=[]){
  const target=retailTarget(transaction,loan);if(!target)return {status:'ineligible',domain:null,target:null}
  const saved=assignments.find(a=>a.target_key===target.key),version=saved?.version??null
  if(saved?.mode==='none')return {status:'hidden',domain:null,target,version}
+ if(saved?.mode==='upload'){const asset=assets.find(a=>a.id===saved.logo_id);return {status:'uploaded',domain:null,name:saved.name||'Uploaded logo',url:uploadedBrandLogoUrl(asset?.svg),assetId:saved.logo_id,target,version}}
  if(saved?.mode==='manual'&&brandDomain(saved.domain))return {status:'manual',domain:saved.domain,name:saved.name,target,version}
  return {...matchRetailBrand(target.description,rules),target,version}
 }
 function brandLogoUrl(domain,clientId,theme){return brandDomain(domain)&&clientId?'https://cdn.brandfetch.io/domain/'+domain+'/w/160/h/160/'+(['light','dark'].includes(theme)?'theme/'+theme+'/':'')+'fallback/404/type/logo?c='+encodeURIComponent(clientId):null}
-function createRetailBrandResolver(assignments=[],rules=[]){const cache=new WeakMap();return(t,l)=>{if(!t)return {status:'ineligible',domain:null,target:null};const prior=cache.get(t);if(prior&&prior.loan===l)return prior.result;const result=resolveRetailBrand(t,l,assignments,rules);cache.set(t,{loan:l,result});return result}}
+function createRetailBrandResolver(assignments=[],rules=[],assets=[]){const cache=new WeakMap();return(t,l)=>{if(!t)return {status:'ineligible',domain:null,target:null};const prior=cache.get(t);if(prior&&prior.loan===l)return prior.result;const result=resolveRetailBrand(t,l,assignments,rules,assets);cache.set(t,{loan:l,result});return result}}
 function uniqueRetailTargets(transactions,loans){const index=new Map(loans.map(l=>[l.id,l])),seen=new Set();return transactions.flatMap(transaction=>{const loan=index.get(transaction.loanId),target=retailTarget(transaction,loan);if(!target||seen.has(target.key))return [];seen.add(target.key);return [{transaction,loan,...target}]})}
 
-window.RetailBrands={RETAIL_BRANDS,brandText,brandDomain,retailTarget,matchRetailBrand,resolveRetailBrand,brandLogoUrl,uniqueRetailTargets};
+window.RetailBrands={RETAIL_BRANDS,brandText,brandDomain,retailTarget,matchRetailBrand,uploadedBrandLogoUrl,scopeRetailBranding,resolveRetailBrand,brandLogoUrl,createRetailBrandResolver,uniqueRetailTargets};
 })();
