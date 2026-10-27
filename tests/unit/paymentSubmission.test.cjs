@@ -8,7 +8,7 @@ test('the immediate payment confirmation uses the exact server submission timest
  let confirmed;const refreshes=[];
  const context={$:selector=>fields[selector.slice(1)],mobileProofSubmitting:false,mobileBusy:new Set(),paymentSelected:new Set([0]),paymentRows:[['test','','','','transaction']],proofScanBusy:false,file:{name:'test.png'},mobileCorrection:null,stagingData:{user:{id:'borrower'}},page:'payment',recentPayments:[],localToday:()=> '2026-10-18',isDuplicatePaymentReference:()=>false,beginTaskLoading:()=>1,yieldLoadingFrame:async()=>{},updateTaskLoading:()=>{},mobileFile:async()=>({name:'test.png',data:'synthetic'}),mobileSave:async()=>record,mobilePaymentRecord:row=>row,resetPaymentSuccess:()=>{},renderMostRecentPayment:()=>{},renderRecentPayments:()=>{},stagingAcknowledgement:()=>({}),showPaymentConfirmation:async row=>{confirmed=row;return true},cancelTaskLoading:()=>{},stagingSend:()=>{},paymentAllocationChanged:()=>{},toast:()=>{}};
  context.paymentRows[0][2]=1000;
- const selectable=fs.readFileSync(require.resolve('../../public/borrower-v4.12.24.html'),'utf8').split('\n').find(line=>line.startsWith('function paymentItemSelectable('));
+ const sourceHtml=fs.readFileSync(require.resolve('../../public/borrower-v4.12.24.html'),'utf8');const selectable=['paymentItemSelectable','paymentItemCredit','paymentCreditIndexes','paymentPositiveSelectedIndexes','paymentSelectionTotals'].map(name=>sourceHtml.split('\n').find(line=>line.startsWith('function '+name+'('))).join('\n');
  vm.runInNewContext(fs.readFileSync('public/v41224-money-inputs.js','utf8').split('// Browser integration')[0]+'\n'+selectable+'\n'+submit,context);
  context.stagingSend=message=>refreshes.push(message);
  await context.submitproof();

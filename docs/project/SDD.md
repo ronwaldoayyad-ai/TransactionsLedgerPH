@@ -44,3 +44,7 @@ The immutable retail_brand_assets table deduplicates canonical artwork by SHA-25
 The fourth shared-artwork setting, Payment Proof Submitted, decorates borrower Recent Activity and a separate Payment proof submissions History section. Submission events show their current review status and stay separate from posted-payment records and totals. They are not new financial records.
 
 Switches retain stable accessible feature names and expose current-result text, including pending or unavailable states where applicable. All admin search fields use the Finder gradient border, native input behavior, visible keyboard focus and a still reduced-motion alternative.
+
+## Selected payment reconciliation
+
+The borrower payment screen totals selected positive remaining dues separately from negative ledger adjustments belonging to the selected due dates. Those credit entries are checked automatically and cannot be deselected, including with Clear all. They have a green treatment. The final amount is the positive subtotal less the magnitude of those credits, with a zero floor; credit-only or fully covered selections cannot submit another proof. Saved posting breakdowns and account-credit activity already reflected in remaining balances are not subtracted again. Submission allocation targets remain positive transaction IDs only; no new credit/posting is created by this presentation calculation. Restored drafts require review if the included credits or amounts change. Assessed fee History rows use the same shared Fees artwork resolver as other transaction views.

@@ -42,3 +42,7 @@ Browser screenshots, synthetic mocks and simulated motion preferences are useful
 Exercise individual PNG upload after an empty Brandfetch result and reviewed bulk SVG assignment through the real UI and database service. Verify previews, transparency, explicit review, live borrower refresh, automatic/Brandfetch reset and unchanged financial fingerprints. Cover early/middle/late migration failures, safe retry, concurrent/stale saves, deduplication, target eligibility, limits and admin/owner/foreign/anonymous authorization. Direct Data API writes must fail.
 
 Check proof artwork in Recent Activity and the separate submission-history section without submitting a real payment. Check current-result switch text for both states, keyboard focus, native search typing/clearing, small-screen overflow and reduced-motion CSS. Record synthetic snapshot and external search mocks as test boundaries. Never upload placeholder artwork to production merely to test persistence.
+
+## Payment-selection credit regression
+
+Verify multi-date mandatory credits, Clear all/Select all, attempted credit deselection, positive-item deselection, credit-only/zero-due states, zero/invalid rows, integer-cent math, changed-credit draft review and positive-only proof allocation IDs. Verify already-applied posting breakdowns do not reduce remaining dues twice. In Chrome test the three-row payment summary, green locked credit rows, mobile/desktop overflow and shared fee artwork under History → Fees. Use synthetic snapshots; do not submit a production proof just to test this display change.

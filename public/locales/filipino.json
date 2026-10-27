@@ -1,6 +1,6 @@
 {
   "locale": "fil-PH",
-  "version": "2026-10-27.1",
+  "version": "2026-10-27.2",
   "strings": {
     "Dashboard": "Buod ng account",
     "Transactions": "Mga transaksyon",
@@ -1576,7 +1576,15 @@
     "Submission records only. Posted payments are listed separately.": "Mga tala lamang ito ng pagsusumite. Hiwalay na nakalista ang mga naitalang bayad.",
     "☾ Dark mode": "☾ Madilim na anyo",
     "☀ Light mode": "☀ Maliwanag na anyo",
-    "Dark appearance": "Madilim na anyo"
+    "Dark appearance": "Madilim na anyo",
+    "Selected Payment Total": "Kabuuan ng napiling bayarin",
+    "Payments Received Total": "Kabuuan ng natanggap na bayad",
+    "Final Due Amount": "Natitirang dapat bayaran",
+    "Selected payment breakdown": "Detalye ng napiling bayarin",
+    "Credit entry": "Tala ng kredito",
+    "Included automatically": "Awtomatikong isinama",
+    "Credit entries cover this selection. No additional payment is required.": "Sapat ang mga tala ng kredito para sa napili. Wala nang kailangang bayaran.",
+    "Existing credit entries are included automatically. No new account credit is created.": "Awtomatikong kasama ang mga dati nang tala ng kredito. Walang bagong kreditong idinadagdag sa account."
   },
   "terminology": {
     "installment": "planong hulugan",

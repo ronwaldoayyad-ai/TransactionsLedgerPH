@@ -27,12 +27,12 @@ isDuplicatePaymentReference=reference=>!!stagingData?.payments.some(p=>!p.retrac
 submitproof=async()=>{
  const error=$('#paymentError');error.textContent='';if(mobileProofSubmitting||mobileBusy.has('payment-submit'))return;
  const amount=moneyInputNumber($('#amount').value),paidDate=$('#date').value,reference=$('#ref').value.trim(),method=({'GCASH':'gcash','MAYA':'maya','Bank Transfer':'bank_transfer','Cash Deposit':'cash'})[$('#paymentMethod').value];
- if([...paymentSelected].some(index=>!paymentItemSelectable(paymentRows[index]))){sanitizePaymentSelection();renderPaymentItems();paymentAllocationChanged();error.textContent='Only items with an amount greater than zero can be selected for payment.';return;}
- if(!paymentSelected.size||!$('#allocationConfirm').checked){error.textContent='Choose payable items and confirm your requested allocation.';return;}
+ if([...paymentSelected].some(index=>!paymentItemSelectable(paymentRows[index])&&!paymentItemCredit(paymentRows[index]))){sanitizePaymentSelection();renderPaymentItems();paymentAllocationChanged();error.textContent='Selected items changed. Review your payable items again.';return;}
+ if(!paymentPositiveSelectedIndexes().length||paymentSelectionTotals().final<=0||!$('#allocationConfirm').checked){error.textContent='Choose payable items and confirm your requested allocation.';return;}
  if(!Number.isFinite(amount)||amount<=0||!paidDate||paidDate>localToday()||!reference||!method||!file||proofScanBusy){error.textContent='Check the amount, date, method, reference and proof file.';return;}
  if(isDuplicatePaymentReference(reference)){error.textContent='This reference already has a pending or approved proof.';return;}
  let correctionNote='';if(mobileCorrection){correctionNote=$('#mobileCorrectionNote')?.value.trim()||'';if(correctionNote.length<10){error.textContent='Explain the correction in at least 10 characters.';return;}}
- const button=$('#submitPayment'),owner=stagingData?.user?.id,proof=file,payload={amount,paidDate,reference,method,notes:$('#notes').value,allocations:[...paymentSelected].map(i=>({id:paymentRows[i][4]})),correctionOf:mobileCorrection?.id||null,correctionNote};button.disabled=true;mobileProofSubmitting=true;
+ const button=$('#submitPayment'),owner=stagingData?.user?.id,proof=file,payload={amount,paidDate,reference,method,notes:$('#notes').value,allocations:paymentPositiveSelectedIndexes().map(i=>({id:paymentRows[i][4]})),correctionOf:mobileCorrection?.id||null,correctionNote};button.disabled=true;mobileProofSubmitting=true;
  if(typeof setPaymentDraftBusy==='function')setPaymentDraftBusy(true);
  const task=beginTaskLoading('Submitting payment proof','Saving your payment details','save');
  try{await yieldLoadingFrame();updateTaskLoading(task,20,'Preparing the uploaded proof');payload.file=await mobileFile(proof);if(owner!==stagingData?.user?.id)return;updateTaskLoading(task,40,'Saving proof for lender review');const result=await mobileSave('payment-submit',payload,null,'#paymentError');

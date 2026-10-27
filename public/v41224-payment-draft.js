@@ -15,8 +15,8 @@ function restorePaymentDraft(){
  const draft=paymentDraftMemory;if(!draft||draft.owner!==stagingData?.user.id||page!=='payment'||!$('#amount'))return;
  paymentDraftRestoring=true;
  try{
-  const records=borrowerPayableRecords(),byId=new Map(records.map(r=>[r[4],r]));paymentDueKeys=new Set(draft.dates.filter(date=>records.some(r=>r[3]===date)));paymentRows=records.filter(r=>paymentDueKeys.has(r[3]));paymentSelected=new Set(paymentRows.flatMap((r,i)=>draft.selected.includes(r[4])&&paymentItemSelectable(r)?[i]:[]));
-  const changed=draft.selected.some(id=>!byId.has(id)||!paymentItemSelectable(byId.get(id))||Number(byId.get(id)[2])!==Number(draft.selectedAmounts.find(r=>r[0]===id)?.[1]));
+  const records=borrowerPayableRecords(),byId=new Map(records.map(r=>[r[4],r]));paymentDueKeys=new Set(draft.dates.filter(date=>records.some(r=>r[3]===date)));paymentRows=records.filter(r=>paymentDueKeys.has(r[3]));paymentSelected=new Set(paymentRows.flatMap((r,i)=>draft.selected.includes(r[4])&&(paymentItemSelectable(r)||paymentItemCredit(r))?[i]:[]));
+  sanitizePaymentSelection();const changed=draft.selected.some(id=>!byId.has(id)||(!paymentItemSelectable(byId.get(id))&&!paymentItemCredit(byId.get(id)))||Number(byId.get(id)[2])!==Number(draft.selectedAmounts.find(r=>r[0]===id)?.[1]))||[...paymentSelected].some(i=>!draft.selected.includes(paymentRows[i][4]));
   file=draft.blob?new File([draft.blob],draft.name,{type:draft.type,lastModified:draft.lastModified}):null;proofOcrFields=draft.ocr;mobileCorrection=draft.correction;
   if(draft.correction&&!$('#mobileCorrectionNote')){const label=document.createElement('label');label.className='field';label.innerHTML='<span>What has been corrected? *</span><textarea id="mobileCorrectionNote" minlength="10" maxlength="2000"></textarea>';$('#paymentError').before(label);}
   renderPaymentDates();renderPaymentItems();for(const [id,value] of Object.entries(draft.fields)){const el=$('#'+id);if(el)el.value=value;}$('#allocationConfirm').checked=draft.confirmed&&!changed;

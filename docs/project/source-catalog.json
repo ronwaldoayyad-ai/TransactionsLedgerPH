@@ -133,8 +133,8 @@
     "tests/unit/paymentExperience.test.cjs": "4021209414cd24172e620740ccca9663f3709359e4843722e44bf6143a10555a",
     "tests/unit/paymentProofSorting.test.js": "fefdd8b961183ff0d84e2e21d32541b55a0e20d0f5e2dcc4872243af4e8e9fd5",
     "tests/unit/paymentReadModel.test.js": "891b6c34e1218f8a9522d72bd374a807637a6eb1f7dcc2dc263eee6f6c4f1cf1",
-    "tests/unit/paymentSelection.test.cjs": "c681023dfaea9299af3a71768111c14e8df2b3b4122e0e059b8363a30bda3007",
-    "tests/unit/paymentSubmission.test.cjs": "45e0fd085ebd47d65709146d2f91f54ea582026f24e82d09946cf180ea8491d5",
+    "tests/unit/paymentSelection.test.cjs": "90335e6b040a9a4106db0b0274d92a86c85f110b3c692a11b01cb50b229d118f",
+    "tests/unit/paymentSubmission.test.cjs": "b52f92d2e3aadfaaedbc7084eceb5b0c0bd9e591e783cb70e90edf88594fb6a2",
     "tests/unit/paymentTimestamp.test.js": "2147d50412df3fcf8fd4c8f1101fa73b46a373b2a608aa95c2f5d83b032fbfce",
     "tests/unit/presentationEnhancements.test.js": "e9139880c87816c647059e6c14a59fa72f7f4330f7169c307cca632542bcad6f",
     "tests/unit/productionRouting.test.cjs": "56a894708e3f551835eb8eb310e47ab4c6be35609f5b8a63462facea94c45323",
@@ -159,7 +159,7 @@
     "tests/unit/transactionGridLayout.test.js": "79af96e93943a4abf9490c72eac0fa79b9ff2341da874af0e3c0d237e63f17da",
     "tests/unit/transactionGroups.test.js": "07061e36fbf3c529a50207ed0e1649201fe98ec9b4e40435d66c6573f9caadb9",
     "tests/unit/transactionPresentation.test.js": "bbee3f98f66f45165613b89ccd748b588b90b7621033e8a7cc1357a8eb3dfabf",
-    "tests/unit/uploadedBrandLogos.test.js": "b155cc1e1220d3ab87bb5e7d5a58b5a33bfed5f4fa4fc5e49c7eac898628b911",
+    "tests/unit/uploadedBrandLogos.test.js": "da67fcc13b99a78187b93af8c5e8341f6ed46f765e41fbe9d4ba03768cf23939",
     "tests/unit/webApi.test.cjs": "2f389a6712249e7aff138aa3d492f7a3c02d0f908e2fed09fe2dc31398289f58"
   },
   "envNames": [
