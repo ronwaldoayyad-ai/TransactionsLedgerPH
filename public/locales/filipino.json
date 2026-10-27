@@ -1,6 +1,6 @@
 {
   "locale": "fil-PH",
-  "version": "2026-10-27.2",
+  "version": "2026-10-28.1",
   "strings": {
     "Dashboard": "Buod ng account",
     "Transactions": "Mga transaksyon",
@@ -782,7 +782,7 @@
     "Accepting disbursement": "Tinatanggap ang paglalabas ng pautang",
     "Refreshing disbursements": "Nire-refresh ang tala ng paglalabas",
     "Saving your electronic acknowledgement": "Sine-save ang iyong elektronikong pagtanggap",
-    "My Invoices": "Aking mga statement",
+    "My Invoices": "Mga invoice ko",
     "Request an invoice anytime.": "Humiling ng statement anumang oras.",
     "Create a statement for your selected due date": "Gumawa ng statement para sa napiling takdang araw",
     "Choose a due date and filters, then generate a PDF you can view or download.": "Pumili ng takdang araw at mga filter, saka gumawa ng PDF na maaaring tingnan o i-download.",
@@ -896,7 +896,7 @@
     "Submitted on": "Naisumite noong",
     "Submission information": "Impormasyon ng pagsumite",
     "Submission status:": "Katayuan ng pagsumite:",
-    "Submit Payment": "Isumite ang bayad",
+    "Submit Payment": "Magsumite ng bayad",
     "Submit to Contact Support": "Isumite sa suporta",
     "SUBMITTED DETAILS": "MGA NAISUMITENG DETALYE",
     "SUBMITTED PAYMENT DETAILS": "MGA NAISUMITENG DETALYE NG BAYAD",
@@ -1584,7 +1584,10 @@
     "Credit entry": "Tala ng kredito",
     "Included automatically": "Awtomatikong isinama",
     "Credit entries cover this selection. No additional payment is required.": "Sapat ang mga tala ng kredito para sa napili. Wala nang kailangang bayaran.",
-    "Existing credit entries are included automatically. No new account credit is created.": "Awtomatikong kasama ang mga dati nang tala ng kredito. Walang bagong kreditong idinadagdag sa account."
+    "Existing credit entries are included automatically. No new account credit is created.": "Awtomatikong kasama ang mga dati nang tala ng kredito. Walang bagong kreditong idinadagdag sa account.",
+    "Payments quick actions": "Mga mabilisang gawain sa pagbabayad",
+    "Payment and loan shortcuts": "Mga shortcut sa bayad at pautang",
+    "Close payments menu": "Isara ang menu ng pagbabayad"
   },
   "terminology": {
     "installment": "planong hulugan",

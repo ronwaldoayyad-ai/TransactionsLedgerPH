@@ -1,6 +1,6 @@
 # User Flow
 
-Reviewed October 26, 2026. Diagrams show implemented decision points; optional services depend on configuration.
+Reviewed October 28, 2026. Diagrams show implemented decision points; optional services depend on configuration.
 
 ## Sign-in and interface selection
 [diagram:access]
@@ -30,3 +30,7 @@ Select the borrower and As of date. Pending dates on or before that date are ini
 
 ## Communication and recovery
 Borrower/lender messages and ledger changes trigger targeted updates without a manual refresh. Notification rules can generate supported app messages. Configured Telegram delivery supplements existing notifications. Locked sign-in support captures the issue context and screenshot for the ticket where capture is available. Support-tracking email verification depends on configured delivery capabilities.
+
+## Borrower mobile payment shortcuts
+
+Tap the central Payments tab to open the fan without leaving the current screen. Choose Installment Transactions, Straight Transactions, Submit Payment, My Invoices or Loan Profile to open that existing destination. Submit Payment retains the full Payments page, including Recent Payments. Tap the center × to return to the underlying screen unchanged. Backdrop taps and Escape leave the fan open, as selected by the owner. Desktop users continue to use the sidebar Payments link.

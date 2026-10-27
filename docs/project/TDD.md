@@ -1,6 +1,6 @@
 # Testing and Debugging Procedures
 
-Reviewed October 27, 2026. A procedure is not a statement that every future build has passed it.
+Reviewed October 28, 2026. A procedure is not a statement that every future build has passed it.
 
 ## Local and continuous checks
 Run npm ci, npm run lint:release, npm run test:release and npm run build with the required public build configuration. Release CI also regenerates the reviewed forward candidate and exercises database migration/accounting suites against disposable PostgreSQL. Use the generated inventory below for the current suite names and [release workflow](https://github.com/ronwaldoayyad-ai/TransactionsLedgerPH/actions) for actual run results.
@@ -46,3 +46,7 @@ Check proof artwork in Recent Activity and the separate submission-history secti
 ## Payment-selection credit regression
 
 Verify multi-date mandatory credits, Clear all/Select all, attempted credit deselection, positive-item deselection, credit-only/zero-due states, zero/invalid rows, integer-cent math, changed-credit draft review and positive-only proof allocation IDs. Verify already-applied posting breakdowns do not reduce remaining dues twice. In Chrome test the three-row payment summary, green locked credit rows, mobile/desktop overflow and shared fee artwork under History → Fees. Use synthetic snapshots; do not submit a production proof just to test this display change.
+
+## Payment fan acceptance
+
+Check all five destination routes, × dismissal, non-dismissal by Escape/backdrop, full keyboard Tab cycle and focus return. Test quick open/close/reopen and owner/route/desktop changes so stale timers cannot leave an overlay or scroll lock. Verify an unfinished payment draft survives opening and closing. Inspect actual label/wordmark bounds at 280/320/390 px and a short landscape viewport, including translated text. Confirm reduced motion removes transform motion and keeps an obvious close action. Native dialog inertness must prevent background focus. Test the exact protected package in Chrome before same-build promotion. The menu requires no schema, Auth, Storage or accounting changes.

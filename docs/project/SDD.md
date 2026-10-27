@@ -1,6 +1,6 @@
 # Design Document
 
-Reviewed October 27, 2026. This is the implemented software and interaction design.
+Reviewed October 28, 2026. This is the implemented software and interaction design.
 
 ## Responsibilities
 | Layer | Responsibility | Boundary |
@@ -48,3 +48,7 @@ Switches retain stable accessible feature names and expose current-result text, 
 ## Selected payment reconciliation
 
 The borrower payment screen totals selected positive remaining dues separately from negative ledger adjustments belonging to the selected due dates. Those credit entries are checked automatically and cannot be deselected, including with Clear all. They have a green treatment. The final amount is the positive subtotal less the magnitude of those credits, with a zero floor; credit-only or fully covered selections cannot submit another proof. Saved posting breakdowns and account-credit activity already reflected in remaining balances are not subtracted again. Submission allocation targets remain positive transaction IDs only; no new credit/posting is created by this presentation calculation. Restored drafts require review if the included credits or amounts change. Assessed fee History rows use the same shared Fees artwork resolver as other transaction views.
+
+## Mobile Payments fan
+
+Below the existing 1024 px desktop breakpoint, the central Payments navigation button toggles a native modal dialog with five actions: Installment Transactions, Straight Transactions, Submit Payment, My Invoices and Loan Profile. All use existing screen routes; Submit Payment opens the current payment screen with Recent Payments. Opening/closing the menu does not reset the payment draft. Selecting a destination collapses the fan and then navigates. The owner requested explicit × dismissal: backdrop taps and Escape do not dismiss; no browser-history entry is added. The close button remains keyboard reachable, Tab stays within the dialog and closing restores trigger focus. Sign-out, owner/route changes and switching to desktop clear the overlay. Desktop Payments navigation retains its prior behavior. The controller makes no network or financial calls.
