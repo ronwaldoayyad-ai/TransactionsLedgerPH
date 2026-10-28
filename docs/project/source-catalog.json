@@ -110,6 +110,7 @@
     "tests/unit/csvSecurity.test.js": "f7dc235b43dfbc508272e39edd015b14809c3cbf1883d93608ba48ee8dbd17b5",
     "tests/unit/dashboardOrbitUnread.test.cjs": "144a01f7750d8516c3b2a64f55a36fa69840394c9f89eafb33721f556595cd25",
     "tests/unit/documentation.test.js": "00c2dcef8165c3a763ddb5e681a0f3936dd54b3e3c64e0bf2816a567146e09b7",
+    "tests/unit/faqGuides.test.cjs": "7743d547c516a7e8b17967650a1ad394f8eb3cf7190a35863a5367a33c32fc89",
     "tests/unit/feeAssessment.test.js": "11013f0a21efdf3a49c4af35e0c4ef4f695ff88a7d9297d19116c05a47fcb619",
     "tests/unit/feeConflictSafety.test.js": "f9682016f6b2a99afb99f51b3a222087026246286cc07fd0a88cbf36eeb120b2",
     "tests/unit/feePresentation.test.cjs": "e9cd72968b414b1fbcfe44e5f32c71ac175bdc2ac28240710978ce3936ae54e4",

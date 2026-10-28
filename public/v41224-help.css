@@ -21,3 +21,25 @@
 .paw-messages-card>.paw-composer.chat-composer{margin:9px 10px 0;width:calc(100% - 20px)}
 
 .legal-document section+section{margin-top:26px}.legal-document section{scroll-margin-top:24px}.legal-document p,.legal-document li{line-height:1.7;overflow-wrap:anywhere}.legal-document ul{padding-left:22px;list-style:disc}.legal-document li{margin:9px 0}.legal-document .legal-toc{margin:20px 0;padding:16px;border:1px solid var(--line);border-radius:14px;background:var(--surface,#fff)}.legal-toc ol{list-style:decimal;padding-left:20px}.legal-document a{overflow-wrap:anywhere;text-decoration:underline;text-underline-offset:3px}
+
+/* Detailed help remains readable without expanding the entire catalog at once. */
+.faq-reviewed,.faq-result-count{font-size:11px;color:var(--muted);margin:8px 0}
+.faq-item{scroll-margin-top:24px;padding:15px 0}
+.faq-item summary{font-size:13px;line-height:1.6;padding:4px 5px;border-radius:6px}
+.faq-item summary:focus-visible{outline:2px solid #1769f5;outline-offset:3px}
+.faq-answer{max-width:78ch;padding:4px 5px 0;font-size:13px;overflow-wrap:anywhere}
+.faq-answer p{line-height:1.75}
+.faq-steps{list-style:decimal;margin:12px 0;padding-left:24px;color:var(--ink)}
+.faq-steps li{padding-left:5px;margin:10px 0;line-height:1.75}
+.faq-note{margin:14px 0;padding:12px 14px;border-left:3px solid #16a38d;border-radius:0 10px 10px 0;background:var(--soft,#edf3ff)}
+.faq-note>b{font-size:11px;color:var(--ink)}
+.faq-note p{margin:4px 0 0}
+.faq-plain-answer{white-space:pre-line}
+.faq-figure{margin:16px 0;background:var(--surface,#fff);border:1px solid var(--line,#dfe8f6);border-radius:15px;overflow:hidden}
+.faq-figure img{display:block;width:100%;height:auto;max-width:640px;margin:auto}
+.faq-figure figcaption{font-size:10px;line-height:1.6;padding:9px 12px;color:var(--muted)}
+.faq-figure figcaption a{display:inline-block;margin-top:5px;min-height:30px;padding-block:4px;color:#1769f5;text-decoration:underline;text-underline-offset:3px}
+.faq-audience,.faq-language-note{display:inline-block;margin:6px 0;padding:4px 8px;border-radius:6px;background:var(--soft,#edf3ff);color:var(--muted);font-size:10px}
+.faq-pagination{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px;margin-top:12px}
+.faq-pagination button{min-height:40px}
+@media(min-width:1000px){.faq-intro h2{font-size:20px}.faq-item summary{font-size:15px}.faq-answer{font-size:14px}}
