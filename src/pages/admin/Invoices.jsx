@@ -1,3 +1,4 @@
+import { debugError } from "../../lib/debugLog"
 import { useMemo, useState } from 'react'
 import { useApp } from '../../context/AppContext'
 import { useInvoices } from '../../context/InvoicesContext'
@@ -158,7 +159,7 @@ export default function Invoices() {
         attachments: [invoicePdfAttachment(toPdf(inv))],
       })
     } catch (e) {
-      console.error('[invoices] statement-ready notification failed:', e?.message ?? e)
+      debugError('[invoices] statement-ready notification failed:', e?.message ?? e)
     }
     setBusy(false)
     setPreview((p) => (p && p.id === inv.id ? { ...p, status: 'assigned' } : p))

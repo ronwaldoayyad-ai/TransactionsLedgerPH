@@ -109,6 +109,9 @@ export default function Transactions() {
   // Hide settled (Paid/Refunded/Cancelled) transactions when on. Default ON.
   const [hideSettled, setHideSettled] = usePersistedState('txn.hideSettled', true)
   const [selected, setSelected] = useState(() => new Set())
+  const [archiveReview,setArchiveReview]=useState(null)
+  const [archiveBusy,setArchiveBusy]=useState(false)
+  const [archiveError,setArchiveError]=useState('')
   const [bulkStatus, setBulkStatus] = useState('paid')
   // Mobile-only UI: a filter bottom sheet and a per-row status action sheet
   // (the desktop table's inline controls don't fit a phone width).
@@ -235,8 +238,16 @@ export default function Transactions() {
   }
 
   const deleteSelected = () => {
-    archiveTransactions(selectedInView)
-    setSelected(new Set())
+    reviewArchive(selectedInView)
+  }
+  const reviewArchive=ids=>{setArchiveError('');setArchiveReview(transactions.filter(t=>ids.includes(t.id)).map(t=>({...t})))}
+  const confirmArchive=async()=>{
+    if(archiveBusy||!archiveReview?.length)return
+    if(archiveReview.some(row=>JSON.stringify(transactions.find(t=>t.id===row.id))!==JSON.stringify(row))){setArchiveError('These records changed. Close this review and select them again.');return}
+    setArchiveBusy(true);setArchiveError('')
+    try{if(await archiveTransactions(archiveReview.map(t=>t.id))===true){setSelected(new Set());setArchiveReview(null)}else setArchiveError('The records could not be archived. Review any message shown and try again.')}
+    catch{setArchiveError('The records could not be archived. Please retry.')}
+    finally{setArchiveBusy(false)}
   }
 
   // --- CSV import: parse, match borrowers, validate, preview, then insert.
@@ -1066,7 +1077,7 @@ export default function Transactions() {
             <button
               type="button"
               onClick={() => {
-                archiveTransactions([liveActionTxn.id])
+                reviewArchive([liveActionTxn.id])
                 setActionTxn(null)
               }}
               className="mt-1 flex w-full items-center gap-2 rounded-xl px-4 py-3 text-left text-red-600 transition-colors hover:bg-red-50 active:bg-red-100"
@@ -1078,6 +1089,11 @@ export default function Transactions() {
         </div>
       )}
       {correction&&<TransactionCorrectionReview key={correction.current.id+JSON.stringify(correction.patch)} request={correction} borrowers={borrowers} onSave={correctTransaction} onClose={closeCorrection}/>}
+      <Modal open={!!archiveReview} title="Review records to archive" onClose={()=>{if(!archiveBusy)setArchiveReview(null)}} footer={<><Button disabled={archiveBusy} variant="secondary" onClick={()=>setArchiveReview(null)}>Cancel</Button><Button disabled={archiveBusy||!archiveReview?.length||!!archiveError} onClick={confirmArchive}>{archiveBusy?'Archiving…':`Archive ${archiveReview?.length||0} records`}</Button></>}>
+        <p className="mb-3 text-sm text-slate-600">These records will be hidden from the active ledger and borrower balances. They can be restored from Reports &amp; Logs → Archives. This does not reverse a recorded payment.</p>
+        {archiveError&&<p role="alert" className="mb-3 text-sm text-red-600">{archiveError}</p>}
+        <ul className="divide-y divide-slate-100">{archiveReview?.map(row=><li key={row.id} className="py-2 text-sm"><strong>{nameOf(row.userId)}</strong><p>{row.description}</p><p className="text-xs text-slate-500">{row.id} · {formatPeso(row.amount)} · Due {formatDate(row.dueDate)}</p></li>)}</ul>
+      </Modal>
     </>
   )
 }

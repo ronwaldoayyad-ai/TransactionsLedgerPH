@@ -13,7 +13,7 @@ module.exports=({db,active,localAuth,jwt,hash,api,cookiePath})=>{
   let id=cookie?.split('.')[0],signature=cookie?.split('.')[1]
   const expected=id&&digest(id)
   if(!uuid.test(id||'')||!signature||signature.length!==expected.length||!crypto.timingSafeEqual(Buffer.from(signature),Buffer.from(expected))){
-   id=crypto.randomUUID();res.setHeader('Set-Cookie','ll_login_device='+id+'.'+digest(id)+'; HttpOnly; SameSite=Strict; Path='+cookiePath+'; Max-Age=31536000'+(req.headers['x-forwarded-proto']==='https'?'; Secure':''))
+   id=crypto.randomUUID();res.setHeader('Set-Cookie','ll_login_device='+id+'.'+digest(id)+'; HttpOnly; SameSite=Strict; Path='+cookiePath+'; Max-Age=31536000'+(cookiePath==='/api'||req.headers['x-forwarded-proto']==='https'?'; Secure':''))
   }
   return row('device:'+digest(id),'device')
  }

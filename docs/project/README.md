@@ -31,6 +31,7 @@ These documents are the current map/contracts. Actual CI/release evidence owns p
 
 | Document | Purpose |
 | --- | --- |
+| [Security.md](Security.md) | October 28 controls, owner choices, verification and remaining security requirements |
 | [Login-Access.md](Login-Access.md) | Automatic Login Code sign-in, five-attempt account/device locks, admin unlock and review limits |
 | [Dashboard-Shortcuts.md](Dashboard-Shortcuts.md) | Combined borrower orb, compact fan menu, existing interfaces and visual review limits |
 | [Admin-Workspace.md](Admin-Workspace.md) | Lender workspace, staging data completeness, manual refresh, verification boundaries and source links · October 16, 2026 |

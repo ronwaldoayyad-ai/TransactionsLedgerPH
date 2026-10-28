@@ -1,15 +1,16 @@
 // Shared service; production dependencies are supplied by the validated runtime.
-const http=require('node:http'),crypto=require('node:crypto'),supabaseHeaders=require('./supabase-headers.cjs'),publicError=require('./public-service-error.cjs');
+const http=require('node:http'),crypto=require('node:crypto'),supabaseHeaders=require('./supabase-headers.cjs'),publicError=require('./public-service-error.cjs'),{objectPath,readUpload}=require('./upload-security.cjs');
 function respondError(res,error){const result=publicError(error);res.writeHead(result.status);res.end(JSON.stringify(result.body));}
 module.exports=function createFlowService({db,api,origin,jwt,hash,validator=require('./file-validator.cjs'),cookiePath='/api',backgroundWorkers=true,sendSupportVerification=null,telegramConfig={}}){
 async function validateUpload(req,body){
  const user=await active(req),allowed={ 'payment-proofs':['image/jpeg','image/png','image/webp','application/pdf'],avatars:['image/jpeg','image/png','image/webp'],'mobile-attachments':['image/jpeg','image/png','image/webp','image/gif','image/bmp','image/avif','application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document']};
- if(!allowed[body.bucket]||String(body.path).split('/')[0]!==user.id)throw Error('File ownership mismatch.');
+ if(!allowed[body.bucket])throw Error('File ownership mismatch.');
+ const encodedPath=objectPath(user.id,body.path);
  const object=(await db.query('select id,metadata,updated_at::text as version from storage.objects where bucket_id=$1 and name=$2',[body.bucket,body.path])).rows[0];
  const mime=object?.metadata?.mimetype,limit=body.bucket==='avatars'?2097152:5242880;
  if(!object||!allowed[body.bucket].includes(mime)||!object.metadata.size||object.metadata.size>limit)throw Error('Choose a supported file within the size limit.');
- const token=req.headers.authorization,download=await fetch(api+'/storage/v1/object/authenticated/'+body.bucket+'/'+body.path,{headers:{apikey:jwt('anon'),Authorization:token}});
- if(!download.ok)throw Error('Unable to read the uploaded file.');const bytes=Buffer.from(await download.arrayBuffer());if(bytes.length!==Number(object.metadata.size))throw Error('File size mismatch.');
+ const token=req.headers.authorization,download=await fetch(api+'/storage/v1/object/authenticated/'+body.bucket+'/'+encodedPath,{headers:{apikey:jwt('anon'),Authorization:token},redirect:'error',signal:AbortSignal.timeout(15000)});
+ const bytes=await readUpload(download,limit);if(bytes.length!==Number(object.metadata.size))throw Error('File size mismatch.');
  await validator(bytes,mime);
  await db.query('insert into mobile_private.verified_uploads(object_id,owner_id,bucket,path,updated_at,sha256,mime,size) values($1,$2,$3,$4,$5,$6,$7,$8) on conflict(object_id) do update set updated_at=excluded.updated_at,sha256=excluded.sha256,mime=excluded.mime,size=excluded.size',[object.id,user.id,body.bucket,body.path,object.version,crypto.createHash('sha256').update(bytes).digest('hex'),mime,bytes.length]);
  return {valid:true};

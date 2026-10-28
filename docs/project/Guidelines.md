@@ -2,6 +2,8 @@
 
 Reviewed October 27, 2026.
 
+Security configuration, quotas, accepted Login Code policy, pending MFA and native release requirements are maintained in [Security.md](Security.md), reviewed October 28, 2026. Run its verification gates before publishing security changes.
+
 ## Borrower guide
 - Dashboard: switch Current/Next Balance Due and inspect the matching breakdown. Credit advice appears only when account credit exists.
 - Transactions: use search, sort and group/status filters. Installment Cards is the default; open a schedule for fees, progress and status. Straight Retail, Fees and Adjustments use pills within the existing grouping.

@@ -16,6 +16,12 @@ dist-ssr
 !.env.hosted.example
 *.pem
 *.key
+*.p12
+*.pfx
+*.kdbx
+*.secrets.json
+.npmrc
+!.npmrc.example
 
 # Editor directories and files
 .vscode/*

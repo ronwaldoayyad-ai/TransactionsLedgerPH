@@ -3,5 +3,5 @@ test('production aliases use the canonical service origin without matching previ
  const hosts=config.redirects.map(r=>r.has[0].value);for(const host of ['support.ronwaldo.com','transactions-ledger-ph.vercel.app','www.loanledgerph.ronwaldo.com'])assert.ok(hosts.includes(host));
  assert.ok(!hosts.includes('loanledgerph.ronwaldo.com'));assert.ok(!hosts.some(h=>h.includes('*')));
  for(const r of config.redirects){assert.equal(r.source,'/:path*');assert.equal(r.destination,'https://loanledgerph.ronwaldo.com/:path*');assert.equal(r.has[0].type,'host');assert.equal(r.permanent,false);}
- assert.equal(config.rewrites[0].source,'/api/:path*');
+ assert.ok(config.rewrites.find(r=>r.source==='/api/:path*'&&r.destination.includes('__route')));
 });

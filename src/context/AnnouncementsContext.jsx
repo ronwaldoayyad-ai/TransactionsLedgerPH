@@ -1,3 +1,4 @@
+import { debugError } from "../lib/debugLog"
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { useApp } from './AppContext'
 import { useRecordRefresh } from '../lib/recordRefresh'
@@ -96,7 +97,7 @@ export function AnnouncementsProvider({ children }) {
       .select('*')
       .order('created_at', { ascending: false })
     if (error) {
-      console.error('[announcements] load failed:', error.message)
+      debugError('[announcements] load failed:', error.message)
       return
     }
     setLiveAnnouncements((data ?? []).map(mapAnnouncement))
@@ -138,7 +139,7 @@ export function AnnouncementsProvider({ children }) {
       .select('*')
       .order('created_at', { ascending: false })
     if (error) {
-      console.error('[announcements] templates load failed:', error.message)
+      debugError('[announcements] templates load failed:', error.message)
       return
     }
     setLiveTemplates((data ?? []).map(mapTemplate))
@@ -247,7 +248,7 @@ export function AnnouncementsProvider({ children }) {
         if (isLive) {
           const { error } = await supabase.from('announcements').delete().eq('id', a.id)
           if (error) {
-            console.error('[announcements] consume failed:', error.message)
+            debugError('[announcements] consume failed:', error.message)
             setDismissed((prev) => new Set(prev).add(a.id)) // at least hide it this session
             return
           }
@@ -281,7 +282,7 @@ export function AnnouncementsProvider({ children }) {
           one_time: oneTime,
         })
         if (error) {
-          console.error('[announcements] create failed:', error.message)
+          debugError('[announcements] create failed:', error.message)
           return { error: error.message }
         }
         await fetchAll()
@@ -337,7 +338,7 @@ export function AnnouncementsProvider({ children }) {
       if (isLive) {
         const { error } = await supabase.from('announcements').delete().eq('id', id)
         if (error) {
-          console.error('[announcements] delete failed:', error.message)
+          debugError('[announcements] delete failed:', error.message)
           return
         }
         await fetchAll()
@@ -358,7 +359,7 @@ export function AnnouncementsProvider({ children }) {
           .update({ title, body, audience, target_user_ids: ids, expires_at: expiresAt || null })
           .eq('id', id)
         if (error) {
-          console.error('[announcements] update failed:', error.message)
+          debugError('[announcements] update failed:', error.message)
           return { error: error.message }
         }
         await fetchAll()

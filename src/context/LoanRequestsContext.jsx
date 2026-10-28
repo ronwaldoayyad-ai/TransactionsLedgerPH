@@ -1,3 +1,4 @@
+import { debugError } from "../lib/debugLog"
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { useApp } from './AppContext'
 import { useRecordRefresh } from '../lib/recordRefresh'
@@ -186,7 +187,7 @@ export function LoanRequestsProvider({ children }) {
         p_account_name: bankAccountName,
       })
       if (error) {
-        console.error('[loan-requests] submit failed:', error.message)
+        debugError('[loan-requests] submit failed:', error.message)
         return { error: error.message }
       }
       await fetchAll()
@@ -200,7 +201,7 @@ export function LoanRequestsProvider({ children }) {
       if (!isLive) return { error: 'Live session required.' }
       const { error } = await supabase.rpc('cancel_my_loan_request', { p_id: id, p_note: note })
       if (error) {
-        console.error('[loan-requests] cancel failed:', error.message)
+        debugError('[loan-requests] cancel failed:', error.message)
         return { error: error.message }
       }
       await fetchAll()
@@ -220,7 +221,7 @@ export function LoanRequestsProvider({ children }) {
         p_account_name: bankAccountName,
       })
       if (error) {
-        console.error('[loan-requests] bank update failed:', error.message)
+        debugError('[loan-requests] bank update failed:', error.message)
         return { error: error.message }
       }
       await fetchAll()
@@ -239,7 +240,7 @@ export function LoanRequestsProvider({ children }) {
         p_note: note,
       })
       if (error) {
-        console.error('[loan-requests] status update failed:', error.message)
+        debugError('[loan-requests] status update failed:', error.message)
         return { error: error.message }
       }
       await fetchAll()
@@ -256,7 +257,7 @@ export function LoanRequestsProvider({ children }) {
         .update({ notarial_fee: notarialFee, dst })
         .eq('id', id)
       if (error) {
-        console.error('[loan-requests] fee update failed:', error.message)
+        debugError('[loan-requests] fee update failed:', error.message)
         return { error: error.message }
       }
       await fetchAll()
@@ -272,7 +273,7 @@ export function LoanRequestsProvider({ children }) {
         .from('loan_request_rates')
         .upsert({ term_months: termMonths, monthly_rate: monthlyRate, updated_at: new Date().toISOString() })
       if (error) {
-        console.error('[loan-requests] rate save failed:', error.message)
+        debugError('[loan-requests] rate save failed:', error.message)
         return { error: error.message }
       }
       await fetchAll()
@@ -298,7 +299,7 @@ export function LoanRequestsProvider({ children }) {
         .from('loan_request_access')
         .upsert({ user_id: userId, enabled, updated_at: new Date().toISOString() })
       if (error) {
-        console.error('[loan-requests] access save failed:', error.message)
+        debugError('[loan-requests] access save failed:', error.message)
         return { error: error.message }
       }
       await fetchAll()
@@ -315,7 +316,7 @@ export function LoanRequestsProvider({ children }) {
       if (list.length === 0) return {}
       const { error } = await supabase.from('loan_requests').delete().in('id', list)
       if (error) {
-        console.error('[loan-requests] delete failed:', error.message)
+        debugError('[loan-requests] delete failed:', error.message)
         return { error: error.message }
       }
       await fetchAll()

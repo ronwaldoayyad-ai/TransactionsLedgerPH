@@ -33,6 +33,7 @@ export default defineConfig({
     } : {},
   },
   build: {
+    sourcemap: false,
     // Split heavy third-party libs into their own long-lived chunks so a code
     // change in app source doesn't bust their browser cache, and so the big,
     // rarely-changing dependencies download in parallel with the app shell.

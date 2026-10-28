@@ -10,6 +10,11 @@ module.exports=function createApiHandler(getRuntime){return async function handl
  const {service,assistant,origin,deploymentOrigin,workerSecret}=runtime;
  const requestOrigin=request.headers.get('origin');
  if(requestOrigin&&requestOrigin!==origin&&requestOrigin!==deploymentOrigin)return json(403,{error:'This request is not allowed.'});
+ if(route!=='/notification-worker'&&request.method==='POST'&&request.headers.get('content-type')?.split(';')[0].trim().toLowerCase()!=='application/json')return json(415,{error:'Use a JSON request.'});
+ if(route!=='/notification-worker'&&runtime.requestGuard){
+  try{await runtime.requestGuard({route,address:request.headers.get('x-vercel-forwarded-for')?.split(',')[0]||''});}
+  catch(error){if(error.status===429)return Response.json({error:'Too many requests. Please wait and try again.'},{status:429,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Retry-After':String(Math.max(1,Math.min(86400,Number(error.retryAfter)||60)))}});return json(503,{error:'Request protection is temporarily unavailable. Please retry.'});}
+ }
  if(route==='/health'){
   try{await service.db.query('select 1');return json(200,{ready:true})}catch{return json(503,{ready:false})}
  }

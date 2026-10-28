@@ -1,3 +1,4 @@
+import { debugWarn, debugError } from "../lib/debugLog"
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { useApp } from './AppContext'
 import { useRecordRefresh } from '../lib/recordRefresh'
@@ -43,7 +44,7 @@ export function InvoicesProvider({ children }) {
       .order('created_at', { ascending: false })
     if (error) {
       // Degrade gracefully if the migration hasn't been run yet.
-      console.warn('[invoices] load failed (run the migration?):', error.message)
+      debugWarn('[invoices] load failed (run the migration?):', error.message)
       return
     }
     setInvoices((data ?? []).map(mapInvoice))
@@ -90,7 +91,7 @@ export function InvoicesProvider({ children }) {
         p_line_items: lineItems ?? [],
       })
       if (error) {
-        console.error('[invoices] create failed:', error.message)
+        debugError('[invoices] create failed:', error.message)
         return { error: error.message }
       }
       const row = Array.isArray(data) ? data[0] : data
@@ -109,7 +110,7 @@ export function InvoicesProvider({ children }) {
         .update({ status: 'assigned', updated_at: new Date().toISOString() })
         .eq('id', id)
       if (error) {
-        console.error('[invoices] assign failed:', error.message)
+        debugError('[invoices] assign failed:', error.message)
         return { error: error.message }
       }
       await fetchAll()
@@ -128,7 +129,7 @@ export function InvoicesProvider({ children }) {
         .update({ status, updated_at: new Date().toISOString() })
         .eq('id', id)
       if (error) {
-        console.error('[invoices] status update failed:', error.message)
+        debugError('[invoices] status update failed:', error.message)
         return { error: error.message }
       }
       await fetchAll()
@@ -142,7 +143,7 @@ export function InvoicesProvider({ children }) {
       if (!isLive) return { error: 'Live session required.' }
       const { error } = await supabase.from('invoices').delete().eq('id', id)
       if (error) {
-        console.error('[invoices] delete failed:', error.message)
+        debugError('[invoices] delete failed:', error.message)
         return { error: error.message }
       }
       await fetchAll()

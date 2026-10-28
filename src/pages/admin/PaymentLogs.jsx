@@ -1,3 +1,4 @@
+import { debugError } from "../../lib/debugLog"
 import { useMemo, useState } from 'react'
 import { useApp } from '../../context/AppContext'
 import { useNotifications } from '../../context/NotificationsContext'
@@ -160,7 +161,7 @@ export default function PaymentLogs() {
             targetUserIds: [created.userId],
           })
         } catch (e) {
-          console.error('[payment-logs] payment notification failed:', e?.message ?? e)
+          debugError('[payment-logs] payment notification failed:', e?.message ?? e)
         }
       }
       // Historical acknowledgements do not settle dues. Reviewed postings own

@@ -23,8 +23,8 @@ async function answerQuestion(body,{env=process.env,fetchImpl=fetch,signedIn=fal
  if(typeof body.question!=='string'||body.question.trim().length<2||body.question.length>800)throw Error('Ask an app question between 2 and 800 characters.');
  const question=body.question.trim(),entries=selectFAQs(question),language=body.language==='Filipino'?'Filipino':'English';
  const respond=(matches,reason)=>{const result=fallback(matches,reason);if(language==='Filipino'&&matches.length&&result.answer===matches[0].answer)result.answer=filipinoContent.faq[matches[0].id]?.answer||result.answer;return result;};
- if(body.useAI&&signedIn&&providerName(env)==='openrouter'&&!freeModel(modelName(env)))return respond(entries,'free-model-required');
- if(!body.useAI||!signedIn||!configured(env))return respond(entries,!signedIn?'sign-in-required':configured(env)?'faq-selected':'not-configured');
+ if(body.useAI===true&&signedIn&&providerName(env)==='openrouter'&&!freeModel(modelName(env)))return respond(entries,'free-model-required');
+ if(body.useAI!==true||!signedIn||!configured(env))return respond(entries,!signedIn?'sign-in-required':configured(env)?'faq-selected':'not-configured');
  // Only a user-selected general question and published FAQ text leave this service.
  // No ledger, support ticket, lender message or uploaded file is queried here.
  if(/[^\s@]+@[^\s@]+\.[^\s@]+|\b\d{6,}\b|\b(?:password|otp|access code)\s*(?:is|:|=)\s*\S+/i.test(question))return fallback(entries,'private-details');
@@ -71,7 +71,7 @@ async function answerQuestion(body,{env=process.env,fetchImpl=fetch,signedIn=fal
  }catch{return fallback(entries,'provider-unavailable');}
 
 }
-function createPawcheebelsHandler({origin,authenticate,env=process.env,fetchImpl=fetch}){
+function createPawcheebelsHandler({origin,authenticate,consumeQuota,env=process.env,fetchImpl=fetch}){
  const requests=new Map(),busy=new Set(),state={cache:new Map(),unavailable:new Map()};
  return async(req,res)=>{
   res.setHeader('Content-Type','application/json');res.setHeader('Cache-Control','no-store');
@@ -86,8 +86,9 @@ function createPawcheebelsHandler({origin,authenticate,env=process.env,fetchImpl
    const now=Date.now();for(const [key,item] of requests)if(item.until<now)requests.delete(key);
    if(!requests.has(owner)){if(requests.size>=2000)return send(429,{error:'The assistant is busy. Try again shortly.'});requests.set(owner,{count:0,until:now+60000});}
    const window=requests.get(owner);if(window.count>=12||busy.has(owner))return send(429,{error:'Please wait before asking another question.'});window.count++;busy.add(owner);acquired=true;
+   if(user&&body.useAI===true&&consumeQuota)await consumeQuota(user);
    const result=await answerQuestion(body,{env,fetchImpl,signedIn:!!user,owner:user?.id,state});return send(200,result);
-  }catch(error){return send(400,{error:/Sign in|active|account/.test(error.message)?'Sign in again to use AI assistance.':error.message==='Unexpected end of JSON input'?'Ask a valid app question.':'Unable to answer. Check your question and retry.'});}
+  }catch(error){if(error.status===429){res.setHeader('Retry-After',String(Math.max(1,Math.min(86400,Number(error.retryAfter)||60))));return send(429,{error:'Please wait before asking another question.'});}if(error.status===503)return send(503,{error:'AI assistance is temporarily unavailable. Please retry.'});return send(400,{error:/Sign in|active|account/.test(error.message)?'Sign in again to use AI assistance.':error.message==='Unexpected end of JSON input'?'Ask a valid app question.':'Unable to answer. Check your question and retry.'});}
   finally{if(acquired)busy.delete(owner);}
  };
 }

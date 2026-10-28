@@ -1,3 +1,4 @@
+import { debugError, debugWarn } from "../lib/debugLog"
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { useApp } from './AppContext'
 import { supabase } from '../supabaseClient'
@@ -68,7 +69,7 @@ export function MessagesProvider({ children }) {
     const { data, error } = await q
     if(generation!==fetchGeneration.current)return
     if (error) {
-      console.error('[messages] load failed:', error.message)
+      debugError('[messages] load failed:', error.message)
       return
     }
     setLiveMessages((data ?? []).map(mapMessage))
@@ -94,7 +95,7 @@ export function MessagesProvider({ children }) {
   // Realtime: refetch on any change the current user is allowed to see.
   useEffect(() => {
     if (!isLive || !meId) return undefined
-    return subscribeToInvalidations({client:supabase,name:`messages-rt-${meId}`,table:'message_change_signals',ownerId:meId,isAdmin,onChange:fetchMessages,onError:error=>console.warn('[messages]',error.message)})
+    return subscribeToInvalidations({client:supabase,name:`messages-rt-${meId}`,table:'message_change_signals',ownerId:meId,isAdmin,onChange:fetchMessages,onError:error=>debugWarn('[messages]',error.message)})
   }, [isLive, meId, isAdmin, fetchMessages])
 
   // Notification sounds for INCOMING activity: messages received from the other
@@ -132,7 +133,7 @@ export function MessagesProvider({ children }) {
           .from('messages')
           .insert({ borrower_id: target, from_admin: isAdmin, body: text })
         if (error) {
-          console.error('[messages] send failed:', error.message)
+          debugError('[messages] send failed:', error.message)
           return
         }
         await fetchMessages()
@@ -171,7 +172,7 @@ export function MessagesProvider({ children }) {
           .eq('from_admin', toMeFromAdmin)
           .is('read_at', null)
         if (error) {
-          console.error('[messages] mark-read failed:', error.message)
+          debugError('[messages] mark-read failed:', error.message)
           return
         }
         await fetchMessages()
@@ -201,7 +202,7 @@ export function MessagesProvider({ children }) {
       if (isLive) {
         const { error } = await supabase.from('messages').update({ reactions: next }).eq('id', messageId)
         if (error) {
-          console.error('[messages] react failed:', error.message)
+          debugError('[messages] react failed:', error.message)
           return
         }
         await fetchMessages()
@@ -226,7 +227,7 @@ export function MessagesProvider({ children }) {
         }
         const { error } = await supabase.from('messages').update({ pinned: next }).eq('id', messageId)
         if (error) {
-          console.error('[messages] pin failed:', error.message)
+          debugError('[messages] pin failed:', error.message)
           return
         }
         await fetchMessages()
@@ -247,7 +248,7 @@ export function MessagesProvider({ children }) {
       if (isLive) {
         const { error } = await supabase.from('messages').delete().eq('id', messageId)
         if (error) {
-          console.error('[messages] delete failed:', error.message)
+          debugError('[messages] delete failed:', error.message)
           return
         }
         await fetchMessages()
@@ -267,7 +268,7 @@ export function MessagesProvider({ children }) {
       if (isLive) {
         const { error } = await supabase.from('messages').delete().eq('borrower_id', target)
         if (error) {
-          console.error('[messages] clear failed:', error.message)
+          debugError('[messages] clear failed:', error.message)
           return
         }
         await fetchMessages()

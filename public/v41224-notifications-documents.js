@@ -117,9 +117,14 @@ async function fileDownloadFeedback(work){
  try{await new Promise(resolve=>requestAnimationFrame(resolve));return await work()}catch(error){toast(error.message||'Unable to download. Please retry.');return false}finally{fileDownloadBusy=false;status.remove();buttons.forEach(({button,disabled})=>{if(button.isConnected){button.disabled=disabled;button.removeAttribute('aria-busy')}})}
 }
 downloadChatAttachment=async id=>{try{const result=await mobileCall('attachment-url',{id}),message=chatMessages.find(m=>m.id===id),response=await fetch(result.url);if(!response.ok)throw Error('Unable to download attachment.');return downloadAppFile(await response.blob(),message?.attachment?.name||'attachment');}catch(error){toast(error.message);return false}};
-for(const name of ['downloadRecentPayment','downloadAcknowledgement','downloadInvoice','downloadDisbursement','downloadLoanDisclosure','downloadChatAttachment','downloadNotificationAttachment']){
- const original=eval(name);const wrapped=(...args)=>fileDownloadFeedback(()=>original(...args));eval(name+' = wrapped');
-}
+function wrapDocumentDownload(original){return (...args)=>fileDownloadFeedback(()=>original(...args));}
+downloadRecentPayment=wrapDocumentDownload(downloadRecentPayment);
+downloadAcknowledgement=wrapDocumentDownload(downloadAcknowledgement);
+downloadInvoice=wrapDocumentDownload(downloadInvoice);
+downloadDisbursement=wrapDocumentDownload(downloadDisbursement);
+downloadLoanDisclosure=wrapDocumentDownload(downloadLoanDisclosure);
+downloadChatAttachment=wrapDocumentDownload(downloadChatAttachment);
+downloadNotificationAttachment=wrapDocumentDownload(downloadNotificationAttachment);
 viewRecentPayment=downloadRecentPayment;viewAcknowledgement=downloadAcknowledgement;viewInvoice=downloadInvoice;viewDisbursement=downloadDisbursement;
 function decoratePaymentDownloads(){
  const icon='<svg class="download-file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><g class="download-icon-arrow"><path d="M12 3v12m-4-4 4 4 4-4"/></g><path d="M5 16v4h14v-4"/></svg>';

@@ -1,3 +1,4 @@
+import { debugError } from "../../lib/debugLog"
 import { useMemo, useRef, useState } from 'react'
 import { useApp } from '../../context/AppContext'
 import { useLoanRequests } from '../../context/LoanRequestsContext'
@@ -138,7 +139,7 @@ export default function LoanRequests() {
           targetUserIds: [updating.userId],
         })
       } catch (e) {
-        console.error('[loan-requests] status notification failed:', e?.message ?? e)
+        debugError('[loan-requests] status notification failed:', e?.message ?? e)
       }
     }
     return res
