@@ -97,6 +97,7 @@
     "tests/integration/transactionGroupMigration.test.cjs": "7ece05c953785e6318b5da138c6f34d791f8c543478d52e165d367808f9affaf",
     "tests/unit/acknowledgementDates.test.cjs": "8331bc3553e62a681652a38fd9fb717e5180310a810d99fa987f54f665bd89c1",
     "tests/unit/archiveSafety.test.js": "439ebc64e4354a475936365b61dd24961589e0fcef60ea37ee12125ad5b1174c",
+    "tests/unit/attachmentDataUrl.test.js": "ba115b248d9d9261bf2d97c06ee8560c42ccd6edfba5f073e7c011c896c80575",
     "tests/unit/borrowerAccess.test.cjs": "203c4c51448f872c6d27399e75eacd888b2159fa3d7bc7d67fa962cadc0adae5",
     "tests/unit/borrowerUsability.test.js": "1d2b1530fbb41a98db5189c931cdc8e46c4a8e0c5550fee23008495eeb34824f",
     "tests/unit/classicRecovery.test.cjs": "68231f4e8e587766368f875ab487f4d270f7cd339d89ca38456844bd16b3a8ec",
