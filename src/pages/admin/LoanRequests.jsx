@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { debugError } from "../../lib/debugLog"
+import { useMemo, useRef, useState } from 'react'
 import { useApp } from '../../context/AppContext'
 import { useLoanRequests } from '../../context/LoanRequestsContext'
 import { useNotifications } from '../../context/NotificationsContext'
@@ -10,87 +11,69 @@ import StatusBadge from '../../components/loanrequest/StatusBadge'
 import HistoryTimeline from '../../components/loanrequest/HistoryTimeline'
 import RequestDetailBody from '../../components/loanrequest/RequestDetailBody'
 import UpdateStatusModal from '../../components/loanrequest/UpdateStatusModal'
-import { Button, Card, CardHeader, EmptyState, Field, Modal, Switch, inputClass } from '../../components/ui'
+import {SearchInput,  Button, Card, CardHeader, EmptyState, Modal, Switch, inputClass } from '../../components/ui'
 import { formatPeso } from '../../lib/amortization'
 import { TERMS, statusNotification } from '../../lib/loanRequest'
 
-// --- Feature Visibility: enable/disable loan requests per borrower ---
-function AccessRow({ userId, initialEnabled, onSave }) {
-  const [enabled, setEnabled] = useState(initialEnabled)
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
-  const dirty = enabled !== initialEnabled
-
-  const save = async () => {
-    setSaving(true)
-    await onSave(userId, enabled)
-    setSaving(false)
-    setSaved(true)
+// --- Feature Visibility: each borrower switch saves immediately ---
+function AccessRow({userId,name,initialEnabled,onSave}) {
+  const [pending,setPending]=useState(null)
+  const [error,setError]=useState('')
+  const busy=useRef(false)
+  const saving=pending!==null
+  async function change(next){
+    if(busy.current)return
+    busy.current=true;setPending(next);setError('')
+    try{const result=await onSave(userId,next);if(result?.error)throw Error(result.error)}
+    catch(failure){setError(failure.message)}
+    finally{setPending(null);busy.current=false}
   }
-
-  return (
-    <div className="flex items-center gap-3">
-      <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-700">
-        <Switch checked={enabled} onChange={(v) => { setEnabled(v); setSaved(false) }} label="Enable loan requests" />
-        {enabled ? 'Enabled' : 'Disabled'}
-      </label>
-      <Button onClick={save} disabled={saving || (!dirty && saved)}>
-        {saving ? 'Saving…' : saved && !dirty ? 'Saved' : 'Save'}
-      </Button>
-    </div>
-  )
+  const enabled=pending??initialEnabled
+  return <div className="flex max-w-xs flex-col items-end gap-1"><Switch stateLabels={{on:saving?'Saving visibility…':'Loan requests are visible',off:saving?'Saving visibility…':'Loan requests are hidden'}} checked={enabled} disabled={saving} onChange={change} label={'Show Request a Loan for '+name}/>{error&&<p role="alert" className="text-right text-xs text-red-700">{error}</p>}</div>
 }
-
-function FeatureVisibility({ borrowers }) {
-  const { accessFor, setAccess } = useLoanRequests()
-  const [selectedId, setSelectedId] = useState('')
-
-  return (
-    <Card>
-      <CardHeader title="Master Control — Feature Visibility" subtitle="Enable cash loan requests per borrower." />
-      <div className="space-y-4 px-5 py-4">
-        <Field label="Select Borrower" htmlFor="fv-borrower">
-          <select id="fv-borrower" className={inputClass} value={selectedId} onChange={(e) => setSelectedId(e.target.value)}>
-            <option value="">— Select a borrower —</option>
-            {borrowers.map((b) => (
-              <option key={b.id} value={b.id}>
-                {b.name}
-              </option>
-            ))}
-          </select>
-        </Field>
-        {selectedId ? (
-          <AccessRow key={selectedId} userId={selectedId} initialEnabled={accessFor(selectedId)} onSave={setAccess} />
-        ) : (
-          <p className="text-sm text-slate-500">Pick a borrower to toggle their access.</p>
-        )}
-      </div>
-    </Card>
-  )
+function FeatureVisibility({borrowers}){
+  const {accessFor,setAccess,accessReady,accessError,refreshRequests}=useLoanRequests()
+  const [search,setSearch]=useState('')
+  const [filter,setFilter]=useState('all')
+  const enabledCount=borrowers.filter(b=>accessFor(b.id)).length
+  const query=search.trim().toLowerCase()
+  const visible=borrowers.filter(b=>(filter==='all'||accessFor(b.id)===(filter==='enabled'))&&[b.name,b.email,b.accountNumber].some(v=>String(v||'').toLowerCase().includes(query))).sort((a,b)=>String(a.name).localeCompare(String(b.name)))
+  return <Card>
+    <CardHeader title="Master Control — Feature Visibility" subtitle="Switch on to show Request a Loan. Switch off to hide it. Changes save automatically."/>
+    {accessError&&<div role="alert" className="m-5 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">{accessError}<Button variant="secondary" onClick={refreshRequests} className="mt-2">Retry access</Button></div>}
+    <section aria-label="Borrower loan-request access">
+      <div className="space-y-3 px-5 py-4"><h3 className="text-sm font-semibold text-slate-900">Borrower loan-request access</h3><p className="text-xs text-slate-500">Existing requests stay in the borrower’s history. Each switch controls starting a new request.</p>
+      <div className="flex flex-wrap gap-2" role="group" aria-label="Filter borrower access">{[['all','All',borrowers.length],['enabled','Enabled',enabledCount],['disabled','Disabled',borrowers.length-enabledCount]].map(([value,label,count])=><button key={value} type="button" aria-pressed={filter===value} disabled={!accessReady} onClick={()=>setFilter(value)} className={'rounded-full border px-3 py-1.5 text-xs font-medium '+(filter===value?'border-navy-800 bg-navy-800 text-white':'border-slate-200 bg-white text-slate-600')}>{label}{accessReady?' ('+count+')':''}</button>)}</div>
+      <SearchInput aria-label="Search borrower access" placeholder="Search name, email or account number" className={inputClass} value={search} disabled={!accessReady} onChange={e=>setSearch(e.target.value)}/></div>
+      {!accessReady&&!accessError&&<p role="status" className="px-5 py-4 text-sm text-slate-500">Loading loan-request access…</p>}
+      {accessReady&&<ul className="max-h-96 overflow-y-auto divide-y divide-slate-100">{visible.length?visible.map(b=><li key={b.id} className="flex items-center gap-3 px-5 py-3"><div className="min-w-0 flex-1"><p className="break-words text-sm font-medium text-slate-900">{b.name}</p><p className="break-all text-xs text-slate-500">{b.email}{b.accountNumber?' · '+b.accountNumber:''}</p></div><AccessRow userId={b.id} name={b.name} initialEnabled={accessFor(b.id)} onSave={setAccess}/></li>):<li className="px-5 py-4 text-sm text-slate-500">No borrowers match this filter.</li>}</ul>}
+    </section>
+  </Card>
 }
 
 // --- Rate configuration: per-term monthly add-on rate (4 decimals, in %) ---
-function RateConfig({ initialRates, onSaveRate }) {
+function RateConfig({ initialRates, onSaveRates }) {
+  const signature=JSON.stringify(initialRates)
+  const [source,setSource]=useState(signature)
   const [draft, setDraft] = useState(() =>
-    Object.fromEntries(TERMS.map((t) => [t, ((initialRates[t] ?? 0) * 100).toFixed(4)])),
+    Object.fromEntries(TERMS.map((t) => [t, initialRates[t]===undefined?'':(initialRates[t] * 100).toFixed(4)])),
   )
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [error,setError]=useState('')
+  if(source!==signature){setSource(signature);setDraft(Object.fromEntries(TERMS.map(t=>[t,initialRates[t]===undefined?'':(initialRates[t]*100).toFixed(4)])));setSaved(false)}
 
   const save = async () => {
     setSaving(true)
-    for (const t of TERMS) {
-      const pct = Number(draft[t])
-      if (!Number.isNaN(pct)) await onSaveRate(t, pct / 100)
-    }
-    setSaving(false)
-    setSaved(true)
+    setError('');setSaved(false)
+    try{const result=await onSaveRates(draft);if(result?.error)setError(result.error);else setSaved(true)}catch(e){setError(e.message)}finally{setSaving(false)}
   }
 
   return (
     <Card>
       <CardHeader title="Loan Rate Configuration" subtitle="Monthly add-on rate per term (4 decimal places)." />
       <div className="space-y-3 px-5 py-4">
+        {!Object.keys(initialRates).length&&<p className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">No rates have been configured yet. Enter a rate for each term and save. Blank fields are not treated as zero interest.</p>}
         {TERMS.map((t) => (
           <div key={t} className="flex items-center gap-3">
             <label htmlFor={`rate-${t}`} className="w-24 text-sm font-medium text-slate-700">
@@ -101,6 +84,9 @@ function RateConfig({ initialRates, onSaveRate }) {
               type="number"
               step="0.0001"
               min="0"
+              max="100"
+              disabled={saving}
+              placeholder="Not configured"
               className={`${inputClass} w-32`}
               value={draft[t]}
               onChange={(e) => { setDraft((d) => ({ ...d, [t]: e.target.value })); setSaved(false) }}
@@ -111,6 +97,8 @@ function RateConfig({ initialRates, onSaveRate }) {
         <Button onClick={save} disabled={saving}>
           {saving ? 'Saving…' : saved ? 'Saved' : 'Save Rates'}
         </Button>
+        {error&&<p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
+        {saved&&<p role="status" className="text-sm text-emerald-700">All loan rates saved.</p>}
       </div>
     </Card>
   )
@@ -118,7 +106,7 @@ function RateConfig({ initialRates, onSaveRate }) {
 
 export default function LoanRequests() {
   const { users } = useApp()
-  const { requests, rates, ratesByTerm, eventsFor, updateStatus, updateFees, deleteRequests, setRate } =
+  const { requests, ratesByTerm,ratesError,loading,refreshRequests,saveRates, eventsFor, updateStatus, updateFees, deleteRequests } =
     useLoanRequests()
   const { createNotification } = useNotifications()
   const borrowers = useMemo(() => users.filter((u) => u.role === 'user'), [users])
@@ -145,12 +133,13 @@ export default function LoanRequests() {
     if (!res?.error && statusChanged) {
       try {
         await createNotification({
+          autoEvent:'loan.status_changed',eventPayload:{source_id:updating.id,status,note,reference:updating.reference||''},
           ...statusNotification({ status, note, reference: updating.reference }),
           audience: 'targeted',
           targetUserIds: [updating.userId],
         })
       } catch (e) {
-        console.error('[loan-requests] status notification failed:', e?.message ?? e)
+        debugError('[loan-requests] status notification failed:', e?.message ?? e)
       }
     }
     return res
@@ -190,14 +179,15 @@ export default function LoanRequests() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         <FeatureVisibility borrowers={borrowers} />
-        {rates.length > 0 ? (
-          <RateConfig initialRates={ratesByTerm} onSaveRate={setRate} />
+        {!loading&&!ratesError ? (
+          <RateConfig initialRates={ratesByTerm} onSaveRates={saveRates} />
         ) : (
           <Card>
             <CardHeader title="Loan Rate Configuration" />
             <p className="px-5 py-8 text-center text-sm text-slate-500">
-              Rate configuration loads once the loan-requests schema is set up.
+              {loading?'Loading loan rates…':ratesError}
             </p>
+            {!loading&&<div className="px-5 pb-5"><Button variant="secondary" onClick={refreshRequests}>Retry loading rates</Button></div>}
           </Card>
         )}
       </div>

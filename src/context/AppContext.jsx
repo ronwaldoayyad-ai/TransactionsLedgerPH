@@ -1,4 +1,9 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { debugError, debugWarn } from "../lib/debugLog"
+import {transactionGroup,groupOptions} from '../lib/transactionGroups'
+import { prepareManualTransaction, prepareTransactionEdit, persistTransactionEdit, prepareAdminCorrection } from '../lib/transactionEditing'
+import { companionEnabled } from '../lib/serviceEndpoint'
+import { authenticatePassword } from '../lib/loginAccess'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { adminUser, mockAuditLog, mockLoans, mockPayments, mockUsers } from '../data/mock'
 import { addMonthsClamped, buildDisclosure, parseISODate, toISODate } from '../lib/amortization'
 import {
@@ -18,8 +23,13 @@ import {
 } from '../lib/dbMappers'
 import { allocate } from '../lib/paymentLogs'
 import { clearPageStore } from '../lib/pageStateStore'
-import { readStoredOverrides, writeStoredOverrides } from '../lib/paymentDueConfig'
+import { writeStoredOverrides } from '../lib/paymentDueConfig'
 import { supabase } from '../supabaseClient'
+import { mobileAction } from '../lib/mobileLocalFlow'
+import { refreshRecords } from '../lib/recordRefresh'
+import { saveBorrowerDetails } from '../lib/borrowerAdministration'
+import { subscribeToInvalidations } from '../lib/realtimeInvalidation'
+import { fetchLedgerSnapshot } from '../lib/ledgerRealtime'
 
 // Map a payment_due_overrides row (one per borrower) to the app's shape.
 const mapPaymentDueOverride = (r) => ({
@@ -87,7 +97,7 @@ const buildTransactions = (loanList) =>
 let reportDbError = null
 const logDbError = (op) => ({ error }) => {
   if (error) {
-    console.error(`[supabase] ${op} failed:`, error.message)
+    debugError(`[supabase] ${op} failed:`, error.message)
     reportDbError?.(`${op} failed: ${error.message}`)
   }
 }
@@ -112,22 +122,31 @@ export function AppProvider({ children }) {
   const [authLoading, setAuthLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [syncError, setSyncError] = useState(null)
+  const [dataReady, setDataReady] = useState(false)
+  const loadGeneration = useRef(0)
+  const refreshFlight = useRef(null)
+  const authenticatedOwner = useRef(null)
+  const freshSignIn = useRef(false)
   // Admin "view as borrower": the real session stays admin; pages see the
   // borrower through the effective session below.
   const [viewAs, setViewAs] = useState(null)
-  const [users, setUsers] = useState(mockUsers)
-  const [loans, setLoans] = useState(mockLoans)
-  const [payments, setPayments] = useState(mockPayments)
-  const [transactions, setTransactions] = useState(() => buildTransactions(mockLoans))
+  const [users, setUsers] = useState([])
+  const [loans, setLoans] = useState([])
+  const [payments, setPayments] = useState([])
+  const [transactions, setTransactions] = useState([])
   const [archivedTransactions, setArchivedTransactions] = useState([])
   const [paymentLogs, setPaymentLogs] = useState([])
+  const [paymentPostings, setPaymentPostings] = useState([])
+  const [hiddenPaymentBreakdowns,setHiddenPaymentBreakdowns]=useState([])
+  const ledgerGeneration=useRef(0)
   const [arbitrageLoans, setArbitrageLoans] = useState([])
   const [interestRates, setInterestRates] = useState([])
   const [trackedLoans, setTrackedLoans] = useState([])
-  const [auditLog, setAuditLog] = useState(mockAuditLog)
+  const [auditLog, setAuditLog] = useState([])
   // Per-borrower admin overrides for the "Next Payment Due" tile. Loaded from
   // Supabase in live mode; the localStorage seed keeps the demo/dev flow alive.
-  const [paymentDueOverrides, setPaymentDueOverrides] = useState(() => readStoredOverrides())
+  const [paymentDueOverrides, setPaymentDueOverrides] = useState([])
+  const overrideGeneration=useRef(0)
 
   const isLive = session?.source === 'supabase'
   const actor = session?.user?.name ?? adminUser.name
@@ -154,7 +173,7 @@ export function AppProvider({ children }) {
             // Audit logging is best-effort: a failure here must never block the
             // user's action (their payment/etc. already saved) nor surface as a
             // scary sync banner — just record it to the console.
-            if (error) console.error('[supabase] audit insert failed:', error.message)
+            if (error) debugError('[supabase] audit insert failed:', error.message)
             else setAuditLog((prev) => [mapAudit(data), ...prev])
           })
         return
@@ -174,6 +193,8 @@ export function AppProvider({ children }) {
     setTransactions(buildTransactions(mockLoans))
     setArchivedTransactions([])
     setPaymentLogs([])
+    setPaymentPostings([])
+    setHiddenPaymentBreakdowns([])
     setArbitrageLoans([])
     setInterestRates([])
     setTrackedLoans([])
@@ -185,8 +206,11 @@ export function AppProvider({ children }) {
   // Each slice updates independently and ONLY on success, so one failing
   // query never wipes the other records; storage URL resolution is guarded
   // so a missing proof file can't break the whole refresh.
-  const loadLiveData = useCallback(async () => {
+  const loadLiveData = useCallback(async ({ initialProfile = null } = {}) => {
+    const generation = ++loadGeneration.current
     const failures = []
+    const borrowerInitial = initialProfile?.role === 'user' && initialProfile.id === authenticatedOwner.current
+    const empty = { data: [], error: null }
     try {
       const [
         profilesRes,
@@ -199,10 +223,12 @@ export function AppProvider({ children }) {
         trackedRes,
         auditRes,
         overridesRes,
+        postingsRes,
+        visibilityRes,
       ] = await Promise.all([
           // Secondary .order('id') makes paging deterministic (a non-unique
           // primary sort key could otherwise shift rows across page boundaries).
-          fetchAllRows(() => supabase.from('profiles').select('*').order('created_at').order('id')),
+          borrowerInitial ? { data: [initialProfile], error: null } : fetchAllRows(() => supabase.from('profiles').select('*').order('created_at').order('id')),
           fetchAllRows(() => supabase.from('loans').select('*').order('created_at').order('id')),
           fetchAllRows(() => supabase.from('transactions').select('*').order('due_date').order('id')),
           fetchAllRows(() =>
@@ -215,17 +241,20 @@ export function AppProvider({ children }) {
           fetchAllRows(() =>
             supabase.from('payment_logs').select('*').order('created_at').order('id'),
           ),
-          fetchAllRows(() =>
+          borrowerInitial ? empty : fetchAllRows(() =>
             supabase.from('arbitrage_loans').select('*').order('created_at').order('id'),
           ),
-          fetchAllRows(() => supabase.from('interest_rates').select('*').order('kind').order('rate')),
-          fetchAllRows(() =>
+          borrowerInitial ? empty : fetchAllRows(() => supabase.from('interest_rates').select('*').order('kind').order('rate')),
+          borrowerInitial ? empty : fetchAllRows(() =>
             supabase.from('tracked_loans').select('*').order('created_at').order('id'),
           ),
-          supabase.from('audit_log').select('*').order('at', { ascending: false }).limit(500),
+          borrowerInitial ? empty : supabase.from('audit_log').select('*').order('at', { ascending: false }).limit(500),
         supabase.from('payment_due_overrides').select('*'),
+        fetchAllRows(() => supabase.from('payment_postings').select('*, allocation_rows:payment_allocations(transaction_id,user_id,amount,before_balance)').order('created_at').order('id')),
+        fetchAllRows(() => supabase.from('payment_breakdown_visibility').select('*').order('posting_id')),
         ])
 
+      if (generation !== loadGeneration.current) return
       if (profilesRes.error) failures.push(`profiles (${profilesRes.error.message})`)
       else setUsers((profilesRes.data ?? []).map(mapProfile))
 
@@ -241,6 +270,10 @@ export function AppProvider({ children }) {
 
       if (paymentLogsRes.error) failures.push(`payment logs (${paymentLogsRes.error.message})`)
       else setPaymentLogs((paymentLogsRes.data ?? []).map(mapPaymentLog))
+      if(postingsRes.error)failures.push(`payment postings (${postingsRes.error.message})`)
+      else setPaymentPostings(postingsRes.data ?? [])
+      if(visibilityRes.error)failures.push(`payment breakdown visibility (${visibilityRes.error.message})`)
+      else setHiddenPaymentBreakdowns(visibilityRes.data??[])
 
       // Arbitrage + interest rates are admin-only; RLS returns an empty set for
       // borrowers (not an error), so these stay empty for them.
@@ -259,7 +292,7 @@ export function AppProvider({ children }) {
       // Non-fatal: if the table is missing (migration not yet applied) tiles
       // simply fall back to the default calculation instead of breaking sync.
       if (overridesRes.error)
-        console.warn('[supabase] payment_due_overrides unavailable:', overridesRes.error.message)
+        failures.push(`payment due overrides (${overridesRes.error.message})`)
       else setPaymentDueOverrides((overridesRes.data ?? []).map(mapPaymentDueOverride))
 
       if (paymentsRes.error) {
@@ -269,7 +302,9 @@ export function AppProvider({ children }) {
         // Resolve signed URLs for rows that have a stored path. Map results by
         // REQUEST ORDER (not the returned `path`, which Supabase may re-encode
         // for keys with special characters — that mismatch dropped thumbnails).
-        const paths = [...new Set(paymentRows.map((p) => p.file_path).filter(Boolean))]
+        // Mobile borrowers request an individual proof through getProofUrl.
+        // Signing every old receipt must not hold up the first Dashboard.
+        const paths = borrowerInitial ? [] : [...new Set(paymentRows.map((p) => p.file_path).filter(Boolean))]
         const urlByPath = {}
         if (paths.length > 0) {
           try {
@@ -280,82 +315,205 @@ export function AppProvider({ children }) {
               if (s?.signedUrl) urlByPath[paths[i]] = s.signedUrl
             })
           } catch (e) {
-            console.error('[supabase] signed URLs failed:', e?.message ?? e)
+            debugError('[supabase] signed URLs failed:', e?.message ?? e)
           }
         }
+        if (generation !== loadGeneration.current) return
         setPayments(paymentRows.map((p) => mapPayment(p, urlByPath[p.file_path] ?? null)))
       }
 
       if (failures.length > 0) {
         const msg = `Some records could not be refreshed: ${failures.join(', ')}.`
-        console.error('[supabase]', msg)
+        debugError('[supabase]', msg)
         setSyncError(msg)
       } else {
         setSyncError(null)
+        setDataReady(true)
       }
     } catch (e) {
       const msg = e?.message ?? 'Unexpected error while syncing with the database.'
-      console.error('[supabase] loadLiveData crashed:', msg)
+      debugError('[supabase] loadLiveData crashed:', msg)
       setSyncError(msg)
     }
   }, [])
 
+  const refreshLedger=useCallback(async()=>{
+    const owner=authenticatedOwner.current,generation=++ledgerGeneration.current
+    if(!owner)return
+    const rows=await fetchLedgerSnapshot(supabase,fetchAllRows)
+    if(owner!==authenticatedOwner.current||generation!==ledgerGeneration.current)return
+    const all=rows.transactions.map(mapTransaction)
+    setUsers(rows.profiles.map(mapProfile));setLoans(rows.loans.map(mapLoan))
+    setTransactions(all.filter(t=>!t.archivedAt));setArchivedTransactions(all.filter(t=>t.archivedAt))
+    setPaymentLogs(rows.payment_logs.map(mapPaymentLog));setPaymentPostings(rows.payment_postings)
+    setHiddenPaymentBreakdowns(rows.payment_breakdown_visibility)
+    setPayments(previous=>{const urls=new Map(previous.map(p=>[p.id,p.fileUrl]));return rows.payments.map(p=>mapPayment(p,urls.get(p.id)??null))})
+  },[])
+
   // Manual re-sync from Supabase (Refresh button). Also resets retained
   // page state (filters, sorts, calculator inputs) back to defaults.
-  const refreshData = useCallback(async () => {
-    clearPageStore()
+  const refreshData = useCallback(async ({preservePageState=false}={}) => {
     if (!isLive) return
+    if (refreshFlight.current) return refreshFlight.current
+    if(!preservePageState)clearPageStore()
     setRefreshing(true)
-    await loadLiveData()
-    setRefreshing(false)
+    const flight = refreshRecords(loadLiveData).finally(() => {
+      if (refreshFlight.current === flight) {
+        refreshFlight.current = null
+        setRefreshing(false)
+      }
+    })
+    refreshFlight.current = flight
+    return flight
   }, [isLive, loadLiveData])
+
+  // A real preference/profile change needs only the signed-in profile row.
+  // Preserve the current screen, drafts and loaded financial records.
+  const refreshOwnProfile = useCallback(async () => {
+    const owner = authenticatedOwner.current
+    if (!owner) return
+    const { data, error } = await supabase.from('profiles').select('*').eq('id', owner).single()
+    if (error) throw Error('Your latest profile details could not be loaded.')
+    if (authenticatedOwner.current !== owner) return
+    const user = mapProfile(data)
+    setUsers(previous => previous.map(item => item.id === owner ? user : item))
+    setSession(previous => previous?.source === 'supabase' && previous.user.id === owner ? { ...previous, user } : previous)
+  }, [])
 
   // --- Supabase auth: restore the session on load, react to changes, resolve
   // the signed-in profile (role drives routing), then load the live data.
   useEffect(() => {
     let mounted = true
+    let profileGeneration = 0
+    let resolvedOwner
+    let pendingOwner
 
-    const loadProfile = async (sbSession) => {
+    const loadProfile = async (sbSession, profileRequest) => {
+      if (!mounted || profileRequest !== profileGeneration) return
       if (!sbSession) {
+        freshSignIn.current = false
+        resolvedOwner = null
+        pendingOwner = undefined
         if (mounted) {
+          ++loadGeneration.current
+          authenticatedOwner.current = null
+          setDataReady(false)
+          setSyncError(null)
+          setUsers([]); setLoans([]); setPayments([]); setTransactions([])
+          setArchivedTransactions([]); setPaymentLogs([]); setPaymentDueOverrides([]);setPaymentPostings([]);setHiddenPaymentBreakdowns([])
           setSession((prev) => (prev?.source === 'demo' ? prev : null))
           setAuthLoading(false)
         }
         return
       }
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', sbSession.user.id)
-        .single()
-      if (!mounted) return
-      if (profile && !error) {
-        setSession({
-          source: 'supabase',
-          user: mapProfile(profile),
-          needsPasswordSetup: profile.status === 'invited',
-        })
-        loadLiveData()
+      try {
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', sbSession.user.id)
+          .single()
+        if (!mounted || profileRequest !== profileGeneration) return
+        pendingOwner = undefined
+        if (profile && !error && ['admin', 'user'].includes(profile.role)) {
+          resolvedOwner = profile.id
+          if (authenticatedOwner.current !== profile.id) {
+            ++loadGeneration.current
+            authenticatedOwner.current = profile.id
+            setDataReady(false)
+            setUsers([]); setLoans([]); setPayments([]); setTransactions([])
+            setArchivedTransactions([]); setPaymentLogs([]); setPaymentDueOverrides([]);setPaymentPostings([]);setHiddenPaymentBreakdowns([])
+          }
+          setSession({
+            source: 'supabase',
+            user: mapProfile(profile),
+            needsPasswordSetup: profile.status === 'invited',
+          })
+          if (freshSignIn.current && profile.status !== 'disabled') {
+            freshSignIn.current = false
+            window.dispatchEvent(new CustomEvent('loanledger-authenticated'))
+          }
+          loadLiveData({ initialProfile: profile })
+        } else {
+          freshSignIn.current = false
+          setSyncError('Unable to load your account profile. Please try signing in again.')
+        }
+      } catch {
+        if (mounted && profileRequest === profileGeneration) {
+          pendingOwner = undefined
+          freshSignIn.current = false
+          setSyncError('Unable to open your account. Please try signing in again.')
+        }
+      } finally {
+        if (mounted && profileRequest === profileGeneration) setAuthLoading(false)
       }
-      setAuthLoading(false)
     }
 
-    supabase.auth.getSession().then(({ data }) => loadProfile(data.session))
     const { data: sub } = supabase.auth.onAuthStateChange((event, sbSession) => {
-      if (event === 'SIGNED_OUT' || event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
+      if (event === 'SIGNED_OUT' || event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'USER_UPDATED') {
+        const owner = sbSession?.user.id ?? null
+        // Reconfirmation of the same session is not a fresh login. The SDK
+        // supplies INITIAL_SESSION, so a second getSession restore can race it.
+        if (event !== 'USER_UPDATED' && (owner === pendingOwner || (pendingOwner === undefined && owner === resolvedOwner))) return
+        pendingOwner = owner
+        const profileRequest = ++profileGeneration
         // defer: awaiting supabase calls directly inside this callback can deadlock
-        setTimeout(() => loadProfile(sbSession), 0)
+        setTimeout(() => loadProfile(sbSession, profileRequest), 0)
       }
     })
     return () => {
       mounted = false
+      ++profileGeneration
       sub.subscription.unsubscribe()
     }
   }, [loadLiveData])
 
   const signInWithPassword = useCallback(async (email, password) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    return { error: error?.message ?? null } // session arrives via onAuthStateChange
+    freshSignIn.current = true
+    setSyncError(null)
+    setAuthLoading(true)
+    try {
+      const { data, error, login } = companionEnabled
+        ? await authenticatePassword(String(email).trim().toLowerCase(), password)
+        : await supabase.auth.signInWithPassword({ email: String(email).trim().toLowerCase(), password })
+      if (error) {
+        freshSignIn.current = false
+        setAuthLoading(false)
+      } else if (freshSignIn.current) {
+        // Credential validation has succeeded. Start the presentation hold
+        // while the profile and Dashboard data prepare in parallel.
+        freshSignIn.current = false
+        window.dispatchEvent(new CustomEvent('loanledger-authenticated'))
+        if(authenticatedOwner.current&&authenticatedOwner.current===data?.user?.id){
+          // A retry for an already resolved owner may be deduplicated by the
+          // auth listener. Resume data loading without waiting for a new event.
+          setAuthLoading(false)
+          loadLiveData()
+        }
+      }
+      return { error: error?.message ?? null, login } // session arrives via onAuthStateChange
+    } catch (error) {
+      freshSignIn.current = false
+      setAuthLoading(false)
+      return { error: error?.message || 'Unable to sign in. Please try again.' }
+    }
+  }, [loadLiveData])
+
+  const signInWithLoginCode = useCallback(async (tokenHash) => {
+    // The companion has already accepted the credential for an active borrower.
+    // Show the four-second presentation while Auth establishes the session.
+    freshSignIn.current = false
+    setSyncError(null)
+    setAuthLoading(true)
+    window.dispatchEvent(new CustomEvent('loanledger-authenticated'))
+    try {
+      const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'magiclink' })
+      if (error) { freshSignIn.current = false; setAuthLoading(false) }
+      return { error: error?.message ?? null }
+    } catch (error) {
+      freshSignIn.current = false
+      setAuthLoading(false)
+      return { error: error.message || 'Unable to sign in. Please retry.' }
+    }
   }, [])
 
   // Prototype-only: enter as one of the mock users without real credentials.
@@ -410,7 +568,8 @@ export function AppProvider({ children }) {
   )
 
   const signOut = useCallback(async () => {
-    if (isLive) await supabase.auth.signOut()
+    // End this browser session without invalidating the borrower's other devices.
+    if (isLive) await supabase.auth.signOut({ scope: 'local' })
     resetToMocks()
     setViewAs(null)
     clearPageStore()
@@ -442,7 +601,7 @@ export function AppProvider({ children }) {
             .eq('id', me.id)
           if (profileErr) return { error: profileErr.message }
           const { error: authErr } = await supabase.auth.updateUser({ email })
-          if (authErr) console.error('[supabase] auth email update failed:', authErr.message)
+          if (authErr) debugError('[supabase] auth email update failed:', authErr.message)
         }
       }
 
@@ -540,7 +699,7 @@ export function AppProvider({ children }) {
           })
           .then(({ error }) => {
             if (error) {
-              console.error('[supabase] invite failed:', error.message)
+              debugError('[supabase] invite failed:', error.message)
               setUsers((prev) => prev.filter((u) => u.id !== user.id))
             }
           })
@@ -568,16 +727,11 @@ export function AppProvider({ children }) {
   )
 
   const updateUser = useCallback(
-    (id, patch) => {
-      setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...patch } : u)))
-      if (isLive) {
-        supabase
-          .from('profiles')
-          .update({ name: patch.name, email: patch.email, phone: patch.phone })
-          .eq('id', id)
-          .then(logDbError('profile update'))
-      }
+    async (id, patch) => {
+      const saved = isLive ? await saveBorrowerDetails(id, patch) : patch
+      setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...saved } : u)))
       log(actor, 'USER_UPDATED', `Profile ${id} updated`)
+      return saved
     },
     [isLive, log, actor],
   )
@@ -623,7 +777,7 @@ export function AppProvider({ children }) {
           .from('payment-proofs')
           .upload(path, data.file, { contentType: data.file?.type || undefined })
         if (upErr) {
-          console.error('[supabase] proof upload failed:', upErr.message)
+          debugError('[supabase] proof upload failed:', upErr.message)
           reportDbError?.(`proof upload failed (${upErr.message})`)
           return null
         }
@@ -642,7 +796,7 @@ export function AppProvider({ children }) {
           .select()
           .single()
         if (error) {
-          console.error('[supabase] payment insert failed:', error.message)
+          debugError('[supabase] payment insert failed:', error.message)
           reportDbError?.(`payment save failed (${error.message})`)
           // Roll back the orphaned upload so storage doesn't accumulate junk.
           supabase.storage.from('payment-proofs').remove([path])
@@ -672,7 +826,11 @@ export function AppProvider({ children }) {
   )
 
   const reviewPayment = useCallback(
-    (id, status, note = '') => {
+    async (id, status, note = '', allocation = {}) => {
+      if (isLive) {
+        try { const row=await mobileAction('payment-review',{...allocation,key:allocation.key||crypto.randomUUID(),id,status,note});setPayments(prev=>prev.map(p=>p.id===id?mapPayment(row):p));if(status==='approved')await loadLiveData();return {error:null}; }
+        catch(e) {return {error:e.message};}
+      }
       const today = toISODate(new Date())
       setPayments((prev) =>
         prev.map((p) => (p.id === id ? { ...p, status, note, reviewedAt: today } : p)),
@@ -691,23 +849,33 @@ export function AppProvider({ children }) {
         `${payment?.reference ?? id} ${status}${note ? ` — ${note}` : ''}`,
       )
     },
-    [isLive, log, actor, payments],
+    [isLive, log, actor, payments,loadLiveData],
   )
+
+  const postCredit = useCallback(async payload => {
+    if(!isLive)return {error:'Reviewed credit posting requires a connected lender account.'}
+    try{await mobileAction('credit-apply',payload);await loadLiveData();return {error:null}}catch(e){return {error:e.message}}
+  },[isLive,loadLiveData])
+  const reversePayment = useCallback(async payload => {
+    if(!isLive)return {error:'Reviewed reversals require a connected lender account.'}
+    try{await mobileAction('payment-reverse',payload);await loadLiveData();return {error:null}}catch(e){return {error:e.message}}
+  },[isLive,loadLiveData])
 
   // Permanently delete a proof of payment: removes the storage object and the
   // payment row. RLS lets borrowers delete their own and admins delete any.
   const deletePayment = useCallback(
     async (payment) => {
+      if(payment.postedAt)return {error:'Posted proofs are retained for audit. Use a reviewed reversal.'}
       if (isLive) {
         if (payment.filePath) {
           const { error: rmErr } = await supabase.storage
             .from('payment-proofs')
             .remove([payment.filePath])
-          if (rmErr) console.error('[supabase] proof file delete failed:', rmErr.message)
+          if (rmErr) debugError('[supabase] proof file delete failed:', rmErr.message)
         }
         const { error } = await supabase.from('payments').delete().eq('id', payment.id)
         if (error) {
-          console.error('[supabase] payment delete failed:', error.message)
+          debugError('[supabase] payment delete failed:', error.message)
           reportDbError?.(`delete proof (${error.message})`)
           return { error: error.message }
         }
@@ -731,6 +899,7 @@ export function AppProvider({ children }) {
             user_id: loan.userId,
             label: loan.label,
             txn_type: loan.txnType ?? 'installment',
+            loan_category: loan.txnType === 'straight' ? null : loan.loanCategory,
             principal: loan.principal,
             monthly_rate: loan.monthlyRate,
             duration_months: loan.durationMonths,
@@ -744,7 +913,7 @@ export function AppProvider({ children }) {
           .select()
           .single()
         if (error) {
-          console.error('[supabase] loan insert failed:', error.message)
+          debugError('[supabase] loan insert failed:', error.message)
           return null
         }
         // Persist the EXACT schedule the calculator displayed — never
@@ -757,7 +926,7 @@ export function AppProvider({ children }) {
           .insert(txns.map(toDbTransaction))
           .select()
         if (txnErr) {
-          console.error('[supabase] ledger insert failed:', txnErr.message)
+          debugError('[supabase] ledger insert failed:', txnErr.message)
           await supabase.from('loans').delete().eq('id', newLoan.id) // roll back
           return null
         }
@@ -782,7 +951,7 @@ export function AppProvider({ children }) {
       if (isLive) {
         const { error } = await supabase.from('loans').delete().eq('id', loanId)
         if (error) {
-          console.error('[supabase] unassign failed:', error.message)
+          debugError('[supabase] unassign failed:', error.message)
           return false
         }
       }
@@ -800,6 +969,8 @@ export function AppProvider({ children }) {
   const setTransactionStatus = useCallback(
     (ids, status) => {
       const idSet = new Set(ids)
+      if(transactions.some(t=>idSet.has(t.id)&&t.feeAssessmentId)){reportDbError?.('Use payment review to settle assessed fees, or Loan fees & billing to void them.');return false}
+      if(transactions.some(t=>idSet.has(t.id)&&t.paidAmount>0)){reportDbError?.('Use a reviewed reversal to change the status of an allocated due.');return false}
       const today = toISODate(new Date())
       const resultingDatePaid = (t) =>
         status === 'paid' ? (t.datePaid ?? today) : status === 'refunded' ? t.datePaid : null
@@ -840,15 +1011,18 @@ export function AppProvider({ children }) {
 
   // Soft delete: selected ledger rows move to the Archives (Reports & Logs).
   const archiveTransactions = useCallback(
-    (ids) => {
+    async (ids) => {
+      if(session?.user?.role!=='admin')return false
       const idSet = new Set(ids)
+      if(transactions.some(t=>idSet.has(t.id)&&t.feeAssessmentId)){reportDbError?.('Assessed fees remain in the ledger. Void an unpaid assessment in Loan fees & billing.');return false}
+      if(transactions.some(t=>idSet.has(t.id)&&t.paidAmount>0&&['unpaid','past_due'].includes(t.status))){reportDbError?.('An allocated due with an unpaid remainder cannot be archived.');return false}
       const archivedAt = toISODate(new Date())
       if (isLive) {
-        supabase
+        const {error} = await supabase
           .from('transactions')
           .update({ archived_at: archivedAt })
           .in('id', [...idSet])
-          .then(logDbError('archive'))
+        if(error){reportDbError?.('The records could not be archived. No rows were removed from this view. Please retry.');return false}
       }
       const moving = transactions.filter((t) => idSet.has(t.id)).map((t) => ({ ...t, archivedAt }))
       setArchivedTransactions((prev) => [...moving, ...prev])
@@ -858,8 +1032,9 @@ export function AppProvider({ children }) {
         'TXN_ARCHIVED',
         `${idSet.size} installment${idSet.size === 1 ? '' : 's'} deleted and moved to Archives`,
       )
+      return true
     },
-    [isLive, log, actor, transactions],
+    [isLive, log, actor, transactions, session],
   )
 
   const restoreTransactions = useCallback(
@@ -888,14 +1063,13 @@ export function AppProvider({ children }) {
 
   // Permanent delete of archived ledger records (Reports & Logs → Archives).
   const purgeArchivedTransactions = useCallback(
-    async (ids) => {
+    async (ids,key=crypto.randomUUID()) => {
       const idSet = new Set(ids)
       if (isLive) {
-        const { error } = await supabase.from('transactions').delete().in('id', [...idSet])
-        if (error) {
-          console.error('[supabase] purge archived failed:', error.message)
-          return false
-        }
+        const {data,error}=await supabase.rpc('admin_purge_archived_transactions',{p_payload:{ids:[...idSet],key,reviewed:true}})
+        if(error)return {error:error.message,deletedIds:[],blocked:[]}
+        setArchivedTransactions(previous=>previous.filter(t=>!data.deletedIds.includes(t.id)))
+        return {...data,error:null}
       }
       setArchivedTransactions((prev) => prev.filter((t) => !idSet.has(t.id)))
       log(
@@ -903,10 +1077,20 @@ export function AppProvider({ children }) {
         'TXN_PURGED',
         `${idSet.size} archived installment${idSet.size === 1 ? '' : 's'} permanently deleted`,
       )
-      return true
+      return {error:null,deletedIds:[...idSet],blocked:[]}
     },
     [isLive, log, actor],
   )
+
+  const setPaymentBreakdownVisibility=useCallback(async(ids,hidden,key=crypto.randomUUID())=>{
+    if(session?.user.role!=='admin')return {error:'Only a lender can manage payment breakdowns.'}
+    if(isLive){
+      const {data,error}=await supabase.rpc('admin_set_payment_breakdown_visibility',{p_payload:{ids,hidden,key,reviewed:true}})
+      if(error)return {error:error.message}
+      setHiddenPaymentBreakdowns(previous=>[...previous.filter(row=>!data.ids.includes(row.posting_id)),...(hidden?data.ids.map(id=>({posting_id:id,user_id:paymentPostings.find(p=>p.id===id)?.user_id})):[])])
+    }else setHiddenPaymentBreakdowns(previous=>[...previous.filter(row=>!ids.includes(row.posting_id)),...(hidden?ids.map(id=>({posting_id:id,user_id:paymentPostings.find(p=>p.id===id)?.user_id})):[])])
+    return {error:null}
+  },[isLive,session,paymentPostings])
 
   // Permanent delete of audit entries (admin housekeeping).
   const purgeAuditEntries = useCallback(
@@ -918,7 +1102,7 @@ export function AppProvider({ children }) {
         if (dbIds.length > 0) {
           const { error } = await supabase.from('audit_log').delete().in('id', dbIds)
           if (error) {
-            console.error('[supabase] purge audit failed:', error.message)
+            debugError('[supabase] purge audit failed:', error.message)
             return false
           }
         }
@@ -947,6 +1131,7 @@ export function AppProvider({ children }) {
           description: r.description,
           amount: r.amount,
           type: r.type,
+          transaction_group:r.transactionGroup??null,
           txn_date: r.txnDate,
           due_date: r.dueDate,
           status: r.status,
@@ -954,7 +1139,7 @@ export function AppProvider({ children }) {
         }))
         const { data, error } = await supabase.from('transactions').insert(dbRows).select()
         if (error) {
-          console.error('[supabase] import failed:', error.message)
+          debugError('[supabase] import failed:', error.message)
           return { error: error.message }
         }
         setTransactions((prev) => [...prev, ...data.map(mapTransaction)])
@@ -977,12 +1162,14 @@ export function AppProvider({ children }) {
       let txnCount = 0
       if (isLive) {
         for (const g of groups) {
+          if(g.standalone){const result=await supabase.from('transactions').insert(g.rows.map(r=>({...toDbTransaction({...r,loanId:null}),id:r.id}))).select();if(result.error)return {error:result.error.message};setTransactions(prev=>[...prev,...result.data.map(mapTransaction)]);txnCount+=result.data.length;continue}
           const { data: loanRow, error } = await supabase
             .from('loans')
             .insert({
               user_id: g.loan.userId,
               label: g.loan.label,
               txn_type: g.loan.txnType,
+              loan_category:g.loan.loanCategory??null,
               principal: g.loan.principal,
               monthly_rate: g.loan.monthlyRate,
               duration_months: g.loan.durationMonths,
@@ -1005,6 +1192,7 @@ export function AppProvider({ children }) {
             description: r.description,
             amount: r.amount,
             type: r.type,
+          transaction_group:r.transactionGroup??null,
             txn_date: r.txnDate,
             due_date: r.dueDate,
             status: r.status,
@@ -1025,6 +1213,7 @@ export function AppProvider({ children }) {
         }
       } else {
         for (const g of groups) {
+          if(g.standalone){setTransactions(prev=>[...prev,...g.rows]);txnCount+=g.rows.length;continue}
           const id = nextId('ln')
           const loan = { ...g.loan, id, status: 'active', paidMonths: 0 }
           loan.disclosure = buildDisclosure(loan)
@@ -1053,45 +1242,58 @@ export function AppProvider({ children }) {
     [isLive, log, actor],
   )
 
-  // Inline edits to a transaction (dates, amount, description, status).
-  // Setting a Date Paid on an unpaid/past-due row marks it paid; clearing the
-  // Date Paid on a paid row reverts it to unpaid.
-  const updateTransaction = useCallback(
-    (id, patch) => {
-      const current = transactions.find((t) => t.id === id)
-      if (!current) return
-      const next = { ...current, ...patch }
-      if ('datePaid' in patch) {
-        if (patch.datePaid && (next.status === 'unpaid' || next.status === 'past_due'))
-          next.status = 'paid'
-        if (!patch.datePaid && next.status === 'paid') next.status = 'unpaid'
+  // Manual ledger entries may stand alone or append to an existing loan.
+  const createTransaction = useCallback(async (input) => {
+    try {
+      if(session?.user?.role!=='admin')throw Error('Only the lender can add ledger entries.')
+      const row=prepareManualTransaction(input,users,toISODate(new Date()),loans,[...transactions,...archivedTransactions])
+      let saved=row
+      if(isLive){
+        const dbRow={...toDbTransaction(row),id:row.id}
+        let {data,error}=await supabase.from('transactions').insert(dbRow).select().single()
+        if(error?.code==='23505'){
+          const existing=await supabase.from('transactions').select('*').eq('id',row.id).single()
+          if(!existing.error&&Object.entries(dbRow).every(([key,value])=>key==='n'||(key==='amount'?Number(existing.data[key])===value:existing.data[key]===value))){data=existing.data;error=null}
+        }
+        if(error)throw Error(error.message)
+        if(!data?.id)throw Error('The saved entry could not be confirmed. Keep this form open and retry.')
+        saved=mapTransaction(data)
       }
-      // Keep date_paid consistent with the status (and the DB constraint):
-      //  - setting status to "paid" stamps today if no date yet
-      //  - unpaid / past due / cancelled NEVER carry a date (enforced always,
-      //    so a stale date can't linger after any edit)
-      if ('status' in patch && next.status === 'paid' && !next.datePaid)
-        next.datePaid = toISODate(new Date())
-      if (['unpaid', 'cancelled', 'past_due'].includes(next.status)) next.datePaid = null
-      if (isLive) {
-        supabase
-          .from('transactions')
-          .update({
-            txn_date: next.txnDate,
-            due_date: next.dueDate,
-            date_paid: next.datePaid,
-            status: next.status,
-            amount: next.amount,
-            description: next.description,
-          })
-          .eq('id', id)
-          .then(logDbError('transaction update'))
-      }
-      setTransactions((prev) => prev.map((t) => (t.id === id ? next : t)))
-      log(actor, 'TXN_UPDATED', `Installment ${id} updated (${Object.keys(patch).join(', ')})`)
-    },
-    [isLive, log, actor, transactions],
-  )
+      setTransactions(previous=>[...previous.filter(t=>t.id!==saved.id),saved])
+      log(actor,'TXN_IMPORTED','Manual entry '+saved.id+': '+saved.description+', PHP '+(saved.originalAmount??saved.amount))
+      return {error:null,transaction:saved}
+    }catch(error){return {error:error.message||'Unable to add this transaction.'}}
+  },[isLive,session,users,loans,transactions,archivedTransactions,log,actor])
+
+  // Commit only the changed columns, and publish state only after confirmation.
+  const updateTransaction = useCallback(async (id,patch) => {
+    try {
+      if(session?.user?.role!=='admin')throw Error('Only the lender can edit ledger entries.')
+      const current=transactions.find(transaction=>transaction.id===id),today=toISODate(new Date())
+      const prepared=prepareTransactionEdit(current,patch,today)
+      const saved=isLive?mapTransaction(await persistTransactionEdit(supabase,current,patch,today)):prepared.next
+      setTransactions(previous=>previous.map(transaction=>transaction.id===id?saved:transaction))
+      log(actor,'TXN_UPDATED','Transaction '+id+' updated ('+Object.keys(patch).join(', ')+')')
+      return {error:null,transaction:saved}
+    }catch(error){reportDbError?.(error.message);return {error:error.message||'Unable to update this transaction.'}}
+  },[isLive,session,transactions,log,actor])
+
+  const correctTransaction = useCallback(async (current,patch,review) => {
+    try {
+      if(session?.user?.role!=='admin')throw Error('Only the lender can override ledger entries.')
+      const prepared=prepareAdminCorrection(current,patch,toISODate(new Date()),users)
+      if(!review?.reviewed||review.reason?.trim().length<10)throw Error('Review the correction and enter a reason of at least 10 characters.')
+      if(!isLive)throw Error('Reviewed overrides require a connected account.')
+      const {data,error}=await supabase.rpc('admin_correct_transaction',{p_payload:{id:current.id,patch,expected:prepared.expected,...review}})
+      if(error)throw Error(error.message)
+      if(!data?.transaction?.id)throw Error('The saved correction could not be confirmed. Retry with this form open.')
+      const saved=mapTransaction(data.transaction)
+      setTransactions(previous=>previous.map(t=>t.id===saved.id?saved:t))
+      setUsers(previous=>previous.map(u=>u.id===data.creditUserId?{...u,creditBalance:Number(data.creditBalance)}:u))
+      if(data.paymentLog)setPaymentLogs(previous=>[...previous.filter(l=>l.id!==data.paymentLog.id),mapPaymentLog(data.paymentLog)])
+      return {error:null,transaction:saved}
+    }catch(error){return {error:error.message||'Unable to save this correction.'}}
+  },[session,isLive,users])
 
   // Bulk find-and-replace of Item Descriptions from the Overall Transactions
   // ledger. `edits` is an array of { id, description } with the already-computed
@@ -1100,9 +1302,10 @@ export function AppProvider({ children }) {
   // row's new description to Supabase in parallel. Returns the number applied.
   const replaceTransactionDescriptions = useCallback(
     (edits) => {
+      const feeIds=new Set(transactions.filter(t=>t.feeAssessmentId).map(t=>t.id))
       const map = new Map(
         (edits ?? [])
-          .filter((e) => e && e.id && typeof e.description === 'string' && e.description.trim())
+          .filter((e) => e && e.id && !feeIds.has(e.id) && typeof e.description === 'string' && e.description.trim())
           .map((e) => [e.id, e.description.trim()]),
       )
       if (map.size === 0) return 0
@@ -1125,7 +1328,7 @@ export function AppProvider({ children }) {
       )
       return map.size
     },
-    [isLive, log, actor],
+    [isLive, log, actor, transactions],
   )
 
   // Edit a loan's disclosure-statement fields (admin only, via view-as). The
@@ -1200,7 +1403,7 @@ export function AppProvider({ children }) {
           .select()
           .single()
         if (error) {
-          console.error('[supabase] payment log insert failed:', error.message)
+          debugError('[supabase] payment log insert failed:', error.message)
           reportDbError?.(`payment log save failed (${error.message}) — a migration may be missing`)
           return null
         }
@@ -1226,7 +1429,7 @@ export function AppProvider({ children }) {
       if (isLive) {
         const { error } = await supabase.from('payment_logs').delete().eq('id', id)
         if (error) {
-          console.error('[supabase] payment log delete failed:', error.message)
+          debugError('[supabase] payment log delete failed:', error.message)
           reportDbError?.(`delete payment log (${error.message})`)
           return false
         }
@@ -1291,7 +1494,7 @@ export function AppProvider({ children }) {
           .select()
           .single()
         if (error) {
-          console.error('[supabase] arbitrage insert failed:', error.message)
+          debugError('[supabase] arbitrage insert failed:', error.message)
           reportDbError?.(`arbitrage save failed (${error.message}) — a migration may be missing`)
           return null
         }
@@ -1313,7 +1516,7 @@ export function AppProvider({ children }) {
       if (isLive) {
         const { error } = await supabase.from('arbitrage_loans').delete().eq('id', id)
         if (error) {
-          console.error('[supabase] arbitrage delete failed:', error.message)
+          debugError('[supabase] arbitrage delete failed:', error.message)
           reportDbError?.(`delete arbitrage (${error.message})`)
           return false
         }
@@ -1339,7 +1542,7 @@ export function AppProvider({ children }) {
           .select()
           .single()
         if (error) {
-          console.error('[supabase] rate insert failed:', error.message)
+          debugError('[supabase] rate insert failed:', error.message)
           reportDbError?.(`add rate failed (${error.message})`)
           return null
         }
@@ -1359,7 +1562,7 @@ export function AppProvider({ children }) {
       if (isLive) {
         const { error } = await supabase.from('interest_rates').delete().eq('id', id)
         if (error) {
-          console.error('[supabase] rate delete failed:', error.message)
+          debugError('[supabase] rate delete failed:', error.message)
           reportDbError?.(`delete rate (${error.message})`)
           return false
         }
@@ -1381,7 +1584,7 @@ export function AppProvider({ children }) {
           .select()
           .single()
         if (error) {
-          console.error('[supabase] tracked loan insert failed:', error.message)
+          debugError('[supabase] tracked loan insert failed:', error.message)
           reportDbError?.(`loan tracker save failed (${error.message}) — a migration may be missing`)
           return null
         }
@@ -1403,7 +1606,7 @@ export function AppProvider({ children }) {
       if (isLive) {
         const { error } = await supabase.from('tracked_loans').delete().eq('id', id)
         if (error) {
-          console.error('[supabase] tracked loan delete failed:', error.message)
+          debugError('[supabase] tracked loan delete failed:', error.message)
           reportDbError?.(`delete tracked loan (${error.message})`)
           return false
         }
@@ -1417,9 +1620,11 @@ export function AppProvider({ children }) {
 
   // Re-read every override row (used by the writers and the realtime sub).
   const refreshPaymentDueOverrides = useCallback(async () => {
+    const owner=authenticatedOwner.current,generation=++overrideGeneration.current
     const { data, error } = await supabase.from('payment_due_overrides').select('*')
+    if(owner!==authenticatedOwner.current||generation!==overrideGeneration.current)return
     if (error) {
-      console.warn('[supabase] payment_due_overrides refresh failed:', error.message)
+      debugWarn('[supabase] payment_due_overrides refresh failed:', error.message)
       return
     }
     setPaymentDueOverrides((data ?? []).map(mapPaymentDueOverride))
@@ -1451,7 +1656,7 @@ export function AppProvider({ children }) {
             { onConflict: 'borrower_id' },
           )
           if (error) {
-            console.error('[supabase] payment due overrides save failed:', error.message)
+            debugError('[supabase] payment due overrides save failed:', error.message)
             reportDbError?.(`payment due overrides save failed (${error.message}) — a migration may be missing`)
             return false
           }
@@ -1462,7 +1667,7 @@ export function AppProvider({ children }) {
             .delete()
             .in('borrower_id', toDelete)
           if (error) {
-            console.error('[supabase] payment due overrides delete failed:', error.message)
+            debugError('[supabase] payment due overrides delete failed:', error.message)
             reportDbError?.(`payment due overrides delete failed (${error.message})`)
             return false
           }
@@ -1502,7 +1707,7 @@ export function AppProvider({ children }) {
     if (isLive) {
       const { error } = await supabase.from('payment_due_overrides').delete().neq('borrower_id', '00000000-0000-0000-0000-000000000000')
       if (error) {
-        console.error('[supabase] payment due overrides clear-all failed:', error.message)
+        debugError('[supabase] payment due overrides clear-all failed:', error.message)
         reportDbError?.(`clear all payment due overrides (${error.message})`)
         return false
       }
@@ -1518,20 +1723,31 @@ export function AppProvider({ children }) {
   // client (each borrower's device included) re-reads them, so the Next
   // Payment Due tile updates without a manual refresh.
   const pdoListenerId = session?.user?.id ?? 'anon'
+  const pdoIsAdmin=session?.user?.role==='admin'
+  useEffect(()=>{
+    if(!isLive||!dataReady)return undefined
+    const generation=ledgerGeneration
+    const stop=subscribeToInvalidations({client:supabase,name:`ledger-rt-${pdoListenerId}`,table:'ledger_change_signals',ownerId:pdoListenerId,isAdmin:pdoIsAdmin,onChange:refreshLedger,onError:error=>debugWarn('[ledger]',error.message),delay:100})
+    return()=>{++generation.current;stop()}
+  },[isLive,dataReady,pdoListenerId,pdoIsAdmin,refreshLedger])
   useEffect(() => {
     if (!isLive) return undefined
-    const channel = supabase
-      .channel(`payment-due-overrides-rt-${pdoListenerId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'payment_due_overrides' },
-        () => refreshPaymentDueOverrides(),
-      )
-      .subscribe()
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [isLive, pdoListenerId, refreshPaymentDueOverrides])
+    const generationRef=overrideGeneration
+    const stop=subscribeToInvalidations({client:supabase,name:`payment-due-overrides-rt-${pdoListenerId}`,table:'payment_due_change_signals',ownerId:pdoListenerId,isAdmin:pdoIsAdmin,onChange:refreshPaymentDueOverrides,onError:error=>debugWarn('[payment due]',error.message)})
+    return ()=>{++generationRef.current;stop()}
+  }, [isLive, pdoListenerId,pdoIsAdmin, refreshPaymentDueOverrides])
+
+  const changeTransactionGroup=useCallback(async payload=>{
+    try{
+      if(session?.user?.role!=='admin')throw Error('Only the lender can change transaction groups.')
+      const current=transactions.find(t=>t.id===payload.id),loan=loans.find(l=>l.id===current?.loanId)
+      if(!current||current.userId!==payload.expectedUserId||current.type!==payload.expectedType||(current.loanId??null)!==(payload.expectedLoanId??null)||transactionGroup(current,loan)!==payload.expectedGroup)throw Error('The transaction changed. Refresh and review again.')
+      if(!groupOptions(current.type).some(option=>option.value===payload.group)||!payload.reviewed||payload.reason.trim().length<10)throw Error('Choose a matching group, enter a reason and review the change.')
+      if(isLive){const {data,error}=await supabase.rpc('admin_set_transaction_group',{p_payload:payload});if(error)throw Error(error.message);if(!data?.id)throw Error('The saved group could not be confirmed. Keep this form open and retry.');await refreshData()}
+      else{if(current.type==='Installment'&&current.loanId)setLoans(previous=>previous.map(l=>l.id===current.loanId?{...l,loanCategory:payload.group}:l));else setTransactions(previous=>previous.map(t=>t.id===current.id?{...t,transactionGroup:payload.group}:t));log(actor,'TXN_UPDATED','Group changed for '+current.id+': '+payload.group+'. '+payload.reason)}
+      return {error:null}
+    }catch(error){return {error:error.message||'Unable to save this group. Please retry.'}}
+  },[session,transactions,loans,isLive,refreshData,log,actor])
 
   const value = useMemo(
     () => ({
@@ -1541,17 +1757,23 @@ export function AppProvider({ children }) {
       startViewAs,
       stopViewAs,
       authLoading,
+      dataReady,
       refreshing,
       refreshData,
+      refreshOwnProfile,
       syncError,
       getProofUrl,
-      importLoans,
+      importLoans,changeTransactionGroup,
       updateMyProfile,
       setMyAvatar,
       users,
       loans,
       payments,
       paymentLogs,
+      paymentPostings,
+      hiddenPaymentBreakdowns,setPaymentBreakdownVisibility,
+      postCredit,
+      reversePayment,
       createPaymentLog,
       updatePaymentLog,
       deletePaymentLog,
@@ -1571,6 +1793,7 @@ export function AppProvider({ children }) {
       transactions,
       auditLog,
       signInWithPassword,
+      signInWithLoginCode,
       signInDemo,
       signOut,
       completePasswordSetup,
@@ -1585,6 +1808,8 @@ export function AppProvider({ children }) {
       unassignLoan,
       setTransactionStatus,
       updateTransaction,
+      correctTransaction,
+      createTransaction,
       replaceTransactionDescriptions,
       updateLoan,
       archivedTransactions,
@@ -1596,17 +1821,17 @@ export function AppProvider({ children }) {
     }),
     [
       session, effectiveSession, isViewingAs, startViewAs, stopViewAs, authLoading,
-      refreshing, refreshData, syncError, getProofUrl, importLoans, updateMyProfile, setMyAvatar,
-      users, loans, payments, paymentLogs, createPaymentLog, updatePaymentLog, deletePaymentLog,
+      dataReady, refreshing, refreshData, refreshOwnProfile, syncError, getProofUrl, importLoans,changeTransactionGroup, updateMyProfile, setMyAvatar,
+      users, loans, payments, paymentLogs,paymentPostings,hiddenPaymentBreakdowns,setPaymentBreakdownVisibility,postCredit,reversePayment, createPaymentLog, updatePaymentLog, deletePaymentLog,
       arbitrageLoans, interestRates, createArbitrageLoan, deleteArbitrageLoan,
       addInterestRate, deleteInterestRate,
       trackedLoans, createTrackedLoan, deleteTrackedLoan,
       paymentDueOverrides, savePaymentDueOverrides, clearPaymentDueOverride,
       clearAllPaymentDueOverrides,
       transactions, archivedTransactions, auditLog,
-      signInWithPassword, signInDemo, signOut, completePasswordSetup, inviteUser, updateUser,
+      signInWithPassword, signInWithLoginCode, signInDemo, signOut, completePasswordSetup, inviteUser, updateUser,
       deleteUser, resendInvite, submitPayment, reviewPayment, deletePayment, assignLoan, unassignLoan,
-      setTransactionStatus, updateTransaction, replaceTransactionDescriptions, updateLoan,
+      setTransactionStatus, updateTransaction, correctTransaction, createTransaction, replaceTransactionDescriptions, updateLoan,
       archiveTransactions, restoreTransactions,
       purgeArchivedTransactions, purgeAuditEntries, importTransactions,
     ],

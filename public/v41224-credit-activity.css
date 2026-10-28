@@ -1,0 +1,22 @@
+.borrower-credit-activity .sectiontitle{align-items:flex-start}
+.borrower-credit-activity .sectiontitle small{display:block;line-height:1.5;margin-top:4px}
+.credit-entry{margin:10px 0;padding:14px;border:1px solid #cce8d7;border-radius:16px;background:#f0faf4;color:#1d4634;overflow-wrap:anywhere}
+.credit-entry header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;font-size:14px}
+.credit-entry header>b{flex-shrink:0;font-variant-numeric:tabular-nums}
+.credit-entry p,.credit-entry small{font-size:12px;line-height:1.6;margin:6px 0}
+.credit-entry small{display:block}
+.credit-entry-meta,.credit-entry-note{color:#4d6b5c}
+.credit-entry details{margin-top:10px}
+.credit-entry summary{cursor:pointer;min-height:32px;font-size:12px;font-weight:600;line-height:1.5;padding:5px 0}
+.credit-entry summary:focus-visible{outline:2px solid #15803d;outline-offset:3px;border-radius:4px}
+.credit-entry ul{list-style:none;padding:0;margin:8px 0 0;display:grid;gap:8px}
+.credit-entry li{background:rgba(255,255,255,.75);border-radius:10px;padding:11px;font-size:12px}
+.credit-entry dl{display:grid;grid-template-columns:minmax(0,1fr) minmax(90px,auto);gap:7px;margin:10px 0 0;line-height:1.5}
+.credit-entry dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
+.credit-entry.is-reversed{background:#f4f6f8;border-color:#dde3e8;color:#475569}
+.credit-entry.is-reversed .credit-entry-meta,.credit-entry.is-reversed .credit-entry-note{color:#64748b}
+.dark .credit-entry{background:#142d25;border-color:#315745;color:#d8f0e3}
+.dark .credit-entry-meta,.dark .credit-entry-note{color:#b0cdbd}
+.dark .credit-entry li{background:rgba(0,0,0,.14)}
+.dark .credit-entry.is-reversed{background:#202b3c;border-color:#3c4b62;color:#d1d9e6}
+.dark .credit-entry.is-reversed .credit-entry-meta,.dark .credit-entry.is-reversed .credit-entry-note{color:#adbbcd}

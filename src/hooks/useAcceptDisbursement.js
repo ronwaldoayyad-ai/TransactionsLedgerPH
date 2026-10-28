@@ -1,3 +1,4 @@
+import { debugError } from "../lib/debugLog"
 import { useApp } from '../context/AppContext'
 import { useDisbursements } from '../context/DisbursementsContext'
 import { useNotifications } from '../context/NotificationsContext'
@@ -36,6 +37,7 @@ export function useAcceptDisbursement() {
         acknowledgedByName: myName,
       })
       await createNotification({
+        autoEvent:'disbursement.accepted_copy',eventPayload:{source_id:accepted.id,reference:accepted.disbursementNumber},
         category: 'general',
         title: '✅ Loan Disbursement Accepted',
         body: 'Thank you for accepting the agreement. Please find the attached copy of the accepted Loan Disbursement Document.',
@@ -44,7 +46,7 @@ export function useAcceptDisbursement() {
         attachments: [pdf],
       })
     } catch (e) {
-      console.error('[disbursements] acceptance confirmation failed:', e?.message ?? e)
+      debugError('[disbursements] acceptance confirmation failed:', e?.message ?? e)
     }
 
     return { disbursement: accepted }

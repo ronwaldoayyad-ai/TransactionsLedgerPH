@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
+import RetailBrandLogo from '../../components/RetailBrandLogo'
 import { useNotifications } from '../../context/NotificationsContext'
 import { PageHeader } from '../../components/AppShell'
 import { Badge, Button, Card, CardHeader, EmptyState, PulseBadge, StatCard, Switch } from '../../components/ui'
@@ -19,11 +20,12 @@ import { effectiveStatus } from '../../lib/transactions'
 import { overrideForBorrower, rowForBorrower, PAYMENT_DUE_COLORS } from '../../lib/paymentDueConfig'
 
 export default function UserDashboard() {
-  const { session, loans, payments, transactions, paymentDueOverrides } = useApp()
+  const { session, users,loans, payments, transactions, paymentDueOverrides } = useApp()
   const { unreadCount } = useNotifications()
   const navigate = useNavigate()
   const [hidePaid, setHidePaid] = usePersistedState('dashboard.hidePaid', true)
   const myPayments = payments.filter((p) => p.userId === session.user.id)
+  const accountCredit = Number(users.find(u=>u.id===session.user.id)?.creditBalance??0)
   // Balances and progress derive from the shared transactions store, which the
   // admin updates from the Overall Transactions ledger.
   const myTxns = transactions.filter((t) => t.userId === session.user.id)
@@ -138,8 +140,8 @@ export default function UserDashboard() {
   // Totals split by transaction type (across all of the borrower's records).
   const straightTxns = myTxns.filter((t) => t.type === 'Straight')
   const installmentTxns = myTxns.filter((t) => t.type === 'Installment')
-  const straightTotal = straightTxns.reduce((s, t) => s + t.amount, 0)
-  const installmentTotal = installmentTxns.reduce((s, t) => s + t.amount, 0)
+  const straightTotal = straightTxns.reduce((s, t) => s + (t.originalAmount ?? t.amount), 0)
+  const installmentTotal = installmentTxns.reduce((s, t) => s + (t.originalAmount ?? t.amount), 0)
 
   // Clickable tiles: pre-seed the destination page's persisted filters (read on
   // mount by usePersistedState), then navigate.
@@ -197,6 +199,8 @@ export default function UserDashboard() {
           </div>
         }
       />
+
+      {Number.isFinite(accountCredit)&&Math.round(accountCredit*100)>0&&<div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-navy-900"><span>Available account credit <strong className="ml-2 font-mono">{formatPeso(accountCredit)}</strong></span><span className="text-xs text-slate-600">Your lender reviews how credit is applied to dues.</span></div>}
 
       {/* Featured: Current / Next Payment Due. When the admin has pinned a Next
           set, the two cards stack (swipe / arrow keys / dots to switch) and the
@@ -373,12 +377,11 @@ export default function UserDashboard() {
               myLoans.length > 0 && (
                 <div className="flex flex-wrap items-center gap-3">
                   <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
-                    <Switch
+                    <Switch stateLabels={{"on":"Only open loans are shown","off":"All loans are shown"}}
                       checked={hidePaid}
                       onChange={setHidePaid}
-                      label={hidePaid ? 'Show all loans' : 'Hide fully paid, refunded, or cancelled loans'}
+                      label="Hide settled loans"
                     />
-                    {hidePaid ? 'Show all transactions' : 'Hide fully paid/refunded/cancelled'}
                   </label>
                   <Link
                     to="/portal/consolidated"
@@ -422,7 +425,7 @@ export default function UserDashboard() {
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div>
                           <p className="flex items-center gap-2 font-semibold text-slate-900">
-                            {loan.label}
+                            <RetailBrandLogo compact transaction={txnsFor(loan.id)[0]} loan={loan}/>{loan.label}
                             {fullyPaid && (
                               <Badge status="paid">
                                 <Icon name="check" className="h-3 w-3" />

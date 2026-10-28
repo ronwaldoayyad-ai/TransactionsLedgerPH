@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useApp } from '../../context/AppContext'
 import { PageHeader } from '../../components/AppShell'
 import Icon from '../../components/Icon'
-import { Badge, Button, Card, CardHeader, EmptyState, Modal, MultiSelect, inputClass } from '../../components/ui'
+import {SearchInput,  Badge, Button, Card, CardHeader, EmptyState, Modal, MultiSelect, inputClass } from '../../components/ui'
 import Pagination from '../../components/Pagination'
 import { usePagination } from '../../hooks/usePagination'
 import { downloadCSV, formatDate, formatPeso, toISODate } from '../../lib/amortization'
@@ -32,6 +32,8 @@ export default function Logs() {
   const [selected, setSelected] = useState(() => new Set()) // ids in the active tab
   const [confirmPurge, setConfirmPurge] = useState(false)
   const [purging, setPurging] = useState(false)
+  const [purgeError,setPurgeError]=useState(''),[purgeResult,setPurgeResult]=useState(null),[purgeKey,setPurgeKey]=useState(null)
+  const reviewPurge=()=>{setPurgeError('');setPurgeResult(null);setPurgeKey(crypto.randomUUID());setConfirmPurge(true)}
 
   const nameOf = (userId) => users.find((u) => u.id === userId)?.name ?? userId
 
@@ -55,16 +57,22 @@ export default function Logs() {
   const switchTab = (value) => {
     setTab(value)
     setSelected(new Set())
+    setPurgeResult(null);setPurgeError('')
   }
 
   const handlePurge = async () => {
+    if(purging)return
     setPurging(true)
-    const ids = [...selected]
-    const ok =
-      tab === 'archives' ? await purgeArchivedTransactions(ids) : await purgeAuditEntries(ids)
-    setPurging(false)
-    setConfirmPurge(false)
-    if (ok) setSelected(new Set())
+    setPurgeError('')
+    try{
+      const ids=[...selected]
+      if(tab==='archives'){
+        const result=await purgeArchivedTransactions(ids,purgeKey)
+        if(result.error)throw Error(result.error)
+        setPurgeResult(result);setSelected(new Set(result.blocked.map(row=>row.id)))
+        if(!result.blocked.length)setConfirmPurge(false)
+      }else{if(!await purgeAuditEntries(ids))throw Error('Audit entries could not be deleted. Please retry.');setSelected(new Set());setConfirmPurge(false)}
+    }catch(failure){setPurgeError(failure.message)}finally{setPurging(false)}
   }
 
   const actions = [...new Set(auditLog.map((e) => e.action))]
@@ -137,12 +145,13 @@ export default function Logs() {
           <p className="text-sm font-medium text-red-900">
             {selected.size} item{selected.size === 1 ? '' : 's'} selected
           </p>
-          <Button variant="danger" className="!min-h-9 !px-3" onClick={() => setConfirmPurge(true)}>
+          <Button variant="danger" className="!min-h-9 !px-3" onClick={reviewPurge}>
             <Icon name="trash" className="h-4 w-4" />
             Delete permanently
           </Button>
         </div>
       )}
+      {purgeResult&&<p role="status" className="mb-4 rounded-xl border border-slate-200 bg-white p-3 text-sm">{purgeResult.deletedIds.length} archived record(s) permanently deleted. {purgeResult.blocked.length} retained.</p>}
 
       {tab === 'analytics' ? (
         <Analytics />
@@ -150,7 +159,7 @@ export default function Logs() {
         <Card>
           <CardHeader
             title="Archived Transactions"
-            subtitle="Ledger records deleted from Overall Transactions. Restore puts them back; permanent deletion also removes them from the database."
+            subtitle="Deleted ledger records. Permanent deletion removes eligible entries; records linked to payments or correction history are retained."
           />
           {archivedTransactions.length === 0 ? (
             <EmptyState
@@ -285,7 +294,7 @@ export default function Logs() {
               <label htmlFor="log-search" className="sr-only">
                 Search log entries
               </label>
-              <input
+              <SearchInput
                 id="log-search"
                 type="search"
                 value={query}
@@ -411,13 +420,13 @@ export default function Logs() {
       <Modal
         open={confirmPurge}
         title="Delete permanently"
-        onClose={() => setConfirmPurge(false)}
+        onClose={() => {if(!purging)setConfirmPurge(false)}}
         footer={
           <>
             <Button variant="secondary" onClick={() => setConfirmPurge(false)} disabled={purging}>
-              Cancel
+              {purgeResult?'Done':'Cancel'}
             </Button>
-            <Button variant="danger" onClick={handlePurge} disabled={purging}>
+            <Button variant="danger" onClick={handlePurge} disabled={purging||!!purgeResult}>
               <Icon name="trash" className="h-4 w-4" />
               {purging ? 'Deleting…' : `Delete ${selected.size} item${selected.size === 1 ? '' : 's'}`}
             </Button>
@@ -433,6 +442,9 @@ export default function Logs() {
           . This also removes the same data from the Supabase database and{' '}
           <span className="font-semibold">cannot be undone</span>.
         </p>
+        {tab==='archives'&&<p className="mt-3 text-sm text-slate-600">Entries linked to recorded payments, assessed fees or correction history will be retained with an explanation. Other selected entries will be deleted.</p>}
+        {purgeError&&<p role="alert" className="mt-3 text-sm text-red-700">{purgeError}</p>}
+        {purgeResult&&<div className="mt-4 text-sm"><p role="status">{purgeResult.deletedIds.length} deleted; {purgeResult.blocked.length} retained.</p><ul className="mt-2 space-y-2">{purgeResult.blocked.map(row=><li key={row.id} className="rounded-lg bg-amber-50 p-3"><strong>{archivedTransactions.find(t=>t.id===row.id)?.description||row.id}</strong><p>{row.reason}</p></li>)}</ul></div>}
       </Modal>
     </>
   )

@@ -37,6 +37,7 @@ export default function Calculator() {
   // All calculator inputs survive navigating to other sections; they change
   // only when edited here (or after Refresh, which resets to defaults).
   const [txnType, setTxnType] = usePersistedState('calc.txnType', 'installment') // installment | straight
+  const [loanCategory, setLoanCategory] = usePersistedState('calc.loanCategory', 'cash_loan')
   const [principal, setPrincipal] = usePersistedState('calc.principal', 50000)
   const [ratePct, setRatePct] = usePersistedState('calc.ratePct', '0')
   const [duration, setDuration] = usePersistedState('calc.duration', '6')
@@ -121,6 +122,7 @@ export default function Calculator() {
       userId: assigneeId,
       label,
       txnType,
+      loanCategory: txnType === 'installment' ? loanCategory : null,
       principal: P,
       monthlyRate,
       durationMonths: Number(effectiveDuration),
@@ -233,6 +235,13 @@ export default function Calculator() {
         <div className="space-y-6 xl:col-span-2">
           <Card>
             <CardHeader title="Core Inputs" />
+            {txnType === 'installment' && <div className="px-5 pt-4">
+              <span className="mb-2 block text-sm font-medium text-slate-700">Installment category</span>
+              <div role="group" aria-label="Installment category" className="relative grid grid-cols-2 rounded-xl bg-slate-100 p-1 ring-1 ring-slate-200">
+                <span aria-hidden="true" className={'pointer-events-none absolute bottom-1 left-1 top-1 w-[calc(50%-4px)] rounded-lg bg-white shadow-sm transition-transform duration-300 motion-reduce:transition-none '+(loanCategory==='cash_loan'?'translate-x-full':'')} />
+                {[['retail_installment','Retail Installment'],['cash_loan','Cash Loan']].map(([value,title])=><button key={value} type="button" aria-pressed={loanCategory===value} onClick={()=>setLoanCategory(value)} className={'relative min-h-11 cursor-pointer rounded-lg px-2 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-blue-600 '+(loanCategory===value?'text-blue-700':'text-slate-500')}>{title}</button>)}
+              </div><p className="mt-2 text-xs text-slate-500">Saved with the loan and shown on the borrower’s installment cards.</p>
+            </div>}
             <div className="space-y-4 px-5 py-4">
               <div>
                 <span className="mb-1.5 block text-sm font-medium text-slate-700">

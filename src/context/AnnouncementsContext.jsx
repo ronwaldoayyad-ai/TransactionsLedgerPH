@@ -1,5 +1,7 @@
+import { debugError } from "../lib/debugLog"
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { useApp } from './AppContext'
+import { useRecordRefresh } from '../lib/recordRefresh'
 import { supabase } from '../supabaseClient'
 
 // Admin-authored announcements delivered to borrowers (toast + push-down banner).
@@ -70,9 +72,11 @@ export function AnnouncementsProvider({ children }) {
   // (and keeps render pure — no Date.now() during render).
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
+    // Live announcements are filtered by RLS; only demo windows use this clock.
+    if (isLive || !meId || isAdmin || !demoAnnouncements.length) return undefined
     const id = setInterval(() => setNow(Date.now()), 30000)
     return () => clearInterval(id)
-  }, [])
+  }, [isLive, meId, isAdmin, demoVersion])
 
   // Reset dismissals whenever the signed-in identity changes (login / switch),
   // so a fresh session starts with every valid announcement visible again.
@@ -93,7 +97,7 @@ export function AnnouncementsProvider({ children }) {
       .select('*')
       .order('created_at', { ascending: false })
     if (error) {
-      console.error('[announcements] load failed:', error.message)
+      debugError('[announcements] load failed:', error.message)
       return
     }
     setLiveAnnouncements((data ?? []).map(mapAnnouncement))
@@ -135,11 +139,14 @@ export function AnnouncementsProvider({ children }) {
       .select('*')
       .order('created_at', { ascending: false })
     if (error) {
-      console.error('[announcements] templates load failed:', error.message)
+      debugError('[announcements] templates load failed:', error.message)
       return
     }
     setLiveTemplates((data ?? []).map(mapTemplate))
   }, [isLive, isAdmin])
+
+  const refreshAnnouncements = useCallback(() => Promise.all([fetchAll(), fetchTemplates()]), [fetchAll, fetchTemplates])
+  useRecordRefresh(refreshAnnouncements, isLive && !!meId)
 
   useEffect(() => {
     if (!isLive || !isAdmin) return undefined
@@ -241,7 +248,7 @@ export function AnnouncementsProvider({ children }) {
         if (isLive) {
           const { error } = await supabase.from('announcements').delete().eq('id', a.id)
           if (error) {
-            console.error('[announcements] consume failed:', error.message)
+            debugError('[announcements] consume failed:', error.message)
             setDismissed((prev) => new Set(prev).add(a.id)) // at least hide it this session
             return
           }
@@ -275,7 +282,7 @@ export function AnnouncementsProvider({ children }) {
           one_time: oneTime,
         })
         if (error) {
-          console.error('[announcements] create failed:', error.message)
+          debugError('[announcements] create failed:', error.message)
           return { error: error.message }
         }
         await fetchAll()
@@ -331,7 +338,7 @@ export function AnnouncementsProvider({ children }) {
       if (isLive) {
         const { error } = await supabase.from('announcements').delete().eq('id', id)
         if (error) {
-          console.error('[announcements] delete failed:', error.message)
+          debugError('[announcements] delete failed:', error.message)
           return
         }
         await fetchAll()
@@ -352,7 +359,7 @@ export function AnnouncementsProvider({ children }) {
           .update({ title, body, audience, target_user_ids: ids, expires_at: expiresAt || null })
           .eq('id', id)
         if (error) {
-          console.error('[announcements] update failed:', error.message)
+          debugError('[announcements] update failed:', error.message)
           return { error: error.message }
         }
         await fetchAll()

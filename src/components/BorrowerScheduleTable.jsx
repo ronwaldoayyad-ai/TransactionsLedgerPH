@@ -3,6 +3,8 @@ import { BORROWER_STATUS_LABELS, STATUS_LABELS, borrowerStatus } from '../lib/tr
 import { Badge, inputClass } from './ui'
 import Pagination from './Pagination'
 import { usePagination } from '../hooks/usePagination'
+import RetailBrandLogo from './RetailBrandLogo'
+import {useApp} from '../context/AppContext'
 
 // Uncontrolled input that commits to the parent only on blur (so each
 // keystroke doesn't fire a persist+audit write). `key={value}` remounts it
@@ -35,7 +37,8 @@ export default function BorrowerScheduleTable({
   pageSize = 0, // 0 = show all; >0 paginates rows while the footer keeps full totals
 }) {
   const today = toISODate(new Date())
-  const total = transactions.reduce((s, t) => s + t.amount, 0)
+  const {loans}=useApp()
+  const total = transactions.reduce((s, t) => s + (t.originalAmount ?? t.amount), 0)
   const colCount = 2 + (showTxnDate ? 1 : 0) + 2 // # + desc + [txn] + due + paid, before amount
   const paginate = pageSize > 0
   const pag = usePagination(transactions, paginate ? pageSize : 1)
@@ -43,7 +46,7 @@ export default function BorrowerScheduleTable({
   // Background tint shared by table rows and mobile cards: emerald for credits
   // (negative amounts), red for past due, transparent otherwise.
   const tintFor = (t, status) =>
-    t.amount < 0
+    t.amount < 0 || status === 'paid'
       ? 'bg-emerald-50/70'
       : status === 'past_due'
         ? 'bg-red-50/70'
@@ -58,11 +61,12 @@ export default function BorrowerScheduleTable({
         const status = borrowerStatus(t, today)
         const tint = tintFor(t, status)
         return editable ? (
-          <div key={t.id} className={`space-y-2.5 border-b border-slate-100 px-3 py-3 ${tint}`}>
+          <div key={t.id} data-fee-kind={t.feeKind||undefined} className={`space-y-2.5 border-b border-slate-100 px-3 py-3 ${tint}`}>
             <div className="flex items-center justify-between gap-2">
               <span className="font-mono text-xs font-medium text-slate-500">#{t.n}</span>
               <select
                 value={t.status}
+                disabled={t.paidAmount>0}
                 onChange={(e) => onUpdate(t.id, { status: e.target.value })}
                 aria-label={`Status for installment ${t.n}`}
                 className={`${inputClass} !min-h-8 !w-32 !px-2 !py-1 !text-xs`}
@@ -116,6 +120,7 @@ export default function BorrowerScheduleTable({
                 <EditCell
                   type="date"
                   value={t.datePaid ?? ''}
+                  disabled={t.paidAmount>0}
                   onCommit={(v) => onUpdate(t.id, { datePaid: v || null })}
                   className="!w-full"
                 />
@@ -126,7 +131,8 @@ export default function BorrowerScheduleTable({
                 </span>
                 <EditCell
                   type="number"
-                  value={t.amount}
+                  value={t.originalAmount ?? t.amount}
+                  disabled={t.paidAmount>0}
                   onCommit={(v) => onUpdate(t.id, { amount: Number(v) || 0 })}
                   className="!w-full !text-right"
                   step="0.01"
@@ -136,17 +142,18 @@ export default function BorrowerScheduleTable({
             </div>
           </div>
         ) : (
-          <div key={t.id} className={`flex items-center gap-3 border-b border-slate-100 px-3 py-3 ${tint}`}>
+          <div key={t.id} data-fee-kind={t.feeKind||undefined} className={`flex items-center gap-3 border-b border-slate-100 px-3 py-3 ${tint}`}>
             <span className="w-6 shrink-0 font-mono text-xs text-slate-400">{t.n}</span>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[13px] font-medium text-slate-800">{t.description}</p>
+              <div className="flex items-center gap-2"><RetailBrandLogo compact transaction={t} loan={loans.find(l=>l.id===t.loanId)}/><p className="truncate text-[13px] font-medium text-slate-800">{t.description}</p></div>
+              {t.paidAmount>0&&t.remainingAmount>0&&<p className="mt-1 text-xs text-blue-700">Applied {formatPeso(t.paidAmount)} · Remaining {formatPeso(t.remainingAmount)}</p>}
               <p className="mt-0.5 text-[11px] leading-snug text-slate-500">
                 {showTxnDate ? `Txn ${formatDate(t.txnDate)} · ` : ''}Due {formatDate(t.dueDate)}
                 {t.datePaid ? ` · Paid ${formatDate(t.datePaid)}` : ''}
               </p>
             </div>
             <div className="flex shrink-0 flex-col items-end gap-1">
-              <span className="font-mono text-[13px] font-semibold text-slate-900">{formatPeso(t.amount)}</span>
+              <span className="font-mono text-[13px] font-semibold text-slate-900">{formatPeso(t.originalAmount ?? t.amount)}</span>
               <Badge status={status}>{BORROWER_STATUS_LABELS[status]}</Badge>
             </div>
           </div>
@@ -180,8 +187,9 @@ export default function BorrowerScheduleTable({
             return (
               <tr
                 key={t.id}
+                data-fee-kind={t.feeKind||undefined}
                 className={`border-b border-slate-100 transition-colors duration-150 ${
-                  t.amount < 0
+                  t.amount < 0 || status === 'paid'
                     ? 'bg-emerald-50/70 hover:bg-emerald-50'
                     : status === 'past_due'
                       ? 'bg-red-50/70 hover:bg-red-50'
@@ -193,8 +201,9 @@ export default function BorrowerScheduleTable({
                   {editable ? (
                     <EditCell value={t.description} onCommit={(v) => onUpdate(t.id, { description: v })} />
                   ) : (
-                    t.description
+                    <div className="flex items-center gap-2"><RetailBrandLogo compact transaction={t} loan={loans.find(l=>l.id===t.loanId)}/><span>{t.description}</span></div>
                   )}
+                  {t.paidAmount>0&&t.remainingAmount>0&&<small className="mt-1 block text-blue-700">Applied {formatPeso(t.paidAmount)} · Remaining {formatPeso(t.remainingAmount)}</small>}
                 </td>
                 {showTxnDate && (
                   <td className="px-4 py-2.5 text-slate-700">
@@ -217,6 +226,7 @@ export default function BorrowerScheduleTable({
                     <EditCell
                       type="date"
                       value={t.datePaid ?? ''}
+                      disabled={t.paidAmount>0}
                       onCommit={(v) => onUpdate(t.id, { datePaid: v || null })}
                     />
                   ) : t.datePaid ? (
@@ -229,20 +239,22 @@ export default function BorrowerScheduleTable({
                   {editable ? (
                     <EditCell
                       type="number"
-                      value={t.amount}
+                      value={t.originalAmount ?? t.amount}
+                      disabled={t.paidAmount>0}
                       onCommit={(v) => onUpdate(t.id, { amount: Number(v) || 0 })}
                       className="!text-right"
                       step="0.01"
                       min="0"
                     />
                   ) : (
-                    formatPeso(t.amount)
+                    formatPeso(t.originalAmount ?? t.amount)
                   )}
                 </td>
                 <td className="px-4 py-2.5">
                   {editable ? (
                     <select
                       value={t.status}
+                      disabled={t.paidAmount>0}
                       onChange={(e) => onUpdate(t.id, { status: e.target.value })}
                       aria-label={`Status for installment ${t.n}`}
                       className={`${inputClass} !min-h-8 !w-28 !px-2 !py-1 !text-xs`}

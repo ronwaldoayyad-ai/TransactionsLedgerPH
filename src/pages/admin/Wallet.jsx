@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { useWallet } from '../../hooks/useWallet'
 import { PageHeader } from '../../components/AppShell'
 import Icon from '../../components/Icon'
@@ -8,10 +8,14 @@ import { AccountVisual, MiniAccount } from '../../components/wallet/AccountVisua
 import CardForm from '../../components/wallet/CardForm'
 import AccountForm from '../../components/wallet/AccountForm'
 import AccountTxnForm from '../../components/wallet/AccountTxnForm'
-import BillTracker from '../../components/wallet/BillTracker'
-import WalletAnalytics from '../../components/wallet/WalletAnalytics'
+const BillTracker = lazy(() => import('../../components/wallet/BillTracker'))
+const WalletAnalytics = lazy(() => import('../../components/wallet/WalletAnalytics'))
 import { formatDate, formatPeso, toISODate } from '../../lib/amortization'
 import { accountColors, accountMask, accountTotals, cardAgeLabel, portfolioTotals } from '../../lib/wallet'
+
+import WalletDeck from '../../components/wallet/WalletDeck'
+import { MagneticDots } from '../../components/ProcessingFeedback'
+import './wallet-mobile.css'
 
 // Black/white text for contrast against a banner color.
 function readable(hex) {
@@ -30,6 +34,7 @@ const TABS = [
 ]
 
 export default function Wallet() {
+  const screen = useRef(null), tabGesture = useRef(null)
   const wallet = useWallet()
   const { cards, accounts, bills, payments, loading, error, reload } = wallet
   const [tab, setTab] = useState('cards')
@@ -47,8 +52,36 @@ export default function Wallet() {
   const selectedAccount = accounts.find((a) => a.id === selectedAccountId) ?? accounts[0] ?? null
   const isAccounts = tab === 'accounts'
 
+  useEffect(() => {
+    const area = screen.current
+    if (!area) return
+    const labelTables = () => area.querySelectorAll('table').forEach(table => {
+      const headings = [...table.querySelectorAll('thead th')].map(cell => cell.textContent.trim())
+      table.querySelectorAll('tbody tr').forEach(row => [...row.cells].forEach((cell,index) => {
+        if (cell.colSpan === 1 && headings[index]) cell.dataset.label = headings[index]
+      }))
+    })
+    labelTables()
+    const observer = new MutationObserver(labelTables)
+    observer.observe(area, {childList:true,subtree:true})
+    return () => observer.disconnect()
+  }, [])
+  function tabStart(event) {
+    if (!event.isPrimary || event.button !== 0 || event.target.closest('button,input,select,textarea,a,.wallet-deck')) return
+    tabGesture.current = {x:event.clientX,y:event.clientY}
+  }
+  function tabEnd(event) {
+    const start = tabGesture.current; tabGesture.current = null
+    if (!start) return
+    const dx = event.clientX-start.x, dy = event.clientY-start.y
+    if (Math.abs(dx)>60 && Math.abs(dx)>Math.abs(dy)*1.5) {
+      const index = TABS.findIndex(([key]) => key===tab)
+      setTab(TABS[Math.max(0,Math.min(TABS.length-1,index+(dx<0?1:-1)))][0])
+    }
+  }
   return (
-    <>
+    <div ref={screen} className="wallet-screen">
+    <Suspense fallback={<div className="p-6" role="status"><MagneticDots label="Loading wallet section" /></div>}>
       <PageHeader
         title="Cards & Bills Wallet"
         subtitle="Track your cards, accounts, bills, and payments. Private to your account."
@@ -70,7 +103,7 @@ export default function Wallet() {
         </p>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[2fr_2fr_3fr]">
+      <div className="wallet-summary-grid grid grid-cols-2 gap-3 lg:grid-cols-[2fr_2fr_3fr]">
         <Card className="p-5">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total Credit Limit</p>
           <p className="mt-1 font-mono text-3xl font-bold text-slate-900">{formatPeso(totals.creditLimit)}</p>
@@ -79,7 +112,7 @@ export default function Wallet() {
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total Available Limit</p>
           <p className="mt-1 font-mono text-3xl font-bold text-emerald-600">{formatPeso(totals.availableLimit)}</p>
         </Card>
-        <Card className="hidden p-5 lg:block">
+        <Card className="wallet-count-summary p-5">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Cards · Accounts · Bills</p>
           <p className="mt-1 font-mono text-3xl font-bold text-navy-800">
             {cards.length} · {accounts.length} · {bills.length}
@@ -87,7 +120,7 @@ export default function Wallet() {
         </Card>
       </div>
 
-      <div className="mt-4 grid gap-4 sm:grid-cols-2">
+      <div className="wallet-account-totals mt-4 grid grid-cols-2 gap-3">
         <Card className="p-5">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total Available Balance</p>
           <p className="mt-1 font-mono text-3xl font-bold text-emerald-600">{formatPeso(accTotals.available)}</p>
@@ -101,10 +134,12 @@ export default function Wallet() {
       <div className="mt-6 grid gap-6 lg:grid-cols-[2fr_1fr]">
         {/* LEFT: tabs */}
         <div className="min-w-0">
-          <div className="mb-4 grid grid-cols-4 gap-1 rounded-xl bg-slate-100 p-1">
+          <div className="wallet-tabs mb-4 grid grid-cols-4 gap-1 rounded-xl bg-slate-100 p-1" role="tablist" aria-label="Wallet sections">
             {TABS.map(([key, label]) => (
               <button
                 key={key}
+                role="tab" aria-selected={tab===key} aria-controls="wallet-active-panel" id={"wallet-tab-"+key}
+                onKeyDown={event=>{if(["ArrowLeft","ArrowRight"].includes(event.key)){event.preventDefault(); const next=(TABS.findIndex(([id])=>id===key)+(event.key==="ArrowRight"?1:3))%4;setTab(TABS[next][0]);event.currentTarget.parentElement.children[next].focus()}}}
                 onClick={() => setTab(key)}
                 className={`rounded-lg px-2 py-2 text-sm font-medium transition-colors duration-150 ${
                   tab === key ? 'bg-white text-navy-700 shadow-sm' : 'cursor-pointer text-slate-500 hover:text-slate-700'
@@ -115,6 +150,9 @@ export default function Wallet() {
             ))}
           </div>
 
+          <p className="mb-3 text-xs text-slate-500">Swipe across the details to switch wallet sections.</p>
+          <div key={tab} id="wallet-active-panel" role="tabpanel" aria-labelledby={"wallet-tab-"+tab} className="wallet-tab-panel" onPointerDown={tabStart} onPointerUp={tabEnd} onPointerCancel={()=>{tabGesture.current=null}}>
+          <Suspense fallback={<div className="p-6" role="status"><MagneticDots label="Loading wallet section" /></div>}>
           {loading ? (
             <Card><EmptyState icon="clock" title="Loading wallet…" /></Card>
           ) : tab === 'cards' ? (
@@ -141,6 +179,7 @@ export default function Wallet() {
           ) : (
             <WalletAnalytics cards={cards} accounts={accounts} bills={bills} payments={payments} />
           )}
+          </Suspense></div>
         </div>
 
         {/* RIGHT: cards / accounts on file */}
@@ -267,51 +306,12 @@ export default function Wallet() {
       >
         <p className="text-sm text-slate-600">This permanently removes the account. Payments made from it are kept but their source account is cleared.</p>
       </Modal>
-    </>
-  )
-}
-
-// Shared Coverflow carousel: 3D tilted, no scrollbar, infinite loop, frosted
-// nav arrows, click a side item to bring it center. onSelect receives the index.
-function Coverflow({ items, activeIndex, onSelect, renderItem }) {
-  const n = items.length
-  const go = (i) => onSelect(((i % n) + n) % n)
-  return (
-    <div className="relative h-[280px] select-none" style={{ perspective: '1300px' }}>
-      {items.map((it, i) => {
-        let off = i - activeIndex
-        if (off > n / 2) off -= n
-        if (off < -n / 2) off += n
-        const abs = Math.abs(off)
-        const hidden = abs > 2
-        return (
-          <button
-            key={it.id}
-            type="button"
-            onClick={() => go(i)}
-            aria-label="Select"
-            className="absolute left-1/2 top-1/2 w-72 cursor-pointer transition-all duration-500 ease-[cubic-bezier(0.25,0.8,0.3,1)]"
-            style={{
-              transform: `translate(-50%, -50%) translateX(${off * 132}px) translateZ(${-abs * 90}px) rotateY(${off * -38}deg) scale(${1 - abs * 0.05})`,
-              zIndex: 100 - abs,
-              opacity: hidden ? 0 : 1 - abs * 0.18,
-              pointerEvents: hidden ? 'none' : 'auto',
-              filter: off === 0 ? 'none' : 'brightness(0.82)',
-            }}
-          >
-            {renderItem(it, off === 0)}
-          </button>
-        )
-      })}
-      {n > 1 && (
-        <>
-          <NavArrow side="left" onClick={() => go(activeIndex - 1)} />
-          <NavArrow side="right" onClick={() => go(activeIndex + 1)} />
-        </>
-      )}
+    </Suspense>
     </div>
   )
 }
+
+function Coverflow(props) { return <WalletDeck {...props} /> }
 
 function MyCards({ cards, selected, setSelectedId, onAdd, onEdit, onDelete }) {
   if (cards.length === 0) {
@@ -361,24 +361,6 @@ function AccountsView({ accounts, selected, setSelectedAccountId, onAdd, onEdit,
   )
 }
 
-// Apple-like frosted-glass navigation arrow.
-function NavArrow({ side, onClick }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={side === 'left' ? 'Previous' : 'Next'}
-      className={`absolute top-1/2 z-[200] flex h-11 w-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full border border-white/60 bg-white/30 text-slate-700 shadow-lg backdrop-blur-md transition-all duration-200 hover:bg-white/70 active:scale-95 ${
-        side === 'left' ? 'left-1 sm:left-2' : 'right-1 sm:right-2'
-      }`}
-    >
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
-        <path d={side === 'left' ? 'M15 18l-6-6 6-6' : 'M9 18l6-6-6-6'} />
-      </svg>
-    </button>
-  )
-}
-
 // Reusable right-column list with hover ▲/▼ reorder.
 function OnFileList({ items, selectedId, onSelect, onMove, thumb, main, meta }) {
   return (
@@ -390,12 +372,12 @@ function OnFileList({ items, selectedId, onSelect, onMove, thumb, main, meta }) 
               selectedId === it.id ? 'border-navy-300 bg-navy-50/50' : 'border-slate-200 hover:bg-slate-50'
             }`}
           >
-            <button onClick={() => onSelect(it)} className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left">
+            <button onClick={() => onSelect(it)} className="wallet-file-select flex min-w-0 flex-1 cursor-pointer items-center gap-3 text-left">
               {thumb(it)}
               <div className="min-w-0 flex-1">{main(it)}</div>
               <div className="shrink-0 text-right text-[11px] leading-tight">{meta(it)}</div>
             </button>
-            <div className="flex shrink-0 flex-col gap-0.5 opacity-0 transition-opacity duration-150 group-hover:opacity-100">
+            <div className="wallet-on-file-reorder flex shrink-0 flex-col gap-0.5 transition-opacity duration-150">
               <button onClick={() => onMove(it.id, 'up')} disabled={i === 0} aria-label="Move up" className="flex h-5 w-5 cursor-pointer items-center justify-center rounded text-xs text-slate-400 transition-colors hover:bg-slate-100 hover:text-navy-700 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent">▲</button>
               <button onClick={() => onMove(it.id, 'down')} disabled={i === items.length - 1} aria-label="Move down" className="flex h-5 w-5 cursor-pointer items-center justify-center rounded text-xs text-slate-400 transition-colors hover:bg-slate-100 hover:text-navy-700 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent">▼</button>
             </div>
@@ -413,7 +395,7 @@ function CardDetail({ card, onEdit, onDelete }) {
         className="flex items-center justify-between gap-3 px-5 py-4"
         style={{ background: `linear-gradient(to left, ${card.primaryColor}, ${card.secondaryColor})`, color: readable(card.secondaryColor) }}
       >
-        <h2 className="min-w-0 truncate text-lg font-bold">
+        <h2 className="wallet-details-title min-w-0 text-lg font-bold">
           {[card.bankName, card.category, card.network, card.tier].filter(Boolean).join(' ')} (•• {card.last4})
         </h2>
         {card.bankLogo ? (
@@ -446,7 +428,7 @@ function CardDetail({ card, onEdit, onDelete }) {
           </>
         )}
       </dl>
-      <div className="flex flex-wrap gap-2 border-t border-slate-100 px-5 py-4">
+      <div className="wallet-detail-actions flex flex-wrap gap-2 border-t border-slate-100 px-5 py-4">
         <Button variant="secondary" onClick={() => onEdit(card)}>Edit Card</Button>
         <Button variant="danger" onClick={() => onDelete(card.id)}>Delete Card</Button>
       </div>
@@ -462,7 +444,7 @@ function AccountDetail({ account, onEdit, onDelete, onAddTxn }) {
         className="flex items-center justify-between gap-3 px-5 py-4"
         style={{ background: `linear-gradient(to left, ${c1}, ${c2})`, color: readable(c2) }}
       >
-        <h2 className="min-w-0 truncate text-lg font-bold">
+        <h2 className="wallet-details-title min-w-0 text-lg font-bold">
           {[account.bankName, account.productType].filter(Boolean).join(' ')} ({accountMask(account)})
         </h2>
         <span className="shrink-0 text-base font-bold" style={{ color: readable(c1) }}>{account.bankCode || account.bankName}</span>
@@ -479,7 +461,7 @@ function AccountDetail({ account, onEdit, onDelete, onAddTxn }) {
         <Detail label="Available Balance" value={formatPeso(account.availableBalance)} valueClass="text-emerald-600" />
         <Detail label="Maintaining Balance" value={formatPeso(account.maintainingBalance)} />
       </dl>
-      <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 px-5 py-4">
+      <div className="wallet-detail-actions flex flex-wrap items-center gap-2 border-t border-slate-100 px-5 py-4">
         <Button variant="success" onClick={() => onAddTxn('income', account)}>
           <Icon name="plus" className="h-4 w-4" />Add Income
         </Button>

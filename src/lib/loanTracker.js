@@ -3,8 +3,8 @@
 import { addMonthsClamped, parseISODate, toISODate } from './amortization'
 
 // Active universal/commercial banks in the Philippines. Each entry carries a
-// full name, short acronym, brand color, and website domain (for Clearbit
-// logos with an initials fallback).
+// full name, short acronym, brand color, and website domain. The card uses
+// supplied local logos where available, with an initials fallback.
 export const BANKS = [
   { name: 'BDO Unibank', acronym: 'BDO', color: '#003B7A', domain: 'bdo.com.ph' },
   { name: 'Bank of the Philippine Islands', acronym: 'BPI', color: '#A6192E', domain: 'bpi.com.ph' },

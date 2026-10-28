@@ -1,6 +1,10 @@
+import { debugError } from "../lib/debugLog"
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { useApp } from './AppContext'
+import { useRecordRefresh } from '../lib/recordRefresh'
+import { subscribeToInvalidations } from '../lib/realtimeInvalidation'
 import { supabase } from '../supabaseClient'
+import { parseLoanRateDraft } from '../lib/loanRateConfiguration'
 
 // Data layer for the borrower Loan Request feature. Live sessions read/write
 // Supabase (RLS-scoped) and subscribe to Realtime; the module tolerates a
@@ -27,6 +31,10 @@ const mapRequest = (r) => ({
   status: r.status,
   createdAt: r.created_at,
   updatedAt: r.updated_at,
+  purpose: r.purpose,
+  consentAt: r.consent_at,
+  accountConfirmed: r.account_confirmed,
+  termsVersion: r.terms_version,
 })
 const mapEvent = (r) => ({
   id: r.id,
@@ -74,6 +82,9 @@ export function LoanRequestsProvider({ children }) {
   const [requests, setRequests] = useState(isLive ? [] : DEMO_REQUESTS)
   const [events, setEvents] = useState([])
   const [loading, setLoading] = useState(isLive)
+  const [ratesError,setRatesError]=useState('')
+  const [accessReady,setAccessReady]=useState(!isLive)
+  const [accessError,setAccessError]=useState('')
 
   const fetchAll = useCallback(async () => {
     if (!isLive || !meId) return
@@ -87,11 +98,15 @@ export function LoanRequestsProvider({ children }) {
     // Degrade gracefully if the schema isn't present yet (migration not run).
     if (ratesRes.status === 'fulfilled' && !ratesRes.value.error) {
       setRates((ratesRes.value.data ?? []).map(mapRate))
+      setRatesError('')
     } else {
-      console.warn('[loan-requests] rates unavailable (run the migration?)')
+      setRatesError('Loan rates could not be loaded. Retry before editing the configuration.')
     }
     if (accessRes.status === 'fulfilled' && !accessRes.value.error) {
       setAccessList((accessRes.value.data ?? []).map(mapAccess))
+      setAccessReady(true);setAccessError('')
+    } else {
+      setAccessList([]);setAccessReady(false);setAccessError('Loan-request access could not be loaded. Retry before changing access.')
     }
     if (reqRes.status === 'fulfilled' && !reqRes.value.error) {
       setRequests((reqRes.value.data ?? []).map(mapRequest))
@@ -100,6 +115,8 @@ export function LoanRequestsProvider({ children }) {
       setEvents((evRes.value.data ?? []).map(mapEvent))
     }
   }, [isLive, meId])
+
+  useRecordRefresh(fetchAll, isLive && !!meId)
 
   // Initial load — all setState happens after the first await.
   useEffect(() => {
@@ -122,12 +139,13 @@ export function LoanRequestsProvider({ children }) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'loan_requests' }, () => fetchAll())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'loan_request_events' }, () => fetchAll())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'loan_request_rates' }, () => fetchAll())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'loan_request_access' }, () => fetchAll())
       .subscribe()
+    // Keep this published access flag separate from optional request/rate tables.
+    const stopAccess=subscribeToInvalidations({client:supabase,name:'loan-request-access-'+meId,table:'loan_request_access',ownerId:meId,ownerColumn:'user_id',isAdmin,onChange:fetchAll,onError:error=>setAccessError(error.message)})
     return () => {
-      supabase.removeChannel(channel)
+      stopAccess();supabase.removeChannel(channel)
     }
-  }, [isLive, meId, fetchAll])
+  }, [isLive, meId, isAdmin, fetchAll])
 
   // Per-term rate lookup (defaults to 0 until seeded/loaded).
   const ratesByTerm = useMemo(() => {
@@ -141,8 +159,8 @@ export function LoanRequestsProvider({ children }) {
   // Borrower: is THIS user allowed to file requests? (default OFF)
   const canRequest = useMemo(() => {
     if (isAdmin) return false
-    return accessList.some((a) => a.userId === meId && a.enabled)
-  }, [accessList, meId, isAdmin])
+    return accessReady && accessList.some((a) => a.userId === meId && a.enabled)
+  }, [accessList, accessReady, meId, isAdmin])
 
   const myRequests = useMemo(
     () => requests.filter((r) => r.userId === meId),
@@ -169,7 +187,7 @@ export function LoanRequestsProvider({ children }) {
         p_account_name: bankAccountName,
       })
       if (error) {
-        console.error('[loan-requests] submit failed:', error.message)
+        debugError('[loan-requests] submit failed:', error.message)
         return { error: error.message }
       }
       await fetchAll()
@@ -183,7 +201,7 @@ export function LoanRequestsProvider({ children }) {
       if (!isLive) return { error: 'Live session required.' }
       const { error } = await supabase.rpc('cancel_my_loan_request', { p_id: id, p_note: note })
       if (error) {
-        console.error('[loan-requests] cancel failed:', error.message)
+        debugError('[loan-requests] cancel failed:', error.message)
         return { error: error.message }
       }
       await fetchAll()
@@ -203,7 +221,7 @@ export function LoanRequestsProvider({ children }) {
         p_account_name: bankAccountName,
       })
       if (error) {
-        console.error('[loan-requests] bank update failed:', error.message)
+        debugError('[loan-requests] bank update failed:', error.message)
         return { error: error.message }
       }
       await fetchAll()
@@ -222,7 +240,7 @@ export function LoanRequestsProvider({ children }) {
         p_note: note,
       })
       if (error) {
-        console.error('[loan-requests] status update failed:', error.message)
+        debugError('[loan-requests] status update failed:', error.message)
         return { error: error.message }
       }
       await fetchAll()
@@ -239,7 +257,7 @@ export function LoanRequestsProvider({ children }) {
         .update({ notarial_fee: notarialFee, dst })
         .eq('id', id)
       if (error) {
-        console.error('[loan-requests] fee update failed:', error.message)
+        debugError('[loan-requests] fee update failed:', error.message)
         return { error: error.message }
       }
       await fetchAll()
@@ -255,7 +273,7 @@ export function LoanRequestsProvider({ children }) {
         .from('loan_request_rates')
         .upsert({ term_months: termMonths, monthly_rate: monthlyRate, updated_at: new Date().toISOString() })
       if (error) {
-        console.error('[loan-requests] rate save failed:', error.message)
+        debugError('[loan-requests] rate save failed:', error.message)
         return { error: error.message }
       }
       await fetchAll()
@@ -264,6 +282,16 @@ export function LoanRequestsProvider({ children }) {
     [isLive, fetchAll],
   )
 
+  const saveRates=useCallback(async draft=>{
+    if(!isLive||!isAdmin)return {error:'An active lender is required.'}
+    try{
+      const rows=parseLoanRateDraft(draft).map(row=>({...row,updated_at:new Date().toISOString()}))
+      const {error}=await supabase.from('loan_request_rates').upsert(rows,{onConflict:'term_months'})
+      if(error)return {error:error.message}
+      await fetchAll();return {}
+    }catch(error){return {error:error.message}}
+  },[isLive,isAdmin,fetchAll])
+
   const setAccess = useCallback(
     async (userId, enabled) => {
       if (!isLive) return { error: 'Live session required.' }
@@ -271,7 +299,7 @@ export function LoanRequestsProvider({ children }) {
         .from('loan_request_access')
         .upsert({ user_id: userId, enabled, updated_at: new Date().toISOString() })
       if (error) {
-        console.error('[loan-requests] access save failed:', error.message)
+        debugError('[loan-requests] access save failed:', error.message)
         return { error: error.message }
       }
       await fetchAll()
@@ -288,7 +316,7 @@ export function LoanRequestsProvider({ children }) {
       if (list.length === 0) return {}
       const { error } = await supabase.from('loan_requests').delete().in('id', list)
       if (error) {
-        console.error('[loan-requests] delete failed:', error.message)
+        debugError('[loan-requests] delete failed:', error.message)
         return { error: error.message }
       }
       await fetchAll()
@@ -305,7 +333,9 @@ export function LoanRequestsProvider({ children }) {
   const value = useMemo(
     () => ({
       loading,
+      refreshRequests: fetchAll,
       rates,
+      ratesError,saveRates,accessReady,accessError,
       ratesByTerm,
       canRequest,
       myRequests,
@@ -322,7 +352,7 @@ export function LoanRequestsProvider({ children }) {
       setAccess,
     }),
     [
-      loading, rates, ratesByTerm, canRequest, myRequests, requests, eventsFor, accessFor,
+      loading, fetchAll, rates,ratesError,saveRates,accessReady,accessError, ratesByTerm, canRequest, myRequests, requests, eventsFor, accessFor,
       submitRequest, cancelRequest, updateMyBank, updateStatus, updateFees, deleteRequests, setRate, setAccess,
     ],
   )

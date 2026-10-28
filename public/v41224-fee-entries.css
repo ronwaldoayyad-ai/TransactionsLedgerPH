@@ -1,0 +1,5 @@
+.item.assessed-fee-entry{background:#fff5f5;border-color:#fecaca}
+.item.assessed-fee-entry :is(b,strong,.amt){color:#b91c1c}
+.item.assessed-fee-entry .icon{color:#b91c1c;background:#fee2e2}
+.dark .item.assessed-fee-entry{background:#321d27;border-color:#71353e}
+.dark .item.assessed-fee-entry :is(b,strong,.amt){color:#fca5a5}

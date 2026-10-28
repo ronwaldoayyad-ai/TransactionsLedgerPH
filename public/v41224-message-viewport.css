@@ -1,0 +1,19 @@
+.device-holder#deviceHolder[data-device="actualweb"] #app .chat-card {
+  display: flex;
+  flex-direction: column;
+  max-height: var(--chat-available-height, calc(100dvh - 240px));
+}
+.device-holder#deviceHolder[data-device="actualweb"] #app .chat-card > * {
+  flex-shrink: 0;
+}
+.device-holder#deviceHolder[data-device="actualweb"] #app .chat-card > .chat-messages {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.device-holder#deviceHolder[data-device="actualweb"] #app .chat-viewport-tight > :is(.chat-context, .chat-date-separator, .chat-upload-note),
+.device-holder#deviceHolder[data-device="actualweb"] #app .chat-viewport-compact > .chat-topbar {
+  display: none;
+}

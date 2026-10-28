@@ -2,6 +2,8 @@
 // (camelCase, numbers) and back. The app shapes are the PRD §7 contracts.
 import { buildDisclosure } from './amortization'
 import { supabase } from '../supabaseClient'
+import { paymentTimestamp } from './paymentTimestamp'
+import { transactionAmounts } from './paymentReadModel'
 
 const num = (v) => (v == null ? 0 : Number(v))
 const day = (v) => (v ? String(v).slice(0, 10) : null)
@@ -20,14 +22,19 @@ const stamp = (v) =>
 
 export const mapProfile = (r) => ({
   id: r.id,
+  accountNumber: r.borrower_account_number ?? null,
   name: r.name,
   firstName: r.first_name ?? '',
   lastName: r.last_name ?? '',
   nickname: r.nickname ?? '',
   email: r.email,
   phone: r.phone ?? '',
+  birthDate: day(r.birth_date) || '',
+  address: r.address ?? '',
+  occupation: r.occupation ?? '',
   role: r.role,
   status: r.status,
+  creditBalance: num(r.credit_balance),
   invitedAt: day(r.invited_at),
   lastLogin: day(r.last_login),
   avatarPath: r.avatar_path ?? null,
@@ -42,6 +49,7 @@ export const mapLoan = (r) => {
     userId: r.user_id,
     label: r.label,
     txnType: r.txn_type,
+    loanCategory: r.loan_category ?? null,
     principal: num(r.principal),
     monthlyRate: num(r.monthly_rate),
     durationMonths: r.duration_months,
@@ -62,10 +70,13 @@ export const mapLoan = (r) => {
 export const mapTransaction = (r) => ({
   id: r.id,
   loanId: r.loan_id,
+  feeAssessmentId: r.fee_assessment_id ?? null,
+  feeKind: r.fee_kind ?? null,
+  transactionGroup: r.transaction_group ?? null,
   userId: r.user_id,
   n: r.n,
   description: r.description,
-  amount: num(r.amount),
+  ...transactionAmounts(r),
   type: r.type,
   txnDate: day(r.txn_date),
   dueDate: day(r.due_date),
@@ -87,16 +98,26 @@ export const mapPayment = (r, fileUrl = null) => ({
   fileType: r.file_type,
   filePath: r.file_path,
   fileUrl,
-  submittedAt: day(r.submitted_at),
+  submittedAt: paymentTimestamp(r),
+  paidDate: day(r.paid_date),
   status: r.status,
-  reviewedAt: day(r.reviewed_at),
+  reviewedAt: r.reviewed_at,
   note: r.note ?? '',
+  submissionNotes: r.submission_notes ?? '',
+  allocations: r.posted_allocations ?? r.requested_allocations,
+  requestedAllocations: r.requested_allocations,
+  correctionOf: r.correction_of,
+  correctionNote: r.correction_note,
+  retractedAt: r.retracted_at,
+  receiptNumber: r.receipt_number,
+  postedAt: r.posted_at ?? null,
 })
 
 export const mapPaymentLog = (r) => ({
   id: r.id,
   userId: r.user_id,
   kind: r.kind,
+  sourcePostingId: r.source_posting_id ?? null,
   txnDate: day(r.txn_date),
   reference: r.reference ?? '',
   subject: r.subject ?? '',
@@ -214,8 +235,9 @@ export const toDbTransaction = (t) => ({
   user_id: t.userId,
   n: t.n,
   description: t.description,
-  amount: t.amount,
+  amount: t.originalAmount ?? t.amount,
   type: t.type,
+  transaction_group: t.transactionGroup ?? null,
   txn_date: t.txnDate,
   due_date: t.dueDate,
   status: t.status,

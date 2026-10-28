@@ -11,7 +11,6 @@ import RefreshButton from '../../components/RefreshButton'
 import { Button, Card, EmptyState } from '../../components/ui'
 import { formatManilaDateTime } from '../../lib/amortization'
 import {
-  NOTIFICATION_CATEGORIES,
   categoryMeta,
   isImageAttachment,
   formatBytes,
@@ -111,6 +110,7 @@ function NotificationRow({ n, read, onMarkRead, onMarkUnread, onReply, onReact, 
   const [acceptErr, setAcceptErr] = useState('')
   const [reacted, setReacted] = useState(null) // emoji the borrower picked
   const [reacting, setReacting] = useState(false)
+  const [reactionsOpen,setReactionsOpen] = useState(false)
   const replyRef = useRef(null)
   const attachRef = useRef(null)
   const hasAttachments = (n.attachments?.length ?? 0) > 0
@@ -166,7 +166,7 @@ function NotificationRow({ n, read, onMarkRead, onMarkUnread, onReply, onReact, 
     const res = await onReact(n, emoji)
     setReacting(false)
     if (!res?.error) {
-      setReacted(emoji)
+      setReacted(emoji);setReactionsOpen(false)
       if (!read) onMarkRead(n.id)
     }
   }
@@ -227,6 +227,7 @@ function NotificationRow({ n, read, onMarkRead, onMarkUnread, onReply, onReact, 
           <Icon name="mail" className="h-4 w-4" />
           Reply
         </button>
+<button type="button" aria-expanded={reactionsOpen} onClick={()=>setReactionsOpen(value=>!value)} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700">{reacted||'☺'} React</button>
         {hasAttachments && (
           <button
             onClick={openAttachments}
@@ -279,7 +280,7 @@ function NotificationRow({ n, read, onMarkRead, onMarkUnread, onReply, onReact, 
       </div>
 
       {/* Quick reactions — sending one notifies your lender (raises their badge). */}
-      <div className="mt-2 flex flex-wrap items-center gap-1.5 pl-6">
+      {reactionsOpen&&<div className="mt-2 flex flex-wrap items-center gap-1.5 pl-6">
         {QUICK_REACTIONS.map((emoji) => (
           <button
             key={emoji}
@@ -298,6 +299,7 @@ function NotificationRow({ n, read, onMarkRead, onMarkUnread, onReply, onReact, 
           <span className="text-xs font-medium text-emerald-700">Sent {reacted} to your lender</span>
         )}
       </div>
+      }
       {acceptErr && <p className="mt-1.5 pl-6 text-xs font-medium text-red-600">{acceptErr}</p>}
 
       {open && (
@@ -355,7 +357,7 @@ function NotificationRow({ n, read, onMarkRead, onMarkUnread, onReply, onReact, 
 export default function UserNotifications() {
   const { session } = useApp()
   const meId = session.user.id
-  const { notifications, isRead, markRead, markUnread, unreadCount, notifyAdmins } = useNotifications()
+  const { notifications, categoriesAll, isRead, markRead, markUnread, unreadCount, notifyAdmins } = useNotifications()
   const { disbursements } = useDisbursements()
   const acceptDisbursement = useAcceptDisbursement()
   const { sendMessage } = useMessages()
@@ -379,8 +381,8 @@ export default function UserNotifications() {
   // Categories that actually appear, so the filter bar only shows usable chips.
   const presentCategories = useMemo(() => {
     const set = new Set(notifications.map((n) => n.category))
-    return NOTIFICATION_CATEGORIES.filter((c) => set.has(c.value))
-  }, [notifications])
+    return categoriesAll.filter((c) => set.has(c.value))
+  }, [notifications,categoriesAll])
 
   const visible = useMemo(() => {
     if (filter === 'all') return notifications
@@ -393,6 +395,7 @@ export default function UserNotifications() {
   const onReply = async (n, text) => {
     await sendMessage(meId, buildReplyQuote(n) + text)
     await notifyAdmins({
+      autoEvent:'notification.reply',eventPayload:{source_id:n.id},
       category: n.category,
       title: n.title ? `Reply: ${n.title}` : 'Reply from borrower',
       body: `${buildReplyQuote(n)}${text}`,
@@ -402,6 +405,7 @@ export default function UserNotifications() {
   // React notifies the admin (raises their unread badge in the Inbox).
   const onReact = (n, emoji) =>
     notifyAdmins({
+      autoEvent:'notification.reaction',eventPayload:{source_id:n.id},
       category: n.category,
       title: `Reacted ${emoji}`,
       body: `${emoji} — reacted to your notification${n.title ? ` “${n.title}”` : ''}.`,

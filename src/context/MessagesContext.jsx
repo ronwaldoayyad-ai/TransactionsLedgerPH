@@ -1,7 +1,10 @@
+import { debugError, debugWarn } from "../lib/debugLog"
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { useApp } from './AppContext'
 import { supabase } from '../supabaseClient'
 import { playReaction, playReceive } from '../lib/chatSounds'
+import { useRecordRefresh } from '../lib/recordRefresh'
+import { subscribeToInvalidations } from '../lib/realtimeInvalidation'
 
 // Isolated data layer for in-app messaging (borrower ⇄ lender). Mirrors the
 // app's dual-mode pattern: live sessions read/write the `messages` table and
@@ -21,6 +24,12 @@ const mapMessage = (r) => ({
   readAt: r.read_at ?? null,
   reactions: r.reactions ?? {},
   pinned: !!r.pinned,
+  replyTo: r.reply_to_id,
+  notificationId: r.notification_id,
+  attachmentPath: r.attachment_path,
+  attachmentName: r.attachment_name,
+  attachmentType: r.attachment_type,
+  attachmentSize: r.attachment_size,
 })
 
 // Demo store: module-scoped so it survives navigation within the tab.
@@ -40,6 +49,7 @@ export function MessagesProvider({ children }) {
   const [liveMessages, setLiveMessages] = useState([])
   const [demoVersion, setDemoVersion] = useState(0)
   const [loading, setLoading] = useState(isLive)
+  const fetchGeneration = useRef(0)
 
   // Messages visible to the current identity (admin: all; borrower: own).
   const messages = useMemo(() => {
@@ -53,42 +63,40 @@ export function MessagesProvider({ children }) {
 
   const fetchMessages = useCallback(async () => {
     if (!isLive || !meId) return
+    const generation=++fetchGeneration.current
     let q = supabase.from('messages').select('*').order('created_at')
     if (!isAdmin) q = q.eq('borrower_id', meId)
     const { data, error } = await q
+    if(generation!==fetchGeneration.current)return
     if (error) {
-      console.error('[messages] load failed:', error.message)
+      debugError('[messages] load failed:', error.message)
       return
     }
     setLiveMessages((data ?? []).map(mapMessage))
   }, [isLive, isAdmin, meId])
 
+  useRecordRefresh(fetchMessages, isLive && !!meId)
+
   // Initial load (live only) — all setState happens after the first await.
   useEffect(() => {
     if (!isLive || !meId) return undefined
     let active = true
+    const generationRef=fetchGeneration
     ;(async () => {
       await fetchMessages()
       if (active) setLoading(false)
     })()
     return () => {
       active = false
+      ++generationRef.current
     }
   }, [isLive, meId, fetchMessages])
 
   // Realtime: refetch on any change the current user is allowed to see.
   useEffect(() => {
     if (!isLive || !meId) return undefined
-    const channel = supabase
-      .channel(`messages-rt-${meId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, () => {
-        fetchMessages()
-      })
-      .subscribe()
-    return () => {
-      supabase.removeChannel(channel)
-    }
-  }, [isLive, meId, fetchMessages])
+    return subscribeToInvalidations({client:supabase,name:`messages-rt-${meId}`,table:'message_change_signals',ownerId:meId,isAdmin,onChange:fetchMessages,onError:error=>debugWarn('[messages]',error.message)})
+  }, [isLive, meId, isAdmin, fetchMessages])
 
   // Notification sounds for INCOMING activity: messages received from the other
   // party, and reactions they add. My own send/reaction sounds play locally in
@@ -125,7 +133,7 @@ export function MessagesProvider({ children }) {
           .from('messages')
           .insert({ borrower_id: target, from_admin: isAdmin, body: text })
         if (error) {
-          console.error('[messages] send failed:', error.message)
+          debugError('[messages] send failed:', error.message)
           return
         }
         await fetchMessages()
@@ -164,7 +172,7 @@ export function MessagesProvider({ children }) {
           .eq('from_admin', toMeFromAdmin)
           .is('read_at', null)
         if (error) {
-          console.error('[messages] mark-read failed:', error.message)
+          debugError('[messages] mark-read failed:', error.message)
           return
         }
         await fetchMessages()
@@ -194,7 +202,7 @@ export function MessagesProvider({ children }) {
       if (isLive) {
         const { error } = await supabase.from('messages').update({ reactions: next }).eq('id', messageId)
         if (error) {
-          console.error('[messages] react failed:', error.message)
+          debugError('[messages] react failed:', error.message)
           return
         }
         await fetchMessages()
@@ -219,7 +227,7 @@ export function MessagesProvider({ children }) {
         }
         const { error } = await supabase.from('messages').update({ pinned: next }).eq('id', messageId)
         if (error) {
-          console.error('[messages] pin failed:', error.message)
+          debugError('[messages] pin failed:', error.message)
           return
         }
         await fetchMessages()
@@ -240,7 +248,7 @@ export function MessagesProvider({ children }) {
       if (isLive) {
         const { error } = await supabase.from('messages').delete().eq('id', messageId)
         if (error) {
-          console.error('[messages] delete failed:', error.message)
+          debugError('[messages] delete failed:', error.message)
           return
         }
         await fetchMessages()
@@ -260,7 +268,7 @@ export function MessagesProvider({ children }) {
       if (isLive) {
         const { error } = await supabase.from('messages').delete().eq('borrower_id', target)
         if (error) {
-          console.error('[messages] clear failed:', error.message)
+          debugError('[messages] clear failed:', error.message)
           return
         }
         await fetchMessages()
@@ -298,6 +306,7 @@ export function MessagesProvider({ children }) {
   const value = useMemo(
     () => ({
       messages,
+      refreshMessages: fetchMessages,
       loading,
       isAdmin,
       me,
@@ -311,7 +320,7 @@ export function MessagesProvider({ children }) {
       unreadByBorrower,
       unreadTotal,
     }),
-    [messages, loading, isAdmin, me, sendMessage, markRead, reactToMessage, togglePin, deleteMessage, clearConversation, messagesFor, unreadByBorrower, unreadTotal],
+    [messages, fetchMessages, loading, isAdmin, me, sendMessage, markRead, reactToMessage, togglePin, deleteMessage, clearConversation, messagesFor, unreadByBorrower, unreadTotal],
   )
 
   return <MessagesContext.Provider value={value}>{children}</MessagesContext.Provider>

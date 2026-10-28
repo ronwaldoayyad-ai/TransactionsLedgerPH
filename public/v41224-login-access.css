@@ -1,0 +1,38 @@
+.login-access-dialog{box-sizing:border-box;width:min(360px,calc(100vw - 24px));max-height:calc(100dvh - 32px);padding:25px 21px 20px;border:1px solid #edf2fb;border-radius:28px;background:#fff;color:#101d35;text-align:center;box-shadow:0 20px 60px #16264c40;overflow:auto;font:12px/1.55 Inter,system-ui,sans-serif;animation:login-access-appear .24s cubic-bezier(.22,1,.36,1)}
+.login-access-dialog::backdrop{background:#1725416b;backdrop-filter:blur(3px)}
+.login-access-close{position:absolute;right:14px;top:14px;display:grid;place-items:center;width:32px;height:32px;border:0;border-radius:50%;background:#f0f5fb;color:#7d91ac;font-size:22px;cursor:pointer}
+.login-access-symbol{display:grid;place-items:center;width:62px;height:62px;margin:0 auto 17px;border:6px solid #fff1f4;border-radius:50%;background:#fff7f8;box-shadow:inset 0 0 0 1px #ffdae2;color:#ff3966}
+.login-access-symbol svg{width:25px;height:25px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.login-access-dialog h2{margin:0 0 12px;font-size:17px;line-height:1.3;letter-spacing:-.4px}
+.login-access-message{padding:10px 12px;border:1px solid #ffd8df;border-radius:10px;background:#fff3f5;color:#db1748}
+.login-access-dialog #loginAccessDescription{color:#607492;font-size:11px;margin:13px 0 17px;line-height:1.65}
+.login-access-attempts{padding:13px;text-align:left;background:#f7f9fc;border:1px solid #e4ecf8;border-radius:14px;margin:0 0 18px}
+.login-access-attempts>div:first-child{display:flex;justify-content:space-between;align-items:center;gap:5px;font-size:10px}
+.login-access-attempts strong{border:1px solid #e3eaf5;background:#fff;border-radius:6px;padding:1px 6px;white-space:nowrap;color:#c82e52}
+.login-access-attempts p{margin:7px 0 0;font-size:10px;line-height:1.5;color:#657b9b}
+.login-access-meter{display:flex;gap:4px;margin-top:10px}.login-access-meter span{flex:1;height:5px;border-radius:8px;background:#dfe7f1}.login-access-meter span.is-used{background:#fb426a}
+.login-access-reference{font-size:10px;color:#607492}.login-access-reference strong{display:block;overflow-wrap:anywhere;color:#244578;font-size:11px}
+.login-access-dialog .primary{display:block;width:100%;min-height:44px;border:0;border-radius:11px;background:#225df0;color:#fff;font:700 12px/1.3 Inter,system-ui,sans-serif;cursor:pointer;margin:15px 0 8px}
+.login-access-secondary{display:block;width:100%;min-height:42px;border:1px solid #e1eaf7;border-radius:11px;background:#f8faff;color:#315380;font:500 11px/1.3 Inter,system-ui,sans-serif;cursor:pointer}
+.login-access-other{border:0;background:none;padding:12px 6px 0;color:#315380;font-size:11px;cursor:pointer}
+.login-access-dialog button:focus-visible{outline:3px solid #82b5ff;outline-offset:3px}
+.login-access-notice{margin:10px 0;padding:10px 12px;border:1px solid #ffd8df;border-radius:12px;background:#fff3f5;color:#bb284d;font-size:11px}.login-access-notice[hidden]{display:none}.login-access-notice button{display:block;border:0;background:none;padding:6px 0 0;font:700 11px Inter,system-ui,sans-serif;color:#225df0}
+.login-code-auto-hint{text-align:center;color:#637d9c;font-size:11px;margin:10px 0 0}
+.dark .login-access-dialog{background:#182d4b;color:#edf5ff}.dark .login-access-attempts{background:#213957;border-color:#385473}.dark .login-access-dialog #loginAccessDescription{color:#b4c8e3}
+@keyframes login-access-appear{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.login-access-dialog{animation:none}}
+.login-access-dialog h2,.login-access-dialog #loginAccessDescription,.login-access-message,.login-access-attempts p,.login-access-notice{text-align:center}
+.login-access-dialog h2{width:100%}
+.login-access-notice button{margin-inline:auto;text-align:center}
+.login-access-notice{box-sizing:border-box;width:100%;margin-inline:auto;grid-column:1 / -1}
+.login-field-control.is-access-locked{background:#f0f3f8;border-color:#dce3ed!important;box-shadow:none!important;opacity:.7}
+.login-field-control.is-access-locked input,.login-field-control.is-access-locked button{cursor:not-allowed}
+.login-code-cell.is-access-locked{background:#dce3ed!important;color:#8996aa;box-shadow:none!important;outline:none!important}
+.login-code-cell.is-access-locked::before{display:none!important;animation:none!important}
+.login-code-cell.is-access-locked::after{background:#f1f4f8!important}
+.login-code-cell.is-access-locked .login-code-number{animation:none!important}
+.dark .login-field-control.is-access-locked,.dark .login-code-cell.is-access-locked::after{background:#25364b!important}
+
+.managed-notification-dialog h2{margin-top:20px}.managed-notification-body{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.7;color:#58718e;margin:18px 0}
+
+.managed-notification-banner{position:fixed;z-index:2147483600;bottom:calc(95px + env(safe-area-inset-bottom));left:50%;transform:translateX(-50%);width:min(390px,calc(100vw - 28px));box-sizing:border-box;display:flex;align-items:flex-start;gap:12px;background:#17375a;color:#fff;border:1px solid #537296;border-radius:16px;padding:15px 16px;box-shadow:0 12px 35px #142c4e35;font:12px/1.6 Inter,system-ui,sans-serif}.managed-notification-banner>div{flex:1;min-width:0}.managed-notification-banner strong{display:block;font-size:12px}.managed-notification-banner p{margin:4px 0 0;white-space:pre-wrap;overflow-wrap:anywhere;color:#e0edff}.managed-notification-banner button{border:0;background:none;color:#dceaff;font-size:23px;line-height:1;padding:0 2px;cursor:pointer}

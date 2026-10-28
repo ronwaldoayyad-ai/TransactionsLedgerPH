@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useApp } from '../context/AppContext'
 import { useDisbursements } from '../context/DisbursementsContext'
@@ -12,6 +12,9 @@ import { PulseBadge } from './ui'
 import ProfileModal from './ProfileModal'
 import AnnouncementBanner from './announcements/AnnouncementBanner'
 import AnnouncementToasts from './announcements/AnnouncementToasts'
+import AdminWorkspaceBoundary from './admin/AdminWorkspaceBoundary'
+import { useReleaseAccess } from '../context/ReleaseAccessContext'
+const AdminWorkspace = lazy(() => import('./admin/AdminWorkspace'))
 
 // Nav is grouped into labelled sections for visual hierarchy. The first group
 // is title-less (a standalone Overview entry); the rest render an uppercase
@@ -42,6 +45,7 @@ const adminNav = [
     title: 'Loans',
     items: [
       { to: '/admin/calculator', label: 'Loan Calculator', icon: 'calculator' },
+      { to: '/admin/fee-manager', label: 'Loan fees & billing', icon: 'calculator' },
       { to: '/admin/loan-requests', label: 'Loan Requests', icon: 'file' },
       { to: '/admin/loan-tracker', label: 'Loan Tracker', icon: 'wallet' },
     ],
@@ -52,6 +56,8 @@ const adminNav = [
       { to: '/admin/queue', label: 'Verification Queue', icon: 'inbox' },
       { to: '/admin/users', label: 'User Management', icon: 'users' },
       { to: '/admin/logs', label: 'Reports & Logs', icon: 'scroll' },
+      { to: '/admin/documentation', label: 'Documentation', icon: 'file' },
+      { to: '/admin/settings', label: 'Settings', icon: 'sliders' },
     ],
   },
 ]
@@ -101,12 +107,13 @@ function UnreadBadge({ count, className = '' }) {
 }
 
 export default function AppShell({ children }) {
+  const { classicAdmin, chooseAdminInterface, borrower } = useReleaseAccess()
   const { session, realSession, isViewingAs, stopViewAs, signOut, payments, paymentLogs } = useApp()
   const { unreadTotal } = useMessages()
   const { unreadCount: notifUnread } = useNotifications()
   const { invoices } = useInvoices()
   const { disbursements } = useDisbursements()
-  const { myRequests, requests: allLoanRequests } = useLoanRequests()
+  const { canRequest, myRequests, requests: allLoanRequests } = useLoanRequests()
   const navigate = useNavigate()
   const location = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
@@ -173,7 +180,7 @@ export default function AppShell({ children }) {
     stopViewAs()
     navigate('/admin/users')
   }
-  const nav = isAdmin ? adminNav : userNav
+  const nav = isAdmin ? adminNav : userNav.map(group=>({...group,items:group.items.filter(item=>item.to!=='/portal/loan-request'||canRequest)})).filter(group=>group.items.length)
   const pendingCount = payments.filter((p) => p.status === 'pending').length
   // Admin workload badges: how many items are currently awaiting admin action.
   // Unlike the borrower's "changed since last visit" watermarks, these persist
@@ -306,6 +313,8 @@ export default function AppShell({ children }) {
     </div>
   )
 
+  if (isAdmin && !classicAdmin) return <AdminWorkspaceBoundary><Suspense fallback={<div className="p-8" role="status">Opening workspace… <a href="/admin/classic">Use classic admin</a></div>}><AdminWorkspace>{children}</AdminWorkspace></Suspense></AdminWorkspaceBoundary>
+
   return (
     <div className="min-h-screen lg:flex">
       {/* Desktop sidebar */}
@@ -343,6 +352,8 @@ export default function AppShell({ children }) {
       )}
 
       <main className="flex-1 lg:ml-64">
+        {isAdmin && <div className="flex flex-wrap items-center justify-between gap-3 border-b border-blue-200 bg-blue-50 px-5 py-3 text-sm text-blue-900"><span>Classic admin · Your account and records are unchanged.</span><button type="button" className="rounded-lg bg-blue-600 px-3 py-2 text-white" onClick={() => chooseAdminInterface('new')}>Use new admin workspace</button></div>}
+        {!isAdmin && borrower.error && <p className="bg-amber-50 px-5 py-3 text-sm text-amber-900" role="status">{borrower.error}</p>}
         {/* Push-down announcement banner(s) for borrowers */}
         <AnnouncementBanner />
         {isViewingAs && (

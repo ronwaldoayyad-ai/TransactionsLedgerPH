@@ -1,5 +1,16 @@
 // Minimal CSV utilities for the Overall Transactions import feature.
 
+// Quotes alone do not prevent spreadsheet formula execution. Preserve genuine
+// signed amounts; force text for formulas and control-character prefixes.
+export function spreadsheetSafeCSV(text) {
+  const {headers,rows}=parseCSV(text)
+  return [headers,...rows].map(row=>row.map(value=>{
+    let cell=String(value)
+    if((/^\s*[=+@-]/.test(cell)&&!/^[-+]?\d+(?:\.\d+)?$/.test(cell))||/^[\t\r\n]/.test(cell))cell="'"+cell
+    return /[",\r\n]/.test(cell)?'"'+cell.replace(/"/g,'""')+'"':cell
+  }).join(',')).join('\n')
+}
+
 // Parses CSV text (handles quoted fields, embedded commas/quotes, CRLF).
 // Returns { headers: string[], rows: string[][] }.
 export function parseCSV(text) {

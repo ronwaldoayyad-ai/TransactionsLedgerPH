@@ -1,0 +1,3 @@
+const fs=require('fs'),path=require('path'),root=path.resolve(__dirname,'../..');
+const source=fs.readFileSync(path.join(root,'src/lib/retailBrands.js'),'utf8').replace("import {transactionGroup} from './transactionGroups.js'",'const {transactionGroup}=window.TransactionGroups').replace(/\bexport /g,'');
+fs.writeFileSync(path.join(root,'public/retail-brand-core.js'),'// Generated from src/lib/retailBrands.js; keep parity checks passing.\n(()=>{\n'+source+'\nwindow.RetailBrands={RETAIL_BRANDS,brandText,brandDomain,retailTarget,matchRetailBrand,resolveRetailBrand,brandLogoUrl,uniqueRetailTargets};\n})();\n');

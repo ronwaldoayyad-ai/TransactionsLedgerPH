@@ -415,8 +415,8 @@ export default function AdminDashboard() {
   return (
     <>
       <PageHeader
-        title="Command Center"
-        subtitle="Portfolio health, verifications, and recent activity at a glance."
+        title="Portfolio detail"
+        subtitle="Detailed receivables, due-date controls and borrower breakdowns."
         action={
           <div className="flex flex-wrap gap-2">
             <RefreshButton />
@@ -712,12 +712,11 @@ export default function AdminDashboard() {
           subtitle="Past / current / next dues by borrower, plus the collections list. Pick a single due date, or exclude non-payers."
           action={
             <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
-              <Switch
+              <Switch stateLabels={{"on":"Only open transactions are shown","off":"All transactions are shown"}}
                 checked={grandHideSettled}
                 onChange={setGrandHideSettled}
-                label={grandHideSettled ? 'Show all transactions' : 'Hide paid, refunded, and cancelled transactions'}
+                label="Hide settled transactions"
               />
-              {grandHideSettled ? 'Show all transactions' : 'Hide paid/refunded/cancelled'}
             </label>
           }
         />

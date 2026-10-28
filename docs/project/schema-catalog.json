@@ -1,0 +1,4425 @@
+{
+  "tables": [
+    {
+      "rls": true,
+      "name": "announcement_templates",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "type",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "body",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "created_by",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "announcement_templates: admin all",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "mobile_live_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (id)",
+      "foreign_keys": null
+    },
+    {
+      "rls": true,
+      "name": "announcements",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "type",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "body",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "audience",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "target_user_ids",
+          "type": "uuid[]",
+          "nullable": false
+        },
+        {
+          "name": "created_by",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "starts_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        },
+        {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        },
+        {
+          "name": "one_time",
+          "type": "boolean",
+          "nullable": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "announcements: admin all",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "announcements: read active",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        },
+        {
+          "name": "announcements: recipient consume one-time",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "DELETE"
+        },
+        {
+          "name": "mobile_live_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (id)",
+      "foreign_keys": null
+    },
+    {
+      "rls": true,
+      "name": "arbitrage_loans",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "principal",
+          "type": "numeric(12,2)",
+          "nullable": false
+        },
+        {
+          "name": "txn_date",
+          "type": "date",
+          "nullable": false
+        },
+        {
+          "name": "first_payment_date",
+          "type": "date",
+          "nullable": false
+        },
+        {
+          "name": "duration_months",
+          "type": "integer",
+          "nullable": false
+        },
+        {
+          "name": "last_payment_date",
+          "type": "date",
+          "nullable": false
+        },
+        {
+          "name": "borrower_rate",
+          "type": "numeric(6,4)",
+          "nullable": false
+        },
+        {
+          "name": "cost_rate",
+          "type": "numeric(6,4)",
+          "nullable": false
+        },
+        {
+          "name": "dst",
+          "type": "numeric(12,2)",
+          "nullable": false
+        },
+        {
+          "name": "processing_fee",
+          "type": "numeric(12,2)",
+          "nullable": false
+        },
+        {
+          "name": "notarial_fee",
+          "type": "numeric(12,2)",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "arbitrage_loans: admin only",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "mobile_live_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (id)",
+      "foreign_keys": [
+        {
+          "name": "arbitrage_loans_user_id_fkey",
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE"
+        }
+      ]
+    },
+    {
+      "rls": true,
+      "name": "audit_log",
+      "columns": [
+        {
+          "name": "id",
+          "type": "bigint",
+          "nullable": false
+        },
+        {
+          "name": "at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        },
+        {
+          "name": "actor",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "action",
+          "type": "public.audit_action",
+          "nullable": false
+        },
+        {
+          "name": "detail",
+          "type": "text",
+          "nullable": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "audit: admin delete",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "DELETE"
+        },
+        {
+          "name": "audit: admin read",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        },
+        {
+          "name": "audit: lender append",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "INSERT"
+        },
+        {
+          "name": "mobile_live_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (id)",
+      "foreign_keys": null
+    },
+    {
+      "rls": true,
+      "name": "borrower_preferences",
+      "columns": [
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "avatar_id",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "use_profile_photo",
+          "type": "boolean",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        },
+        {
+          "name": "birth_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "address",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "occupation",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "ui_options",
+          "type": "jsonb",
+          "nullable": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "mobile_active_account",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "mobile_valid_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "preferences: delete own",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "DELETE"
+        },
+        {
+          "name": "preferences: insert own",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "INSERT"
+        },
+        {
+          "name": "preferences: read own",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        },
+        {
+          "name": "preferences: update own",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "UPDATE"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (user_id)",
+      "foreign_keys": [
+        {
+          "name": "borrower_preferences_user_id_fkey",
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE"
+        }
+      ]
+    },
+    {
+      "rls": true,
+      "name": "borrower_statements",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "statement_number",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "due_date",
+          "type": "date",
+          "nullable": false
+        },
+        {
+          "name": "status_filter",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "rows",
+          "type": "jsonb",
+          "nullable": false
+        },
+        {
+          "name": "total_due",
+          "type": "numeric(14,2)",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        },
+        {
+          "name": "scope_filter",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "deleted_at",
+          "type": "timestamp with time zone",
+          "nullable": true
+        }
+      ],
+      "policies": [
+        {
+          "name": "mobile_valid_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "own_statements",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        },
+        {
+          "name": "visible_borrower_statements",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (id)",
+      "foreign_keys": [
+        {
+          "name": "borrower_statements_user_id_fkey",
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id)"
+        }
+      ]
+    },
+    {
+      "rls": true,
+      "name": "fee_assessments",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "actor_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "operation_key",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "source_due_date",
+          "type": "date",
+          "nullable": false
+        },
+        {
+          "name": "assessment_month",
+          "type": "date",
+          "nullable": false
+        },
+        {
+          "name": "charge_due_date",
+          "type": "date",
+          "nullable": false
+        },
+        {
+          "name": "finance_enabled",
+          "type": "boolean",
+          "nullable": false
+        },
+        {
+          "name": "finance_rate",
+          "type": "numeric(5,2)",
+          "nullable": false
+        },
+        {
+          "name": "late_enabled",
+          "type": "boolean",
+          "nullable": false
+        },
+        {
+          "name": "base_amount",
+          "type": "numeric(12,2)",
+          "nullable": false
+        },
+        {
+          "name": "finance_amount",
+          "type": "numeric(12,2)",
+          "nullable": false
+        },
+        {
+          "name": "late_amount",
+          "type": "numeric(12,2)",
+          "nullable": false
+        },
+        {
+          "name": "total_amount",
+          "type": "numeric(12,2)",
+          "nullable": false
+        },
+        {
+          "name": "source_rows",
+          "type": "jsonb",
+          "nullable": false
+        },
+        {
+          "name": "source_count",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        },
+        {
+          "name": "voided_at",
+          "type": "timestamp with time zone",
+          "nullable": true
+        },
+        {
+          "name": "voided_by",
+          "type": "uuid",
+          "nullable": true
+        },
+        {
+          "name": "void_reason",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "assessment_mode",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "source_due_dates",
+          "type": "date[]",
+          "nullable": true
+        },
+        {
+          "name": "prior_assessment_count",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "repeat_confirmed",
+          "type": "boolean",
+          "nullable": false
+        },
+        {
+          "name": "repeat_review_token",
+          "type": "text",
+          "nullable": true
+        }
+      ],
+      "policies": [
+        {
+          "name": "fee_assessment_read",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        },
+        {
+          "name": "mobile_live_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (id)",
+      "foreign_keys": [
+        {
+          "name": "fee_assessments_actor_id_fkey",
+          "definition": "FOREIGN KEY (actor_id) REFERENCES public.profiles(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "fee_assessments_user_id_fkey",
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "fee_assessments_voided_by_fkey",
+          "definition": "FOREIGN KEY (voided_by) REFERENCES public.profiles(id) ON DELETE RESTRICT"
+        }
+      ]
+    },
+    {
+      "rls": true,
+      "name": "interest_rates",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "kind",
+          "type": "public.rate_kind",
+          "nullable": false
+        },
+        {
+          "name": "rate",
+          "type": "numeric(6,4)",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "interest_rates: admin only",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "mobile_live_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (id)",
+      "foreign_keys": null
+    },
+    {
+      "rls": true,
+      "name": "invoices",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "invoice_number",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "billed_to_name",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "invoice_date",
+          "type": "date",
+          "nullable": false
+        },
+        {
+          "name": "due_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "selected_due_dates",
+          "type": "date[]",
+          "nullable": false
+        },
+        {
+          "name": "subtotal",
+          "type": "numeric(14,2)",
+          "nullable": false
+        },
+        {
+          "name": "amount_paid",
+          "type": "numeric(14,2)",
+          "nullable": false
+        },
+        {
+          "name": "processing_fee",
+          "type": "numeric(14,2)",
+          "nullable": false
+        },
+        {
+          "name": "total_due",
+          "type": "numeric(14,2)",
+          "nullable": false
+        },
+        {
+          "name": "line_items",
+          "type": "jsonb",
+          "nullable": false
+        },
+        {
+          "name": "created_by",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "invoices: admin delete",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "DELETE"
+        },
+        {
+          "name": "invoices: admin insert",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "INSERT"
+        },
+        {
+          "name": "invoices: admin update",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "UPDATE"
+        },
+        {
+          "name": "invoices: read own assigned or admin",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        },
+        {
+          "name": "mobile_active_account",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "mobile_valid_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (id)",
+      "foreign_keys": [
+        {
+          "name": "invoices_user_id_fkey",
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE"
+        }
+      ]
+    },
+    {
+      "rls": true,
+      "name": "ledger_change_signals",
+      "columns": [
+        {
+          "name": "borrower_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "version",
+          "type": "bigint",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "mobile_valid_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "owner_or_lender",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (borrower_id)",
+      "foreign_keys": [
+        {
+          "name": "ledger_change_signals_borrower_id_fkey",
+          "definition": "FOREIGN KEY (borrower_id) REFERENCES public.profiles(id) ON DELETE CASCADE"
+        }
+      ]
+    },
+    {
+      "rls": true,
+      "name": "loan_disbursements",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "disbursement_number",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "reference",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "request_id",
+          "type": "uuid",
+          "nullable": true
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "disbursement_date",
+          "type": "date",
+          "nullable": false
+        },
+        {
+          "name": "agreement_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "loan_account_number",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "bank_name",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "bank_account_number",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "bank_account_name",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "total_sanctioned_amount",
+          "type": "numeric(14,2)",
+          "nullable": false
+        },
+        {
+          "name": "gross_amount",
+          "type": "numeric(14,2)",
+          "nullable": false
+        },
+        {
+          "name": "percentage_of_total",
+          "type": "numeric(7,4)",
+          "nullable": false
+        },
+        {
+          "name": "value_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "processing_fee",
+          "type": "numeric(14,2)",
+          "nullable": false
+        },
+        {
+          "name": "notarial_fee",
+          "type": "numeric(14,2)",
+          "nullable": false
+        },
+        {
+          "name": "dst",
+          "type": "numeric(14,2)",
+          "nullable": false
+        },
+        {
+          "name": "total_deductions",
+          "type": "numeric(14,2)",
+          "nullable": false
+        },
+        {
+          "name": "net_proceeds",
+          "type": "numeric(14,2)",
+          "nullable": false
+        },
+        {
+          "name": "disbursement_mode",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "deduction_items",
+          "type": "jsonb",
+          "nullable": false
+        },
+        {
+          "name": "acknowledged_at",
+          "type": "timestamp with time zone",
+          "nullable": true
+        },
+        {
+          "name": "acknowledged_by",
+          "type": "uuid",
+          "nullable": true
+        },
+        {
+          "name": "created_by",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "disbursements: admin delete",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "DELETE"
+        },
+        {
+          "name": "disbursements: admin insert",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "INSERT"
+        },
+        {
+          "name": "disbursements: admin update",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "UPDATE"
+        },
+        {
+          "name": "disbursements: read own assigned or admin",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        },
+        {
+          "name": "mobile_active_account",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "mobile_valid_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (id)",
+      "foreign_keys": [
+        {
+          "name": "loan_disbursements_acknowledged_by_fkey",
+          "definition": "FOREIGN KEY (acknowledged_by) REFERENCES public.profiles(id) ON DELETE SET NULL"
+        },
+        {
+          "name": "loan_disbursements_request_id_fkey",
+          "definition": "FOREIGN KEY (request_id) REFERENCES public.loan_requests(id) ON DELETE SET NULL"
+        },
+        {
+          "name": "loan_disbursements_user_id_fkey",
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE"
+        }
+      ]
+    },
+    {
+      "rls": true,
+      "name": "loan_request_access",
+      "columns": [
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "enabled",
+          "type": "boolean",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "loan access: admin write",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "loan access: read own or admin",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        },
+        {
+          "name": "mobile_live_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (user_id)",
+      "foreign_keys": [
+        {
+          "name": "loan_request_access_user_id_fkey",
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE"
+        }
+      ]
+    },
+    {
+      "rls": true,
+      "name": "loan_request_events",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "request_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "note",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "actor",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "loan events: read own or admin",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        },
+        {
+          "name": "mobile_active_account",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "mobile_valid_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (id)",
+      "foreign_keys": [
+        {
+          "name": "loan_request_events_request_id_fkey",
+          "definition": "FOREIGN KEY (request_id) REFERENCES public.loan_requests(id) ON DELETE CASCADE"
+        }
+      ]
+    },
+    {
+      "rls": true,
+      "name": "loan_request_rates",
+      "columns": [
+        {
+          "name": "term_months",
+          "type": "integer",
+          "nullable": false
+        },
+        {
+          "name": "monthly_rate",
+          "type": "numeric(8,6)",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "loan rates: admin write",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "loan rates: read all",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        },
+        {
+          "name": "mobile_live_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (term_months)",
+      "foreign_keys": null
+    },
+    {
+      "rls": true,
+      "name": "loan_requests",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "reference",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "amount",
+          "type": "numeric(16,2)",
+          "nullable": false
+        },
+        {
+          "name": "term_months",
+          "type": "integer",
+          "nullable": false
+        },
+        {
+          "name": "monthly_rate",
+          "type": "numeric(8,6)",
+          "nullable": false
+        },
+        {
+          "name": "bank_name",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "bank_account_number",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "bank_account_name",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "processing_fee",
+          "type": "numeric(16,2)",
+          "nullable": false
+        },
+        {
+          "name": "notarial_fee",
+          "type": "numeric(16,2)",
+          "nullable": false
+        },
+        {
+          "name": "dst",
+          "type": "numeric(16,2)",
+          "nullable": false
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        },
+        {
+          "name": "purpose",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "consent_at",
+          "type": "timestamp with time zone",
+          "nullable": true
+        },
+        {
+          "name": "account_confirmed",
+          "type": "boolean",
+          "nullable": true
+        },
+        {
+          "name": "terms_version",
+          "type": "text",
+          "nullable": true
+        }
+      ],
+      "policies": [
+        {
+          "name": "loan requests: admin delete",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "DELETE"
+        },
+        {
+          "name": "loan requests: admin update",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "UPDATE"
+        },
+        {
+          "name": "loan requests: read own or admin",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        },
+        {
+          "name": "mobile_active_account",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "mobile_valid_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (id)",
+      "foreign_keys": [
+        {
+          "name": "loan_requests_user_id_fkey",
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE"
+        }
+      ]
+    },
+    {
+      "rls": true,
+      "name": "loans",
+      "columns": [
+        {
+          "name": "id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "label",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "txn_type",
+          "type": "public.loan_txn_type",
+          "nullable": false
+        },
+        {
+          "name": "principal",
+          "type": "numeric(12,2)",
+          "nullable": false
+        },
+        {
+          "name": "monthly_rate",
+          "type": "numeric(8,6)",
+          "nullable": false
+        },
+        {
+          "name": "duration_months",
+          "type": "integer",
+          "nullable": false
+        },
+        {
+          "name": "txn_date",
+          "type": "date",
+          "nullable": false
+        },
+        {
+          "name": "first_payment_date",
+          "type": "date",
+          "nullable": false
+        },
+        {
+          "name": "dst",
+          "type": "numeric(12,2)",
+          "nullable": false
+        },
+        {
+          "name": "processing_fee",
+          "type": "numeric(12,2)",
+          "nullable": false
+        },
+        {
+          "name": "notarial_fee",
+          "type": "numeric(12,2)",
+          "nullable": false
+        },
+        {
+          "name": "deduct_from_proceeds",
+          "type": "boolean",
+          "nullable": false
+        },
+        {
+          "name": "status",
+          "type": "public.loan_status",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        },
+        {
+          "name": "loan_category",
+          "type": "text",
+          "nullable": true
+        }
+      ],
+      "policies": [
+        {
+          "name": "loans: admin write",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "loans: read own or admin",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        },
+        {
+          "name": "mobile_active_account",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "mobile_valid_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (id)",
+      "foreign_keys": [
+        {
+          "name": "loans_user_id_fkey",
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON UPDATE CASCADE ON DELETE CASCADE"
+        }
+      ]
+    },
+    {
+      "rls": true,
+      "name": "message_change_signals",
+      "columns": [
+        {
+          "name": "borrower_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "version",
+          "type": "bigint",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "mobile_live_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "owner_or_lender",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (borrower_id)",
+      "foreign_keys": [
+        {
+          "name": "message_change_signals_borrower_id_fkey",
+          "definition": "FOREIGN KEY (borrower_id) REFERENCES public.profiles(id) ON UPDATE CASCADE ON DELETE CASCADE"
+        }
+      ]
+    },
+    {
+      "rls": true,
+      "name": "message_hidden",
+      "columns": [
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "message_id",
+          "type": "uuid",
+          "nullable": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "mobile_valid_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "own_hidden_messages",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (user_id, message_id)",
+      "foreign_keys": [
+        {
+          "name": "message_hidden_message_id_fkey",
+          "definition": "FOREIGN KEY (message_id) REFERENCES public.messages(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "message_hidden_user_id_fkey",
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id)"
+        }
+      ]
+    },
+    {
+      "rls": true,
+      "name": "messages",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "borrower_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "sender_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "from_admin",
+          "type": "boolean",
+          "nullable": false
+        },
+        {
+          "name": "body",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        },
+        {
+          "name": "read_at",
+          "type": "timestamp with time zone",
+          "nullable": true
+        },
+        {
+          "name": "reactions",
+          "type": "jsonb",
+          "nullable": false
+        },
+        {
+          "name": "pinned",
+          "type": "boolean",
+          "nullable": false
+        },
+        {
+          "name": "reply_to_id",
+          "type": "uuid",
+          "nullable": true
+        },
+        {
+          "name": "attachment_path",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "attachment_name",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "attachment_type",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "attachment_size",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "client_key",
+          "type": "uuid",
+          "nullable": true
+        },
+        {
+          "name": "notification_id",
+          "type": "uuid",
+          "nullable": true
+        }
+      ],
+      "policies": [
+        {
+          "name": "messages: admin all",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "messages: borrower delete own",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "DELETE"
+        },
+        {
+          "name": "messages: borrower mark read",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "UPDATE"
+        },
+        {
+          "name": "messages: borrower read own",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        },
+        {
+          "name": "messages: borrower send own",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "INSERT"
+        },
+        {
+          "name": "mobile_active_account",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "mobile_valid_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (id)",
+      "foreign_keys": [
+        {
+          "name": "messages_notification_id_fkey",
+          "definition": "FOREIGN KEY (notification_id) REFERENCES public.notifications(id) ON DELETE SET NULL"
+        },
+        {
+          "name": "messages_reply_to_id_fkey",
+          "definition": "FOREIGN KEY (reply_to_id) REFERENCES public.messages(id) ON DELETE SET NULL"
+        }
+      ]
+    },
+    {
+      "rls": true,
+      "name": "mobile_login_tokens",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "code_hash",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "issued_by",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        },
+        {
+          "name": "consumed_at",
+          "type": "timestamp with time zone",
+          "nullable": true
+        },
+        {
+          "name": "revoked_at",
+          "type": "timestamp with time zone",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "lender_token_history",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        },
+        {
+          "name": "mobile_live_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (id)",
+      "foreign_keys": [
+        {
+          "name": "mobile_login_tokens_issued_by_fkey",
+          "definition": "FOREIGN KEY (issued_by) REFERENCES public.profiles(id)"
+        },
+        {
+          "name": "mobile_login_tokens_user_id_fkey",
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id)"
+        }
+      ]
+    },
+    {
+      "rls": true,
+      "name": "notification_categories",
+      "columns": [
+        {
+          "name": "value",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "label",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "filipino_label",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "icon",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "color",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "version",
+          "type": "integer",
+          "nullable": false
+        },
+        {
+          "name": "deleted_at",
+          "type": "timestamp with time zone",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        },
+        {
+          "name": "updated_by",
+          "type": "uuid",
+          "nullable": true
+        }
+      ],
+      "policies": [
+        {
+          "name": "mobile_live_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "notification_category_read",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (value)",
+      "foreign_keys": [
+        {
+          "name": "notification_categories_updated_by_fkey",
+          "definition": "FOREIGN KEY (updated_by) REFERENCES public.profiles(id) ON DELETE SET NULL"
+        }
+      ]
+    },
+    {
+      "rls": true,
+      "name": "notification_change_signals",
+      "columns": [
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "revision",
+          "type": "uuid",
+          "nullable": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "mobile_live_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "notification_signal_own",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (user_id)",
+      "foreign_keys": [
+        {
+          "name": "notification_change_signals_user_id_fkey",
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE"
+        }
+      ]
+    },
+    {
+      "rls": true,
+      "name": "notification_reactions",
+      "columns": [
+        {
+          "name": "notification_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "emoji",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "mobile_live_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "notification_reactions_active",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "own_notification_reactions",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (notification_id, user_id)",
+      "foreign_keys": [
+        {
+          "name": "notification_reactions_notification_id_fkey",
+          "definition": "FOREIGN KEY (notification_id) REFERENCES public.notifications(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "notification_reactions_user_id_fkey",
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE"
+        }
+      ]
+    },
+    {
+      "rls": true,
+      "name": "notification_reads",
+      "columns": [
+        {
+          "name": "notification_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "read_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "mobile_live_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "notification_reads: admin read",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        },
+        {
+          "name": "notification_reads: own delete",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "DELETE"
+        },
+        {
+          "name": "notification_reads: own read",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        },
+        {
+          "name": "notification_reads: own write",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "INSERT"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (notification_id, user_id)",
+      "foreign_keys": [
+        {
+          "name": "notification_reads_notification_id_fkey",
+          "definition": "FOREIGN KEY (notification_id) REFERENCES public.notifications(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "notification_reads_user_id_fkey",
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE"
+        }
+      ]
+    },
+    {
+      "rls": true,
+      "name": "notification_templates",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "category",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "body",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "created_by",
+          "type": "uuid",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "mobile_live_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "notification_templates: admin all",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (id)",
+      "foreign_keys": [
+        {
+          "name": "notification_templates_category_reference",
+          "definition": "FOREIGN KEY (category) REFERENCES public.notification_categories(value)"
+        },
+        {
+          "name": "notification_templates_created_by_fkey",
+          "definition": "FOREIGN KEY (created_by) REFERENCES public.profiles(id) ON DELETE SET NULL"
+        }
+      ]
+    },
+    {
+      "rls": true,
+      "name": "notifications",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "category",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "title",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "body",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "audience",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "target_user_ids",
+          "type": "uuid[]",
+          "nullable": false
+        },
+        {
+          "name": "attachments",
+          "type": "jsonb",
+          "nullable": false
+        },
+        {
+          "name": "created_by",
+          "type": "uuid",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        },
+        {
+          "name": "rule_id",
+          "type": "uuid",
+          "nullable": true
+        },
+        {
+          "name": "rule_version",
+          "type": "integer",
+          "nullable": true
+        },
+        {
+          "name": "event_id",
+          "type": "uuid",
+          "nullable": true
+        },
+        {
+          "name": "delivery_surface",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "display_duration",
+          "type": "integer",
+          "nullable": false
+        },
+        {
+          "name": "archived_at",
+          "type": "timestamp with time zone",
+          "nullable": true
+        },
+        {
+          "name": "edited_at",
+          "type": "timestamp with time zone",
+          "nullable": true
+        }
+      ],
+      "policies": [
+        {
+          "name": "mobile_live_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "notifications: admin all",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "notifications: read own",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        },
+        {
+          "name": "notifications: self insert",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "INSERT"
+        },
+        {
+          "name": "notifications_not_archived",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (id)",
+      "foreign_keys": [
+        {
+          "name": "notifications_category_reference",
+          "definition": "FOREIGN KEY (category) REFERENCES public.notification_categories(value)"
+        }
+      ]
+    },
+    {
+      "rls": true,
+      "name": "payment_allocation_releases",
+      "columns": [
+        {
+          "name": "correction_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "posting_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "transaction_id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "amount",
+          "type": "numeric(12,2)",
+          "nullable": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "mobile_valid_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "releases_read",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (correction_id, posting_id, transaction_id)",
+      "foreign_keys": [
+        {
+          "name": "payment_allocation_releases_correction_id_fkey",
+          "definition": "FOREIGN KEY (correction_id) REFERENCES public.transaction_corrections(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "payment_allocation_releases_posting_id_transaction_id_fkey",
+          "definition": "FOREIGN KEY (posting_id, transaction_id) REFERENCES public.payment_allocations(posting_id, transaction_id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "payment_allocation_releases_user_id_fkey",
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE RESTRICT"
+        }
+      ]
+    },
+    {
+      "rls": true,
+      "name": "payment_allocations",
+      "columns": [
+        {
+          "name": "posting_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "transaction_id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "amount",
+          "type": "numeric(12,2)",
+          "nullable": false
+        },
+        {
+          "name": "before_balance",
+          "type": "numeric(12,2)",
+          "nullable": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "mobile_live_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "own_allocations",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (posting_id, transaction_id)",
+      "foreign_keys": [
+        {
+          "name": "payment_allocations_posting_id_fkey",
+          "definition": "FOREIGN KEY (posting_id) REFERENCES public.payment_postings(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "payment_allocations_transaction_id_fkey",
+          "definition": "FOREIGN KEY (transaction_id) REFERENCES public.transactions(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "payment_allocations_user_id_fkey",
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE RESTRICT"
+        }
+      ]
+    },
+    {
+      "rls": true,
+      "name": "payment_breakdown_visibility",
+      "columns": [
+        {
+          "name": "posting_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "hidden_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        },
+        {
+          "name": "hidden_by",
+          "type": "uuid",
+          "nullable": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "mobile_valid_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "own_or_lender",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (posting_id)",
+      "foreign_keys": [
+        {
+          "name": "payment_breakdown_visibility_posting_id_fkey",
+          "definition": "FOREIGN KEY (posting_id) REFERENCES public.payment_postings(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "payment_breakdown_visibility_user_id_fkey",
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE"
+        }
+      ]
+    },
+    {
+      "rls": true,
+      "name": "payment_due_change_signals",
+      "columns": [
+        {
+          "name": "borrower_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "version",
+          "type": "bigint",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "mobile_live_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "owner_or_lender",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (borrower_id)",
+      "foreign_keys": [
+        {
+          "name": "payment_due_change_signals_borrower_id_fkey",
+          "definition": "FOREIGN KEY (borrower_id) REFERENCES public.profiles(id) ON UPDATE CASCADE ON DELETE CASCADE"
+        }
+      ]
+    },
+    {
+      "rls": true,
+      "name": "payment_due_overrides",
+      "columns": [
+        {
+          "name": "borrower_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "due_dates",
+          "type": "text[]",
+          "nullable": false
+        },
+        {
+          "name": "applied_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        },
+        {
+          "name": "updated_by",
+          "type": "uuid",
+          "nullable": true
+        },
+        {
+          "name": "next_due_dates",
+          "type": "text[]",
+          "nullable": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "mobile_live_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "payment_due_overrides: admin write",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "payment_due_overrides: own or lender",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (borrower_id)",
+      "foreign_keys": null
+    },
+    {
+      "rls": true,
+      "name": "payment_logs",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "kind",
+          "type": "public.pay_log_kind",
+          "nullable": false
+        },
+        {
+          "name": "txn_date",
+          "type": "date",
+          "nullable": false
+        },
+        {
+          "name": "reference",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "subject",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "due_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "amount_owed",
+          "type": "numeric(12,2)",
+          "nullable": false
+        },
+        {
+          "name": "method",
+          "type": "public.pay_log_method",
+          "nullable": true
+        },
+        {
+          "name": "funds_applied",
+          "type": "numeric(12,2)",
+          "nullable": false
+        },
+        {
+          "name": "remaining_balance",
+          "type": "numeric(12,2)",
+          "nullable": false
+        },
+        {
+          "name": "alloc_status",
+          "type": "public.pay_log_alloc",
+          "nullable": false
+        },
+        {
+          "name": "carry_applied",
+          "type": "numeric(12,2)",
+          "nullable": false
+        },
+        {
+          "name": "parent_id",
+          "type": "uuid",
+          "nullable": true
+        },
+        {
+          "name": "consumed",
+          "type": "boolean",
+          "nullable": false
+        },
+        {
+          "name": "consumed_by",
+          "type": "uuid",
+          "nullable": true
+        },
+        {
+          "name": "note",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        },
+        {
+          "name": "source_posting_id",
+          "type": "uuid",
+          "nullable": true
+        },
+        {
+          "name": "correction_id",
+          "type": "uuid",
+          "nullable": true
+        }
+      ],
+      "policies": [
+        {
+          "name": "mobile_active_account",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "mobile_valid_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "payment_logs: admin write",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "payment_logs: read own or admin",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (id)",
+      "foreign_keys": [
+        {
+          "name": "payment_logs_consumed_by_fkey",
+          "definition": "FOREIGN KEY (consumed_by) REFERENCES public.payment_logs(id) ON DELETE SET NULL"
+        },
+        {
+          "name": "payment_logs_correction_id_fkey",
+          "definition": "FOREIGN KEY (correction_id) REFERENCES public.transaction_corrections(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "payment_logs_parent_id_fkey",
+          "definition": "FOREIGN KEY (parent_id) REFERENCES public.payment_logs(id) ON DELETE SET NULL"
+        },
+        {
+          "name": "payment_logs_source_posting_id_fkey",
+          "definition": "FOREIGN KEY (source_posting_id) REFERENCES public.payment_postings(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "payment_logs_user_id_fkey",
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE"
+        }
+      ]
+    },
+    {
+      "rls": true,
+      "name": "payment_postings",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "payment_id",
+          "type": "uuid",
+          "nullable": true
+        },
+        {
+          "name": "reversal_of",
+          "type": "uuid",
+          "nullable": true
+        },
+        {
+          "name": "actor_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "operation_key",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "cash_amount",
+          "type": "numeric(12,2)",
+          "nullable": false
+        },
+        {
+          "name": "credit_used",
+          "type": "numeric(12,2)",
+          "nullable": false
+        },
+        {
+          "name": "credit_added",
+          "type": "numeric(12,2)",
+          "nullable": false
+        },
+        {
+          "name": "allocated_amount",
+          "type": "numeric(12,2)",
+          "nullable": false
+        },
+        {
+          "name": "effective_date",
+          "type": "date",
+          "nullable": false
+        },
+        {
+          "name": "note",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "log_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        },
+        {
+          "name": "correction_credit_reclaimed",
+          "type": "numeric(12,2)",
+          "nullable": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "mobile_live_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "own_postings",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (id)",
+      "foreign_keys": [
+        {
+          "name": "payment_postings_actor_id_fkey",
+          "definition": "FOREIGN KEY (actor_id) REFERENCES public.profiles(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "payment_postings_log_id_fkey",
+          "definition": "FOREIGN KEY (log_id) REFERENCES public.payment_logs(id) DEFERRABLE INITIALLY DEFERRED"
+        },
+        {
+          "name": "payment_postings_payment_id_fkey",
+          "definition": "FOREIGN KEY (payment_id) REFERENCES public.payments(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "payment_postings_reversal_of_fkey",
+          "definition": "FOREIGN KEY (reversal_of) REFERENCES public.payment_postings(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "payment_postings_user_id_fkey",
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE RESTRICT"
+        }
+      ]
+    },
+    {
+      "rls": true,
+      "name": "payments",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "loan_id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "amount",
+          "type": "numeric(12,2)",
+          "nullable": false
+        },
+        {
+          "name": "method",
+          "type": "public.payment_method",
+          "nullable": false
+        },
+        {
+          "name": "reference",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "file_name",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "file_type",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "file_path",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "submitted_at",
+          "type": "date",
+          "nullable": false
+        },
+        {
+          "name": "status",
+          "type": "public.payment_status",
+          "nullable": false
+        },
+        {
+          "name": "reviewed_at",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "note",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "paid_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "requested_allocations",
+          "type": "jsonb",
+          "nullable": true
+        },
+        {
+          "name": "submission_key",
+          "type": "uuid",
+          "nullable": true
+        },
+        {
+          "name": "correction_of",
+          "type": "uuid",
+          "nullable": true
+        },
+        {
+          "name": "correction_note",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "retracted_at",
+          "type": "timestamp with time zone",
+          "nullable": true
+        },
+        {
+          "name": "receipt_number",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "submission_notes",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "submitted_at_exact",
+          "type": "timestamp with time zone",
+          "nullable": true
+        },
+        {
+          "name": "posted_at",
+          "type": "timestamp with time zone",
+          "nullable": true
+        },
+        {
+          "name": "posted_allocations",
+          "type": "jsonb",
+          "nullable": true
+        }
+      ],
+      "policies": [
+        {
+          "name": "mobile_active_account",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "mobile_valid_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "payments: admin delete",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "DELETE"
+        },
+        {
+          "name": "payments: admin insert",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "INSERT"
+        },
+        {
+          "name": "payments: admin update",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "UPDATE"
+        },
+        {
+          "name": "payments: borrower delete own",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "DELETE"
+        },
+        {
+          "name": "payments: borrower submit own pending",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "INSERT"
+        },
+        {
+          "name": "payments: read own or admin",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (id)",
+      "foreign_keys": [
+        {
+          "name": "payments_correction_of_fkey",
+          "definition": "FOREIGN KEY (correction_of) REFERENCES public.payments(id)"
+        },
+        {
+          "name": "payments_loan_id_fkey",
+          "definition": "FOREIGN KEY (loan_id) REFERENCES public.loans(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "payments_user_id_fkey",
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON UPDATE CASCADE ON DELETE CASCADE"
+        }
+      ]
+    },
+    {
+      "rls": true,
+      "name": "profiles",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "email",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "phone",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "role",
+          "type": "public.user_role",
+          "nullable": false
+        },
+        {
+          "name": "status",
+          "type": "public.user_status",
+          "nullable": false
+        },
+        {
+          "name": "invited_at",
+          "type": "date",
+          "nullable": false
+        },
+        {
+          "name": "last_login",
+          "type": "timestamp with time zone",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        },
+        {
+          "name": "first_name",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "last_name",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "nickname",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "avatar_path",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "borrower_account_number",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "credit_balance",
+          "type": "numeric(12,2)",
+          "nullable": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "mobile_live_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "profiles: admin delete",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "DELETE"
+        },
+        {
+          "name": "profiles: admin insert",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "INSERT"
+        },
+        {
+          "name": "profiles: admin update",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "UPDATE"
+        },
+        {
+          "name": "profiles: read own or admin",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        },
+        {
+          "name": "profiles: read the lender",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (id)",
+      "foreign_keys": null
+    },
+    {
+      "rls": true,
+      "name": "retail_brand_assets",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "svg",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "filename",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "sha256",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "mobile_valid_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "own_retail_brand_assets",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (id)",
+      "foreign_keys": null
+    },
+    {
+      "rls": true,
+      "name": "retail_brand_assignments",
+      "columns": [
+        {
+          "name": "target_key",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "loan_id",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "transaction_id",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "mode",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "domain",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "version",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        },
+        {
+          "name": "logo_id",
+          "type": "uuid",
+          "nullable": true
+        }
+      ],
+      "policies": [
+        {
+          "name": "mobile_valid_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "own_retail_brands",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (target_key)",
+      "foreign_keys": [
+        {
+          "name": "retail_brand_assignments_loan_id_fkey",
+          "definition": "FOREIGN KEY (loan_id) REFERENCES public.loans(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "retail_brand_assignments_logo_id_fkey",
+          "definition": "FOREIGN KEY (logo_id) REFERENCES public.retail_brand_assets(id)"
+        },
+        {
+          "name": "retail_brand_assignments_transaction_id_fkey",
+          "definition": "FOREIGN KEY (transaction_id) REFERENCES public.transactions(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "retail_brand_assignments_user_id_fkey",
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE"
+        }
+      ]
+    },
+    {
+      "rls": true,
+      "name": "retail_brand_rules",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "alias",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "domain",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "name",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "active",
+          "type": "boolean",
+          "nullable": false
+        },
+        {
+          "name": "version",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "mobile_valid_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "retail_brand_reference",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (id)",
+      "foreign_keys": null
+    },
+    {
+      "rls": true,
+      "name": "support_ticket_events",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "ticket_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "note",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "actor_id",
+          "type": "uuid",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "mobile_active_account",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "mobile_valid_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "own_ticket_events",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (id)",
+      "foreign_keys": [
+        {
+          "name": "support_ticket_events_actor_id_fkey",
+          "definition": "FOREIGN KEY (actor_id) REFERENCES public.profiles(id)"
+        },
+        {
+          "name": "support_ticket_events_ticket_id_fkey",
+          "definition": "FOREIGN KEY (ticket_id) REFERENCES public.support_tickets(id)"
+        }
+      ]
+    },
+    {
+      "rls": true,
+      "name": "support_tickets",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "nullable": true
+        },
+        {
+          "name": "ticket_number",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "email",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "topic",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "fingerprint",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "status",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "attachment_path",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "attachment_name",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        },
+        {
+          "name": "status_note",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "guest_key",
+          "type": "uuid",
+          "nullable": true
+        },
+        {
+          "name": "guest_request_hash",
+          "type": "text",
+          "nullable": true
+        }
+      ],
+      "policies": [
+        {
+          "name": "mobile_active_account",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "mobile_valid_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "own_tickets",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (id)",
+      "foreign_keys": [
+        {
+          "name": "support_tickets_user_id_fkey",
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id)"
+        }
+      ]
+    },
+    {
+      "rls": true,
+      "name": "tracked_loans",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "bank_name",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "bank_acronym",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "bank_color",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "bank_domain",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "principal",
+          "type": "numeric(12,2)",
+          "nullable": false
+        },
+        {
+          "name": "processing_fee",
+          "type": "numeric(12,2)",
+          "nullable": false
+        },
+        {
+          "name": "monthly_rate",
+          "type": "numeric(6,4)",
+          "nullable": false
+        },
+        {
+          "name": "duration_months",
+          "type": "integer",
+          "nullable": false
+        },
+        {
+          "name": "txn_date",
+          "type": "date",
+          "nullable": false
+        },
+        {
+          "name": "first_payment_date",
+          "type": "date",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "mobile_live_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "tracked_loans: admin only",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (id)",
+      "foreign_keys": null
+    },
+    {
+      "rls": true,
+      "name": "transaction_corrections",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "transaction_id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "actor_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "operation_key",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "reason",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "before_row",
+          "type": "jsonb",
+          "nullable": false
+        },
+        {
+          "name": "after_row",
+          "type": "jsonb",
+          "nullable": false
+        },
+        {
+          "name": "credit_returned",
+          "type": "numeric(12,2)",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "corrections_admin_read",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        },
+        {
+          "name": "mobile_valid_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (id)",
+      "foreign_keys": [
+        {
+          "name": "transaction_corrections_actor_id_fkey",
+          "definition": "FOREIGN KEY (actor_id) REFERENCES public.profiles(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "transaction_corrections_transaction_id_fkey",
+          "definition": "FOREIGN KEY (transaction_id) REFERENCES public.transactions(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "transaction_corrections_user_id_fkey",
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE RESTRICT"
+        }
+      ]
+    },
+    {
+      "rls": true,
+      "name": "transaction_group_logos",
+      "columns": [
+        {
+          "name": "group_key",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "svg",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "filename",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "version",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "group_logo_reference",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        },
+        {
+          "name": "mobile_valid_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (group_key)",
+      "foreign_keys": null
+    },
+    {
+      "rls": true,
+      "name": "transactions",
+      "columns": [
+        {
+          "name": "id",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "loan_id",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "user_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "n",
+          "type": "integer",
+          "nullable": false
+        },
+        {
+          "name": "description",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "amount",
+          "type": "numeric(12,2)",
+          "nullable": false
+        },
+        {
+          "name": "type",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "txn_date",
+          "type": "date",
+          "nullable": false
+        },
+        {
+          "name": "due_date",
+          "type": "date",
+          "nullable": false
+        },
+        {
+          "name": "status",
+          "type": "public.txn_status",
+          "nullable": false
+        },
+        {
+          "name": "date_paid",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "archived_at",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "amount_applied",
+          "type": "numeric(12,2)",
+          "nullable": false
+        },
+        {
+          "name": "fee_assessment_id",
+          "type": "uuid",
+          "nullable": true
+        },
+        {
+          "name": "fee_kind",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "transaction_group",
+          "type": "text",
+          "nullable": true
+        }
+      ],
+      "policies": [
+        {
+          "name": "mobile_active_account",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "mobile_valid_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "transactions: admin write",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "transactions: read own active or admin",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "SELECT"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (id)",
+      "foreign_keys": [
+        {
+          "name": "transactions_fee_assessment_id_fkey",
+          "definition": "FOREIGN KEY (fee_assessment_id) REFERENCES public.fee_assessments(id) ON DELETE RESTRICT"
+        },
+        {
+          "name": "transactions_loan_id_fkey",
+          "definition": "FOREIGN KEY (loan_id) REFERENCES public.loans(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "transactions_user_id_fkey",
+          "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON UPDATE CASCADE ON DELETE CASCADE"
+        }
+      ]
+    },
+    {
+      "rls": true,
+      "name": "wallet_account_txns",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "owner_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "account_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "kind",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "amount",
+          "type": "numeric(16,2)",
+          "nullable": false
+        },
+        {
+          "name": "merchant",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "category",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "txn_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "note",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "mobile_live_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "wallet_account_txns: own",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (id)",
+      "foreign_keys": [
+        {
+          "name": "wallet_account_txns_account_id_fkey",
+          "definition": "FOREIGN KEY (account_id) REFERENCES public.wallet_accounts(id) ON DELETE CASCADE"
+        }
+      ]
+    },
+    {
+      "rls": true,
+      "name": "wallet_accounts",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "owner_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "account_number",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "product_type",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "bank_name",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "bank_code",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "swift_code",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "branch",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "ownership",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "available_balance",
+          "type": "numeric(16,2)",
+          "nullable": false
+        },
+        {
+          "name": "maintaining_balance",
+          "type": "numeric(16,2)",
+          "nullable": false
+        },
+        {
+          "name": "debit_card_number",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "sort_order",
+          "type": "integer",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "mobile_live_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "wallet_accounts: own",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (id)",
+      "foreign_keys": null
+    },
+    {
+      "rls": true,
+      "name": "wallet_bills",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "owner_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "card_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "amount_due",
+          "type": "numeric(14,2)",
+          "nullable": false
+        },
+        {
+          "name": "due_date",
+          "type": "date",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        }
+      ],
+      "policies": [
+        {
+          "name": "mobile_live_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "wallet_bills: own",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (id)",
+      "foreign_keys": [
+        {
+          "name": "wallet_bills_card_id_fkey",
+          "definition": "FOREIGN KEY (card_id) REFERENCES public.wallet_cards(id) ON DELETE CASCADE"
+        }
+      ]
+    },
+    {
+      "rls": true,
+      "name": "wallet_cards",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "owner_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "bank_name",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "bank_logo",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "primary_color",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "secondary_color",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "first6",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "last4",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "network",
+          "type": "public.wallet_network",
+          "nullable": false
+        },
+        {
+          "name": "tier",
+          "type": "public.wallet_tier",
+          "nullable": false
+        },
+        {
+          "name": "category",
+          "type": "public.wallet_category",
+          "nullable": true
+        },
+        {
+          "name": "credit_limit",
+          "type": "numeric(14,2)",
+          "nullable": false
+        },
+        {
+          "name": "available_limit",
+          "type": "numeric(14,2)",
+          "nullable": false
+        },
+        {
+          "name": "statement_date",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "due_date",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        },
+        {
+          "name": "network_logo",
+          "type": "text",
+          "nullable": true
+        },
+        {
+          "name": "sort_order",
+          "type": "integer",
+          "nullable": false
+        },
+        {
+          "name": "naffl",
+          "type": "boolean",
+          "nullable": false
+        },
+        {
+          "name": "amf",
+          "type": "numeric(14,2)",
+          "nullable": false
+        },
+        {
+          "name": "amf_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "expiry_date",
+          "type": "date",
+          "nullable": true
+        },
+        {
+          "name": "activation_date",
+          "type": "date",
+          "nullable": true
+        }
+      ],
+      "policies": [
+        {
+          "name": "mobile_live_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "wallet_cards: own",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (id)",
+      "foreign_keys": null
+    },
+    {
+      "rls": true,
+      "name": "wallet_payments",
+      "columns": [
+        {
+          "name": "id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "owner_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "bill_id",
+          "type": "uuid",
+          "nullable": false
+        },
+        {
+          "name": "amount",
+          "type": "numeric(14,2)",
+          "nullable": false
+        },
+        {
+          "name": "paid_on",
+          "type": "date",
+          "nullable": false
+        },
+        {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "nullable": false
+        },
+        {
+          "name": "note",
+          "type": "text",
+          "nullable": false
+        },
+        {
+          "name": "account_id",
+          "type": "uuid",
+          "nullable": true
+        }
+      ],
+      "policies": [
+        {
+          "name": "mobile_live_session",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        },
+        {
+          "name": "wallet_payments: own",
+          "roles": [
+            "authenticated"
+          ],
+          "command": "ALL"
+        }
+      ],
+      "primary_key": "PRIMARY KEY (id)",
+      "foreign_keys": [
+        {
+          "name": "wallet_payments_account_id_fkey",
+          "definition": "FOREIGN KEY (account_id) REFERENCES public.wallet_accounts(id) ON DELETE SET NULL"
+        },
+        {
+          "name": "wallet_payments_bill_id_fkey",
+          "definition": "FOREIGN KEY (bill_id) REFERENCES public.wallet_bills(id) ON DELETE CASCADE"
+        }
+      ]
+    }
+  ],
+  "captured_at": "2026-10-26T23:03:20.641Z",
+  "public_rpcs": [
+    "acknowledge_loan_disbursement",
+    "activate_my_account",
+    "admin_assign_retail_brand",
+    "admin_correct_transaction",
+    "admin_purge_archived_transactions",
+    "admin_save_retail_brand_rule",
+    "admin_set_payment_breakdown_visibility",
+    "admin_set_transaction_group",
+    "assess_combined_fees",
+    "cancel_my_loan_request",
+    "combined_fee_context",
+    "create_invoice",
+    "create_loan_disbursement",
+    "handle_new_user",
+    "handle_user_signin",
+    "is_admin",
+    "mobile_action",
+    "notify_admins",
+    "notify_loan_request_received",
+    "notify_payment_received",
+    "rls_auto_enable",
+    "set_loan_request_reference",
+    "set_my_avatar",
+    "set_payment_submitted_time",
+    "set_transaction_id",
+    "submit_loan_request",
+    "update_loan_request_status",
+    "update_my_loan_request_bank",
+    "update_my_profile"
+  ],
+  "realtime_tables": [
+    "announcements",
+    "borrower_preferences",
+    "borrower_statements",
+    "ledger_change_signals",
+    "loan_disbursements",
+    "loan_request_access",
+    "loan_request_events",
+    "loan_request_rates",
+    "loan_requests",
+    "message_change_signals",
+    "message_hidden",
+    "messages",
+    "notification_change_signals",
+    "notification_reactions",
+    "notification_reads",
+    "notifications",
+    "payment_due_change_signals",
+    "payment_due_overrides",
+    "retail_brand_assignments",
+    "retail_brand_rules",
+    "support_ticket_events",
+    "support_tickets",
+    "transaction_group_logos"
+  ],
+  "storage_buckets": [
+    {
+      "name": "avatars",
+      "public": true,
+      "file_size_limit": "2097152",
+      "allowed_mime_types": [
+        "image/jpeg",
+        "image/png",
+        "image/webp"
+      ]
+    },
+    {
+      "name": "mobile-attachments",
+      "public": false,
+      "file_size_limit": "5242880",
+      "allowed_mime_types": [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/gif",
+        "image/bmp",
+        "image/avif",
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      ]
+    },
+    {
+      "name": "payment-proofs",
+      "public": false,
+      "file_size_limit": "5242880",
+      "allowed_mime_types": [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "application/pdf"
+      ]
+    }
+  ]
+}

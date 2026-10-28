@@ -1,0 +1,3523 @@
+{
+  "version": "2026-10-28.2",
+  "name": "LoanLedger PH FAQ",
+  "reviewed": "October 28, 2026",
+  "entries": [
+    {
+      "id": "navigation",
+      "category": "Getting started",
+      "question": "How do I navigate the app?",
+      "summary": "The same account records are available through mobile bottom tabs or the desktop left sidebar.",
+      "steps": [
+        "Use Dashboard for your balance, transfer channels, shortcuts and recent activity.",
+        "Open Transactions for installment schedules and straight entries, or Payments to select dues and submit proof.",
+        "Use History for recorded payments and credit activity. More or the sidebar includes documents, messages, profile and support."
+      ],
+      "answer": "The same account records are available through mobile bottom tabs or the desktop left sidebar.\n\n1. Use Dashboard for your balance, transfer channels, shortcuts and recent activity.\n2. Open Transactions for installment schedules and straight entries, or Payments to select dues and submit proof.\n3. Use History for recorded payments and credit activity. More or the sidebar includes documents, messages, profile and support.\n\nRemember: Some features appear only when the lender enables them for your account.",
+      "keywords": [
+        "navigation",
+        "navigate",
+        "tabs",
+        "menu",
+        "sidebar"
+      ],
+      "page": "dashboard",
+      "note": "Some features appear only when the lender enables them for your account.",
+      "illustration": "navigation"
+    },
+    {
+      "id": "desktop-navigation",
+      "category": "Getting started",
+      "question": "How is the desktop view different from the mobile view?",
+      "summary": "Desktop offers persistent left navigation and wider layouts; mobile uses compact cards and bottom navigation.",
+      "steps": [
+        "On a computer, choose a destination from the left sidebar.",
+        "On a phone, use the bottom tabs and More; swipe inside card or Quick Access strips for additional items.",
+        "Sign in with the same account on each device and match the account identity before comparing records."
+      ],
+      "answer": "Desktop offers persistent left navigation and wider layouts; mobile uses compact cards and bottom navigation.\n\n1. On a computer, choose a destination from the left sidebar.\n2. On a phone, use the bottom tabs and More; swipe inside card or Quick Access strips for additional items.\n3. Sign in with the same account on each device and match the account identity before comparing records.\n\nRemember: A larger screen does not grant more account permissions.",
+      "keywords": [
+        "desktop",
+        "navigation",
+        "computer",
+        "mobile",
+        "browser"
+      ],
+      "page": "dashboard",
+      "note": "A larger screen does not grant more account permissions."
+    },
+    {
+      "id": "payment-fan",
+      "category": "Getting started",
+      "question": "What happens when I tap the central Payments button on mobile?",
+      "summary": "Payments opens a fan of shortcuts without immediately leaving your current screen.",
+      "steps": [
+        "Tap Payments once to open the fan.",
+        "Choose Installment Transactions, Straight Transactions, Submit Payment, My Invoices or Loan Profile. Submit Payment opens the full Payments screen including Recent Payments.",
+        "Tap the central × to close without navigating. Backdrop taps and Escape do not close this fan."
+      ],
+      "answer": "Payments opens a fan of shortcuts without immediately leaving your current screen.\n\n1. Tap Payments once to open the fan.\n2. Choose Installment Transactions, Straight Transactions, Submit Payment, My Invoices or Loan Profile. Submit Payment opens the full Payments screen including Recent Payments.\n3. Tap the central × to close without navigating. Backdrop taps and Escape do not close this fan.\n\nRemember: The desktop sidebar Payments link opens Payments directly.",
+      "keywords": [
+        "payment",
+        "fan",
+        "radial",
+        "close",
+        "shortcuts"
+      ],
+      "page": "payment",
+      "note": "The desktop sidebar Payments link opens Payments directly.",
+      "illustration": "navigation"
+    },
+    {
+      "id": "quick-access",
+      "category": "Getting started",
+      "question": "How do I see all Quick Access shortcuts?",
+      "summary": "Dashboard Quick Access initially shows a compact row while retaining all available shortcuts.",
+      "steps": [
+        "Find Quick Access on Dashboard.",
+        "Swipe the shortcut strip horizontally, scroll it on a computer, or use its arrows.",
+        "Choose the shortcut you need. Request a Loan is available only when the lender enables it."
+      ],
+      "answer": "Dashboard Quick Access initially shows a compact row while retaining all available shortcuts.\n\n1. Find Quick Access on Dashboard.\n2. Swipe the shortcut strip horizontally, scroll it on a computer, or use its arrows.\n3. Choose the shortcut you need. Request a Loan is available only when the lender enables it.\n\nRemember: Four shortcuts are shown by default where width permits; the number physically visible varies with screen size.",
+      "keywords": [
+        "quick",
+        "access",
+        "horizontal",
+        "scroll",
+        "swipe"
+      ],
+      "page": "dashboard",
+      "note": "Four shortcuts are shown by default where width permits; the number physically visible varies with screen size."
+    },
+    {
+      "id": "reorder-shortcuts",
+      "category": "Getting started",
+      "question": "Can I rearrange Quick Access shortcuts?",
+      "summary": "You can place frequently used destinations earlier in the shortcut row.",
+      "steps": [
+        "Choose Edit beside Quick Access.",
+        "Use the available reorder controls to arrange the shortcuts.",
+        "Finish the editor and scroll the row to check the result."
+      ],
+      "answer": "You can place frequently used destinations earlier in the shortcut row.\n\n1. Choose Edit beside Quick Access.\n2. Use the available reorder controls to arrange the shortcuts.\n3. Finish the editor and scroll the row to check the result.\n\nRemember: Reordering navigation does not change records, due dates or payment priority.",
+      "keywords": [
+        "reorder",
+        "shortcuts",
+        "edit"
+      ],
+      "page": "dashboard",
+      "note": "Reordering navigation does not change records, due dates or payment priority."
+    },
+    {
+      "id": "finder",
+      "category": "Getting started",
+      "question": "How do I use Finder?",
+      "summary": "Finder searches available account content and links to matching screens.",
+      "steps": [
+        "Open the floating orb and choose Finder.",
+        "Enter a distinctive description, amount or date, then select a matching result.",
+        "On mobile, keep the input above the keyboard; dismiss the keyboard to inspect more results when needed."
+      ],
+      "answer": "Finder searches available account content and links to matching screens.\n\n1. Open the floating orb and choose Finder.\n2. Enter a distinctive description, amount or date, then select a matching result.\n3. On mobile, keep the input above the keyboard; dismiss the keyboard to inspect more results when needed.\n\nRemember: Confirm amounts and status on the destination screen; a search result is a navigation aid.",
+      "keywords": [
+        "finder",
+        "search",
+        "orb",
+        "keyboard",
+        "voice"
+      ],
+      "page": "dashboard",
+      "note": "Confirm amounts and status on the destination screen; a search result is a navigation aid."
+    },
+    {
+      "id": "finder-empty",
+      "category": "Getting started",
+      "question": "Why does Finder show no results?",
+      "summary": "The term may not match available records, or account data may still be loading.",
+      "steps": [
+        "Check that account screens have loaded and the connection works.",
+        "Try a distinctive part of the description without punctuation, or a date as shown in the app.",
+        "Open Transactions directly and clear its filters. Report a consistently missing known record with the search term and screen."
+      ],
+      "answer": "The term may not match available records, or account data may still be loading.\n\n1. Check that account screens have loaded and the connection works.\n2. Try a distinctive part of the description without punctuation, or a date as shown in the app.\n3. Open Transactions directly and clear its filters. Report a consistently missing known record with the search term and screen.\n\nRemember: No search result does not prove that a record was deleted.",
+      "keywords": [
+        "finder",
+        "empty",
+        "first",
+        "load",
+        "no",
+        "results"
+      ],
+      "page": "transactions",
+      "note": "No search result does not prove that a record was deleted."
+    },
+    {
+      "id": "screen-loading",
+      "category": "Getting started",
+      "question": "What should I do when a screen stays on Loading or shows Retry?",
+      "summary": "Wait for a result or a visible error before repeating an action.",
+      "steps": [
+        "Check your connection and use the screen’s Retry or Refresh once.",
+        "After a proof submission error, check Recent Payments for the same reference before resubmitting.",
+        "Report repeated failures with the screen name, approximate time and visible error."
+      ],
+      "answer": "Wait for a result or a visible error before repeating an action.\n\n1. Check your connection and use the screen’s Retry or Refresh once.\n2. After a proof submission error, check Recent Payments for the same reference before resubmitting.\n3. Report repeated failures with the screen name, approximate time and visible error.\n\nRemember: A spinner or network error does not tell you whether a save committed.",
+      "keywords": [
+        "screen",
+        "loading",
+        "slow",
+        "retry",
+        "refresh"
+      ],
+      "page": "support",
+      "note": "A spinner or network error does not tell you whether a save committed."
+    },
+    {
+      "id": "switch-language",
+      "category": "Getting started",
+      "question": "How do I change the app language?",
+      "summary": "Language settings change interface wording rather than your saved financial records.",
+      "steps": [
+        "Open More or profile/settings and choose Language.",
+        "Select an available language.",
+        "Return to the screen and check its labels. Names, descriptions and issued documents can keep their original language."
+      ],
+      "answer": "Language settings change interface wording rather than your saved financial records.\n\n1. Open More or profile/settings and choose Language.\n2. Select an available language.\n3. Return to the screen and check its labels. Names, descriptions and issued documents can keep their original language.\n\nRemember: New detailed guides can remain in English until a reviewed translation is available.",
+      "keywords": [
+        "switch",
+        "language",
+        "Filipino",
+        "English",
+        "translation"
+      ],
+      "page": "languageSettings",
+      "note": "New detailed guides can remain in English until a reviewed translation is available."
+    },
+    {
+      "id": "login",
+      "category": "Sign-in & account security",
+      "question": "How do I sign in or get help with access?",
+      "summary": "Use your registered email/password or a lender-issued Login Code.",
+      "steps": [
+        "Choose Email and password, enter your registered details and select Sign In.",
+        "For a lender-issued six-digit code, choose Login Code and enter all digits; sign-in starts after the sixth digit.",
+        "If access is locked or disabled, follow the displayed support/unlock instructions instead of guessing credentials."
+      ],
+      "answer": "Use your registered email/password or a lender-issued Login Code.\n\n1. Choose Email and password, enter your registered details and select Sign In.\n2. For a lender-issued six-digit code, choose Login Code and enter all digits; sign-in starts after the sixth digit.\n3. If access is locked or disabled, follow the displayed support/unlock instructions instead of guessing credentials.\n\nRemember: Never send passwords, Login Codes or OTPs through chat or a ticket.",
+      "keywords": [
+        "login",
+        "sign",
+        "in",
+        "password",
+        "access"
+      ],
+      "page": "support",
+      "note": "Never send passwords, Login Codes or OTPs through chat or a ticket."
+    },
+    {
+      "id": "login-code",
+      "category": "Sign-in & account security",
+      "question": "How do I use a six-digit Login Code?",
+      "summary": "A Login Code is a lender-managed alternative sign-in credential.",
+      "steps": [
+        "Select Login Code on the sign-in screen.",
+        "Enter the six digits exactly as issued; the final digit starts sign-in.",
+        "If rejected, check the code with your lender instead of repeatedly guessing."
+      ],
+      "answer": "A Login Code is a lender-managed alternative sign-in credential.\n\n1. Select Login Code on the sign-in screen.\n2. Enter the six digits exactly as issued; the final digit starts sign-in.\n3. If rejected, check the code with your lender instead of repeatedly guessing.\n\nRemember: Codes are reusable until replaced or revoked under the current policy. Protect a code like a password.",
+      "keywords": [
+        "login",
+        "code",
+        "six",
+        "digit",
+        "expiry"
+      ],
+      "page": "support",
+      "note": "Codes are reusable until replaced or revoked under the current policy. Protect a code like a password."
+    },
+    {
+      "id": "code-vs-password",
+      "category": "Sign-in & account security",
+      "question": "Does resetting my password replace my Login Code or clear a lock?",
+      "summary": "Passwords, Login Codes and sign-in restrictions are separate controls.",
+      "steps": [
+        "Use the supported password recovery process for a forgotten password.",
+        "Ask the lender separately to replace or revoke a code you no longer trust.",
+        "If the account/device is locked, request the relevant unlock and then select Check access."
+      ],
+      "answer": "Passwords, Login Codes and sign-in restrictions are separate controls.\n\n1. Use the supported password recovery process for a forgotten password.\n2. Ask the lender separately to replace or revoke a code you no longer trust.\n3. If the account/device is locked, request the relevant unlock and then select Check access.\n\nRemember: Waiting or changing a password does not automatically clear a lender-managed lock.",
+      "keywords": [
+        "code",
+        "vs",
+        "password",
+        "reset",
+        "revoked",
+        "unlock"
+      ],
+      "page": "support",
+      "note": "Waiting or changing a password does not automatically clear a lender-managed lock."
+    },
+    {
+      "id": "account-lock",
+      "category": "Sign-in & account security",
+      "question": "What happens after too many incorrect password attempts?",
+      "summary": "Five consecutive invalid email/password attempts lock that account across both sign-in methods.",
+      "steps": [
+        "Stop trying when the lock appears and retain the unlock reference.",
+        "Open Help & Support or Contact Lender Support from the popup.",
+        "After the lender confirms the unlock, select Check access and sign in again."
+      ],
+      "answer": "Five consecutive invalid email/password attempts lock that account across both sign-in methods.\n\n1. Stop trying when the lock appears and retain the unlock reference.\n2. Open Help & Support or Contact Lender Support from the popup.\n3. After the lender confirms the unlock, select Check access and sign in again.\n\nRemember: Email/password input is disabled while locked. Do not keep guessing or assume the lock expires by waiting.",
+      "keywords": [
+        "account",
+        "lock",
+        "locked",
+        "five",
+        "attempts"
+      ],
+      "page": "support",
+      "note": "Email/password input is disabled while locked. Do not keep guessing or assume the lock expires by waiting."
+    },
+    {
+      "id": "device-lock",
+      "category": "Sign-in & account security",
+      "question": "How is a Login Code device lock different from an account lock?",
+      "summary": "Five incorrect Login Codes lock sign-in on that device; password-attempt account locks identify the account.",
+      "steps": [
+        "Read whether the popup describes an account or device restriction.",
+        "Send the lender the unlock reference through support.",
+        "Use Check access after the lender unlocks the relevant restriction."
+      ],
+      "answer": "Five incorrect Login Codes lock sign-in on that device; password-attempt account locks identify the account.\n\n1. Read whether the popup describes an account or device restriction.\n2. Send the lender the unlock reference through support.\n3. Use Check access after the lender unlocks the relevant restriction.\n\nRemember: Do not try other accounts or guessed codes to bypass a restriction.",
+      "keywords": [
+        "device",
+        "lock",
+        "invalid",
+        "code",
+        "reference"
+      ],
+      "page": "support",
+      "note": "Do not try other accounts or guessed codes to bypass a restriction."
+    },
+    {
+      "id": "locked-support",
+      "category": "Sign-in & account security",
+      "question": "What is prepared when I contact support from a lockout popup?",
+      "summary": "The lockout support flow can capture issue context and prefill the ticket.",
+      "steps": [
+        "Choose Help & Support or Contact Lender Support from the popup.",
+        "Review the Unable to login topic, description and screenshot attachment if capture is available.",
+        "Add useful non-secret details, submit once and keep the ticket reference."
+      ],
+      "answer": "The lockout support flow can capture issue context and prefill the ticket.\n\n1. Choose Help & Support or Contact Lender Support from the popup.\n2. Review the Unable to login topic, description and screenshot attachment if capture is available.\n3. Add useful non-secret details, submit once and keep the ticket reference.\n\nRemember: If capture is unavailable, attach a redacted screenshot manually. Do not include credentials.",
+      "keywords": [
+        "locked",
+        "support",
+        "lock",
+        "screenshot",
+        "prefill",
+        "unable",
+        "login"
+      ],
+      "page": "support",
+      "note": "If capture is unavailable, attach a redacted screenshot manually. Do not include credentials."
+    },
+    {
+      "id": "disabled-account",
+      "category": "Sign-in & account security",
+      "question": "Why does my account say Invited or Disabled instead of Active?",
+      "summary": "The lender controls account status. Invited accounts may need setup; disabled accounts cannot use normal signed-in access.",
+      "steps": [
+        "Check whether you received an invitation and follow its permitted setup process.",
+        "Contact the lender if the status appears wrong, using your registered account reference.",
+        "Wait for the lender’s confirmation before retrying access."
+      ],
+      "answer": "The lender controls account status. Invited accounts may need setup; disabled accounts cannot use normal signed-in access.\n\n1. Check whether you received an invitation and follow its permitted setup process.\n2. Contact the lender if the status appears wrong, using your registered account reference.\n3. Wait for the lender’s confirmation before retrying access.\n\nRemember: Only an authorized lender can override status/email confirmation. Pawcheebels cannot activate accounts.",
+      "keywords": [
+        "disabled",
+        "account",
+        "invited",
+        "active",
+        "confirm",
+        "email"
+      ],
+      "page": "support",
+      "note": "Only an authorized lender can override status/email confirmation. Pawcheebels cannot activate accounts."
+    },
+    {
+      "id": "forgot-password",
+      "category": "Sign-in & account security",
+      "question": "What should I do if I forget my password?",
+      "summary": "Use Forgot password? or contact your lender through the supported access process.",
+      "steps": [
+        "Choose Forgot password? on sign-in and follow its instructions.",
+        "When an email is expected, check the registered mailbox and spam folder and use only a trusted recovery link.",
+        "If no email arrives or access remains locked, contact support rather than requesting repeated resets."
+      ],
+      "answer": "Use Forgot password? or contact your lender through the supported access process.\n\n1. Choose Forgot password? on sign-in and follow its instructions.\n2. When an email is expected, check the registered mailbox and spam folder and use only a trusted recovery link.\n3. If no email arrives or access remains locked, contact support rather than requesting repeated resets.\n\nRemember: Recovery delivery depends on configured services. Do not send a proposed new password to support.",
+      "keywords": [
+        "forgot",
+        "password",
+        "recovery",
+        "email"
+      ],
+      "page": "support",
+      "note": "Recovery delivery depends on configured services. Do not send a proposed new password to support."
+    },
+    {
+      "id": "change-password",
+      "category": "Sign-in & account security",
+      "question": "How do I change my password when signed in?",
+      "summary": "Use Change Password in the account/settings area where available.",
+      "steps": [
+        "Open More or profile and choose Change Password.",
+        "Complete the required fields and password confirmation, correcting validation errors.",
+        "Save once and follow the app’s sign-in instructions. Update your password manager privately if you use one."
+      ],
+      "answer": "Use Change Password in the account/settings area where available.\n\n1. Open More or profile and choose Change Password.\n2. Complete the required fields and password confirmation, correcting validation errors.\n3. Save once and follow the app’s sign-in instructions. Update your password manager privately if you use one.\n\nRemember: Your lender cannot display your existing plaintext password.",
+      "keywords": [
+        "change",
+        "password",
+        "new",
+        "confirmation"
+      ],
+      "page": "changePassword",
+      "note": "Your lender cannot display your existing plaintext password."
+    },
+    {
+      "id": "borrower-account-number",
+      "category": "Sign-in & account security",
+      "question": "What is my borrower account number?",
+      "summary": "This number identifies your LoanLedger account and differs from a bank account or payment reference.",
+      "steps": [
+        "Find the masked number on Dashboard or in profile/account details.",
+        "Use the reveal control only when needed.",
+        "Use the relevant account reference in official support so the lender can identify your account."
+      ],
+      "answer": "This number identifies your LoanLedger account and differs from a bank account or payment reference.\n\n1. Find the masked number on Dashboard or in profile/account details.\n2. Use the reveal control only when needed.\n3. Use the relevant account reference in official support so the lender can identify your account.\n\nRemember: Do not use a borrower account number as a bank-transfer destination.",
+      "keywords": [
+        "borrower",
+        "account",
+        "number",
+        "masked",
+        "reveal"
+      ],
+      "page": "dashboard",
+      "note": "Do not use a borrower account number as a bank-transfer destination."
+    },
+    {
+      "id": "safe-signout",
+      "category": "Sign-in & account security",
+      "question": "How do I sign out safely on a shared device?",
+      "summary": "Use Sign out rather than only closing the tab.",
+      "steps": [
+        "Open More, profile or the desktop sidebar and choose Sign out.",
+        "Confirm that the sign-in screen replaces the account view.",
+        "Avoid remembering credentials on shared devices and handle downloaded financial files carefully."
+      ],
+      "answer": "Use Sign out rather than only closing the tab.\n\n1. Open More, profile or the desktop sidebar and choose Sign out.\n2. Confirm that the sign-in screen replaces the account view.\n3. Avoid remembering credentials on shared devices and handle downloaded financial files carefully.\n\nRemember: Signing out does not delete server records or undo payments.",
+      "keywords": [
+        "safe",
+        "signout",
+        "logout",
+        "sign",
+        "out",
+        "shared",
+        "device"
+      ],
+      "page": "profile",
+      "note": "Signing out does not delete server records or undo payments."
+    },
+    {
+      "id": "unexpected-account",
+      "category": "Sign-in & account security",
+      "question": "What if the app shows the wrong borrower identity?",
+      "summary": "Stop before submitting or changing anything if the account identity is not yours.",
+      "steps": [
+        "Check the name and masked borrower account number.",
+        "Sign out and use your own registered credentials.",
+        "If it persists, contact support with a description and a redacted screenshot."
+      ],
+      "answer": "Stop before submitting or changing anything if the account identity is not yours.\n\n1. Check the name and masked borrower account number.\n2. Sign out and use your own registered credentials.\n3. If it persists, contact support with a description and a redacted screenshot.\n\nRemember: Do not forward, edit or submit against records that appear to belong to another person.",
+      "keywords": [
+        "unexpected",
+        "account",
+        "wrong",
+        "identity"
+      ],
+      "page": "support",
+      "note": "Do not forward, edit or submit against records that appear to belong to another person."
+    },
+    {
+      "id": "current-next",
+      "category": "Dashboard & balances",
+      "question": "What is the difference between Current Balance Due and Next Balance Due?",
+      "summary": "These are separate configured sets of dues; Next does not guarantee every listed date is in the future.",
+      "steps": [
+        "Choose Current Balance Due or Next Balance Due, or swipe the card.",
+        "Check the active card’s amount, dates and item count.",
+        "Open its item count/breakdown to inspect contributing records."
+      ],
+      "answer": "These are separate configured sets of dues; Next does not guarantee every listed date is in the future.\n\n1. Choose Current Balance Due or Next Balance Due, or swipe the card.\n2. Check the active card’s amount, dates and item count.\n3. Open its item count/breakdown to inspect contributing records.\n\nRemember: Your lender can configure included dates. Read the actual due dates rather than relying on the label alone.",
+      "keywords": [
+        "current",
+        "next",
+        "balance"
+      ],
+      "page": "dashboard",
+      "note": "Your lender can configure included dates. Read the actual due dates rather than relying on the label alone.",
+      "illustration": "balance"
+    },
+    {
+      "id": "balance-breakdown",
+      "category": "Dashboard & balances",
+      "question": "How do I see which items make up my displayed balance?",
+      "summary": "The active balance card and its detailed breakdown belong together.",
+      "steps": [
+        "Select the balance view you need.",
+        "Open the item count or View all beside Transactions Detailed Breakdown.",
+        "Compare positive charges with negative reductions and open an installment item for its schedule."
+      ],
+      "answer": "The active balance card and its detailed breakdown belong together.\n\n1. Select the balance view you need.\n2. Open the item count or View all beside Transactions Detailed Breakdown.\n3. Compare positive charges with negative reductions and open an installment item for its schedule.\n\nRemember: Reviewed postings, corrections or date-group changes can affect the displayed total.",
+      "keywords": [
+        "balance",
+        "breakdown",
+        "item",
+        "count",
+        "total"
+      ],
+      "page": "balance",
+      "note": "Reviewed postings, corrections or date-group changes can affect the displayed total."
+    },
+    {
+      "id": "balance-vs-principal",
+      "category": "Dashboard & balances",
+      "question": "Why is original principal different from the amount currently due?",
+      "summary": "Principal describes the original loan; current due covers the items in the active balance view.",
+      "steps": [
+        "Check the installment card’s original amount and term.",
+        "Open the schedule and review paid rows, future dues and partial-payment remainders.",
+        "Compare only the dates in the active view, including applicable fees and adjustments."
+      ],
+      "answer": "Principal describes the original loan; current due covers the items in the active balance view.\n\n1. Check the installment card’s original amount and term.\n2. Open the schedule and review paid rows, future dues and partial-payment remainders.\n3. Compare only the dates in the active view, including applicable fees and adjustments.\n\nRemember: Do not add original principal to current due: these describe different things.",
+      "keywords": [
+        "balance",
+        "vs",
+        "principal",
+        "original",
+        "difference"
+      ],
+      "page": "transactions",
+      "note": "Do not add original principal to current due: these describe different things."
+    },
+    {
+      "id": "past-due",
+      "category": "Dashboard & balances",
+      "question": "What does the past-due advisory mean?",
+      "summary": "It identifies overdue unpaid charges included in the active balance card and describes the recorded policy.",
+      "steps": [
+        "Read the overdue date and any grace-period message.",
+        "Inspect the matching unpaid items and fees.",
+        "Contact the lender if a due date, charge or recorded payment is disputed."
+      ],
+      "answer": "It identifies overdue unpaid charges included in the active balance card and describes the recorded policy.\n\n1. Read the overdue date and any grace-period message.\n2. Inspect the matching unpaid items and fees.\n3. Contact the lender if a due date, charge or recorded payment is disputed.\n\nRemember: A default rate is not a universal charge for every account. Your agreement and lender-confirmed assessment determine applicable fees.",
+      "keywords": [
+        "past",
+        "due",
+        "overdue",
+        "grace",
+        "late"
+      ],
+      "page": "dashboard",
+      "note": "A default rate is not a universal charge for every account. Your agreement and lender-confirmed assessment determine applicable fees."
+    },
+    {
+      "id": "credit-advisory",
+      "category": "Dashboard & balances",
+      "question": "When does the available account credit advisory appear?",
+      "summary": "It appears when a positive account credit balance is saved; it is hidden when credit is zero.",
+      "steps": [
+        "Read the available credit on the Dashboard payment card.",
+        "Message your lender to request review/application to specific dues.",
+        "After posting, check updated credit and Account credit activity in Transactions or History."
+      ],
+      "answer": "It appears when a positive account credit balance is saved; it is hidden when credit is zero.\n\n1. Read the available credit on the Dashboard payment card.\n2. Message your lender to request review/application to specific dues.\n3. After posting, check updated credit and Account credit activity in Transactions or History.\n\nRemember: Credit is applied after lender review; its presence does not automatically settle a due.",
+      "keywords": [
+        "credit",
+        "advisory",
+        "available"
+      ],
+      "page": "dashboard",
+      "note": "Credit is applied after lender review; its presence does not automatically settle a due."
+    },
+    {
+      "id": "credit-vs-negative",
+      "category": "Dashboard & balances",
+      "question": "Are available credit and negative ledger entries the same thing?",
+      "summary": "They are distinct records and must not be deducted twice.",
+      "steps": [
+        "Use Payments Received Total for negative entries included in chosen due dates.",
+        "Use available account credit for the separate saved credit awaiting allocation.",
+        "Ask the lender to review uncertainty before requesting another adjustment."
+      ],
+      "answer": "They are distinct records and must not be deducted twice.\n\n1. Use Payments Received Total for negative entries included in chosen due dates.\n2. Use available account credit for the separate saved credit awaiting allocation.\n3. Ask the lender to review uncertainty before requesting another adjustment.\n\nRemember: Display-only payment breakdowns explain saved postings; they are not another payment or payable.",
+      "keywords": [
+        "credit",
+        "vs",
+        "negative",
+        "double",
+        "deduction"
+      ],
+      "page": "payment",
+      "note": "Display-only payment breakdowns explain saved postings; they are not another payment or payable.",
+      "illustration": "selection"
+    },
+    {
+      "id": "balance-live",
+      "category": "Dashboard & balances",
+      "question": "Will balances update when the lender changes a record?",
+      "summary": "Connected screens receive relevant ledger and Payment Due changes without requiring a full page refresh.",
+      "steps": [
+        "Stay online and wait for the save/update to complete.",
+        "Check the affected item and active balance group.",
+        "If a known update remains stale, safely refresh and report the item and time."
+      ],
+      "answer": "Connected screens receive relevant ledger and Payment Due changes without requiring a full page refresh.\n\n1. Stay online and wait for the save/update to complete.\n2. Check the affected item and active balance group.\n3. If a known update remains stale, safely refresh and report the item and time.\n\nRemember: A retained payment draft can require allocation confirmation again after selected dues change.",
+      "keywords": [
+        "balance",
+        "live",
+        "realtime",
+        "update",
+        "refresh"
+      ],
+      "page": "dashboard",
+      "note": "A retained payment draft can require allocation confirmation again after selected dues change."
+    },
+    {
+      "id": "no-current-dues",
+      "category": "Dashboard & balances",
+      "question": "Why is a balance view empty while my loan is active?",
+      "summary": "The balance view lists configured due dates, not the full loan’s future installments.",
+      "steps": [
+        "Check both Current and Next and inspect each item list.",
+        "Open Transactions and the complete installment schedule.",
+        "Ask the lender to review Payment Due configuration if a date should appear but does not."
+      ],
+      "answer": "The balance view lists configured due dates, not the full loan’s future installments.\n\n1. Check both Current and Next and inspect each item list.\n2. Open Transactions and the complete installment schedule.\n3. Ask the lender to review Payment Due configuration if a date should appear but does not.\n\nRemember: An empty date group does not cancel a loan.",
+      "keywords": [
+        "no",
+        "current",
+        "dues",
+        "empty",
+        "balance",
+        "future"
+      ],
+      "page": "transactions",
+      "note": "An empty date group does not cancel a loan."
+    },
+    {
+      "id": "transfer-accounts",
+      "category": "Dashboard & balances",
+      "question": "Where do I find supported transfer channels and bank details?",
+      "summary": "Use the details inside the app rather than an old screenshot.",
+      "steps": [
+        "Choose View transfer accounts or a supported channel logo on Dashboard.",
+        "Review the displayed bank/channel, recipient name, number and QR details.",
+        "Transfer through your bank or wallet, then submit its proof in Payments."
+      ],
+      "answer": "Use the details inside the app rather than an old screenshot.\n\n1. Choose View transfer accounts or a supported channel logo on Dashboard.\n2. Review the displayed bank/channel, recipient name, number and QR details.\n3. Transfer through your bank or wallet, then submit its proof in Payments.\n\nRemember: Opening/copying details does not move funds. Verify the recipient in your bank before confirming a transfer.",
+      "keywords": [
+        "transfer",
+        "accounts",
+        "GCash",
+        "BDO",
+        "BPI",
+        "MariBank",
+        "Security",
+        "Bank",
+        "QR"
+      ],
+      "page": "dashboard",
+      "note": "Opening/copying details does not move funds. Verify the recipient in your bank before confirming a transfer."
+    },
+    {
+      "id": "copied-details",
+      "category": "Dashboard & balances",
+      "question": "Does copying bank details or opening a QR code make a payment?",
+      "summary": "No. These actions help prepare a transfer outside LoanLedger.",
+      "steps": [
+        "Check the recipient details in the app.",
+        "Complete your bank/wallet’s normal transfer process and inspect its confirmation.",
+        "Return to Payments and submit the resulting evidence for lender verification."
+      ],
+      "answer": "No. These actions help prepare a transfer outside LoanLedger.\n\n1. Check the recipient details in the app.\n2. Complete your bank/wallet’s normal transfer process and inspect its confirmation.\n3. Return to Payments and submit the resulting evidence for lender verification.\n\nRemember: Bank transfer, proof submission and lender posting are separate stages.",
+      "keywords": [
+        "copied",
+        "details",
+        "copy",
+        "QR",
+        "bank",
+        "transfer"
+      ],
+      "page": "payment",
+      "note": "Bank transfer, proof submission and lender posting are separate stages."
+    },
+    {
+      "id": "installment",
+      "category": "Transactions & installments",
+      "question": "Where do I find Cash Loan and Retail Installments?",
+      "summary": "Open Transactions for grouped installment records and their schedules.",
+      "steps": [
+        "Use All, Cash Loan or Retail Installments in the installment area.",
+        "Cards is the default. Swipe or use arrows between cards, or choose List for a compact overview.",
+        "Open the correct card/row to inspect its Installment Schedule."
+      ],
+      "answer": "Open Transactions for grouped installment records and their schedules.\n\n1. Use All, Cash Loan or Retail Installments in the installment area.\n2. Cards is the default. Swipe or use arrows between cards, or choose List for a compact overview.\n3. Open the correct card/row to inspect its Installment Schedule.\n\nRemember: PayPal Send can belong to Cash Loan when classified that way by your lender.",
+      "keywords": [
+        "installment",
+        "cash",
+        "loan",
+        "retail",
+        "PayPal"
+      ],
+      "page": "transactions",
+      "note": "PayPal Send can belong to Cash Loan when classified that way by your lender.",
+      "illustration": "transactions"
+    },
+    {
+      "id": "sorting",
+      "category": "Transactions & installments",
+      "question": "How are transactions and loan profiles sorted?",
+      "summary": "Sorting changes presentation rather than the saved records.",
+      "steps": [
+        "Open Transactions and choose Newest, Oldest, Amount: high to low or Amount: low to high where available.",
+        "Combine sort with description search and group/status pills.",
+        "Check transaction dates when comparing the order in Loan Profile or another screen."
+      ],
+      "answer": "Sorting changes presentation rather than the saved records.\n\n1. Open Transactions and choose Newest, Oldest, Amount: high to low or Amount: low to high where available.\n2. Combine sort with description search and group/status pills.\n3. Check transaction dates when comparing the order in Loan Profile or another screen.\n\nRemember: Transaction date records when an item originated; due date records when payment is due.",
+      "keywords": [
+        "sorting",
+        "sort",
+        "newest",
+        "oldest",
+        "amount",
+        "date"
+      ],
+      "page": "transactions",
+      "note": "Transaction date records when an item originated; due date records when payment is due."
+    },
+    {
+      "id": "transaction-search",
+      "category": "Transactions & installments",
+      "question": "How do I narrow the transaction list?",
+      "summary": "Combine search with group and status filters to find a record.",
+      "steps": [
+        "Enter a distinctive part of the description.",
+        "Choose an installment group or a straight-transaction group and relevant status.",
+        "Clear search and return filters to All for the broader list."
+      ],
+      "answer": "Combine search with group and status filters to find a record.\n\n1. Enter a distinctive part of the description.\n2. Choose an installment group or a straight-transaction group and relevant status.\n3. Clear search and return filters to All for the broader list.\n\nRemember: A record hidden by filters is not necessarily deleted.",
+      "keywords": [
+        "transaction",
+        "search",
+        "filter",
+        "missing"
+      ],
+      "page": "transactions",
+      "note": "A record hidden by filters is not necessarily deleted."
+    },
+    {
+      "id": "transaction-totals",
+      "category": "Transactions & installments",
+      "question": "What are the amounts beside transaction group names?",
+      "summary": "Group totals adapt to the current filters.",
+      "steps": [
+        "Set search and group/status filters first.",
+        "Read the amount beside Cash Loan, Retail Installments or Straight Transactions.",
+        "Clear filters to return to the broader total."
+      ],
+      "answer": "Group totals adapt to the current filters.\n\n1. Set search and group/status filters first.\n2. Read the amount beside Cash Loan, Retail Installments or Straight Transactions.\n3. Clear filters to return to the broader total.\n\nRemember: Installment totals sum displayed loan/card amounts; straight totals sum matching signed amounts including adjustments. These totals are not automatically the amount due today.",
+      "keywords": [
+        "transaction",
+        "totals",
+        "group",
+        "filtered",
+        "amount"
+      ],
+      "page": "transactions",
+      "note": "Installment totals sum displayed loan/card amounts; straight totals sum matching signed amounts including adjustments. These totals are not automatically the amount due today."
+    },
+    {
+      "id": "straight-groups",
+      "category": "Transactions & installments",
+      "question": "What do Straight Retail, Fees and Adjustments mean?",
+      "summary": "These pills classify entries within Straight Transactions.",
+      "steps": [
+        "Choose Straight Retail for ordinary one-time retail items.",
+        "Choose Fees for charges such as finance charges and late fees.",
+        "Choose Adjustments for entries such as partial-payment reductions and overpayment credit; choose All groups to compare them."
+      ],
+      "answer": "These pills classify entries within Straight Transactions.\n\n1. Choose Straight Retail for ordinary one-time retail items.\n2. Choose Fees for charges such as finance charges and late fees.\n3. Choose Adjustments for entries such as partial-payment reductions and overpayment credit; choose All groups to compare them.\n\nRemember: The lender manages classifications. A group or logo does not itself determine a payment’s accounting effect.",
+      "keywords": [
+        "straight",
+        "groups",
+        "retail",
+        "fees",
+        "adjustments"
+      ],
+      "page": "straight",
+      "note": "The lender manages classifications. A group or logo does not itself determine a payment’s accounting effect.",
+      "illustration": "transactions"
+    },
+    {
+      "id": "installment-schedule",
+      "category": "Transactions & installments",
+      "question": "What should I check in an Installment Schedule?",
+      "summary": "The schedule contains the selected loan’s details and installment records.",
+      "steps": [
+        "Open Transactions, then the installment matching both description and transaction date.",
+        "Review original amount, term, rate and fee fields.",
+        "Inspect each row’s due date, amount, status and paid date; use available disclosure/download actions when needed."
+      ],
+      "answer": "The schedule contains the selected loan’s details and installment records.\n\n1. Open Transactions, then the installment matching both description and transaction date.\n2. Review original amount, term, rate and fee fields.\n3. Inspect each row’s due date, amount, status and paid date; use available disclosure/download actions when needed.\n\nRemember: For a partial payment, check the remaining amount rather than assuming the entire installment is paid.",
+      "keywords": [
+        "installment",
+        "schedule",
+        "monthly",
+        "dues",
+        "details"
+      ],
+      "page": "transactions",
+      "note": "For a partial payment, check the remaining amount rather than assuming the entire installment is paid."
+    },
+    {
+      "id": "installment-progress",
+      "category": "Transactions & installments",
+      "question": "What does payments verified or the progress percentage mean?",
+      "summary": "Progress reflects recorded installment status, not simply the number of proof uploads.",
+      "steps": [
+        "Compare the verified count with paid rows in the schedule.",
+        "Check whether a recent proof is still Pending in Recent Payments.",
+        "For partial payments, inspect the unpaid remainder and its allocation breakdown."
+      ],
+      "answer": "Progress reflects recorded installment status, not simply the number of proof uploads.\n\n1. Compare the verified count with paid rows in the schedule.\n2. Check whether a recent proof is still Pending in Recent Payments.\n3. For partial payments, inspect the unpaid remainder and its allocation breakdown.\n\nRemember: Progress is informational and does not create a new charge or guarantee approval.",
+      "keywords": [
+        "installment",
+        "progress",
+        "verified",
+        "percentage"
+      ],
+      "page": "transactions",
+      "note": "Progress is informational and does not create a new charge or guarantee approval."
+    },
+    {
+      "id": "fully-paid",
+      "category": "Transactions & installments",
+      "question": "What happens when I open a fully paid installment?",
+      "summary": "A settled installment shows Fully paid and can display a celebratory confetti burst and congratulations badge.",
+      "steps": [
+        "Enable fully paid installments if your current filter hides them.",
+        "Open the card/row and inspect its completed schedule.",
+        "Review paid dates and download available supporting records."
+      ],
+      "answer": "A settled installment shows Fully paid and can display a celebratory confetti burst and congratulations badge.\n\n1. Enable fully paid installments if your current filter hides them.\n2. Open the card/row and inspect its completed schedule.\n3. Review paid dates and download available supporting records.\n\nRemember: The celebration is visual feedback, not a financial posting. Reduced-motion preferences can reduce effects.",
+      "keywords": [
+        "fully",
+        "paid",
+        "settled",
+        "confetti",
+        "congratulations"
+      ],
+      "page": "transactions",
+      "note": "The celebration is visual feedback, not a financial posting. Reduced-motion preferences can reduce effects."
+    },
+    {
+      "id": "refunded",
+      "category": "Transactions & installments",
+      "question": "Why does an installment show Refunded?",
+      "summary": "Refunded is a recorded status distinct from In progress or Fully paid.",
+      "steps": [
+        "Open the schedule and read the relevant rows/status.",
+        "Compare with the refund explanation supplied by your lender.",
+        "Ask the lender for the actual refund reference, amount and destination if needed."
+      ],
+      "answer": "Refunded is a recorded status distinct from In progress or Fully paid.\n\n1. Open the schedule and read the relevant rows/status.\n2. Compare with the refund explanation supplied by your lender.\n3. Ask the lender for the actual refund reference, amount and destination if needed.\n\nRemember: The badge alone does not prove a bank transfer reached you. Check the refund evidence.",
+      "keywords": [
+        "refunded",
+        "refund"
+      ],
+      "page": "transactions",
+      "note": "The badge alone does not prove a bank transfer reached you. Check the refund evidence."
+    },
+    {
+      "id": "cancelled-entry",
+      "category": "Transactions & installments",
+      "question": "What does Cancelled mean on a transaction?",
+      "summary": "Cancellation differs from paid, refunded or deleted.",
+      "steps": [
+        "Open the item and inspect its status and details.",
+        "Include Cancelled in the applicable filter when finding old entries.",
+        "Ask the lender why it was cancelled if the reason is unclear."
+      ],
+      "answer": "Cancellation differs from paid, refunded or deleted.\n\n1. Open the item and inspect its status and details.\n2. Include Cancelled in the applicable filter when finding old entries.\n3. Ask the lender why it was cancelled if the reason is unclear.\n\nRemember: Do not interpret cancellation as a cash payment or bank refund.",
+      "keywords": [
+        "cancelled",
+        "entry",
+        "canceled",
+        "status"
+      ],
+      "page": "transactions",
+      "note": "Do not interpret cancellation as a cash payment or bank refund."
+    },
+    {
+      "id": "unclassified",
+      "category": "Transactions & installments",
+      "question": "Why is an installment Unclassified or in the wrong group?",
+      "summary": "Older records can need a lender classification correction.",
+      "steps": [
+        "Note the exact description and transaction date.",
+        "Tell your lender the expected Cash Loan or Retail Installment group.",
+        "Check the updated card and schedule after the lender saves."
+      ],
+      "answer": "Older records can need a lender classification correction.\n\n1. Note the exact description and transaction date.\n2. Tell your lender the expected Cash Loan or Retail Installment group.\n3. Check the updated card and schedule after the lender saves.\n\nRemember: Only the lender can change classification. A linked-loan group change applies to its schedule.",
+      "keywords": [
+        "unclassified",
+        "wrong",
+        "group",
+        "category"
+      ],
+      "page": "transactions",
+      "note": "Only the lender can change classification. A linked-loan group change applies to its schedule."
+    },
+    {
+      "id": "brand-logos",
+      "category": "Transactions & installments",
+      "question": "Where do the merchant and group logos come from?",
+      "summary": "The lender assigns retail brand logos and shared Cash Loan, Fees and Adjustments artwork.",
+      "steps": [
+        "Identify an item using description and amount even when a logo is present.",
+        "Tell the lender if a merchant logo is incorrect or missing.",
+        "Expect shared group artwork to follow matching records in applicable views."
+      ],
+      "answer": "The lender assigns retail brand logos and shared Cash Loan, Fees and Adjustments artwork.\n\n1. Identify an item using description and amount even when a logo is present.\n2. Tell the lender if a merchant logo is incorrect or missing.\n3. Expect shared group artwork to follow matching records in applicable views.\n\nRemember: Changing artwork should not archive records, change amounts or create payments/credit.",
+      "keywords": [
+        "brand",
+        "logos",
+        "logo",
+        "Brandfetch",
+        "merchant",
+        "artwork"
+      ],
+      "page": "transactions",
+      "note": "Changing artwork should not archive records, change amounts or create payments/credit."
+    },
+    {
+      "id": "transaction-colours",
+      "category": "Transactions & installments",
+      "question": "What do red and green transaction highlights mean?",
+      "summary": "Colour distinguishes charges, payment-related reductions and recorded states.",
+      "steps": [
+        "Read the description, sign and status as well as colour.",
+        "Finance charges and late fees are presented in red; credit/payment-related negative entries use green.",
+        "Open the schedule or breakdown to confirm the balance effect."
+      ],
+      "answer": "Colour distinguishes charges, payment-related reductions and recorded states.\n\n1. Read the description, sign and status as well as colour.\n2. Finance charges and late fees are presented in red; credit/payment-related negative entries use green.\n3. Open the schedule or breakdown to confirm the balance effect.\n\nRemember: Positive does not automatically mean unpaid; green does not mean every related loan is settled.",
+      "keywords": [
+        "transaction",
+        "colours",
+        "red",
+        "green",
+        "highlight",
+        "paid"
+      ],
+      "page": "transactions",
+      "note": "Positive does not automatically mean unpaid; green does not mean every related loan is settled."
+    },
+    {
+      "id": "missing-record",
+      "category": "Transactions & installments",
+      "question": "What should I do if I cannot find a transaction?",
+      "summary": "Check filters and record context before concluding it is missing.",
+      "steps": [
+        "Clear search, choose All groups/statuses and include fully paid installments if relevant.",
+        "Check History and the correct schedule, matching borrower and dates.",
+        "Contact the lender with the description/date/reference and ask whether it was archived or corrected."
+      ],
+      "answer": "Check filters and record context before concluding it is missing.\n\n1. Clear search, choose All groups/statuses and include fully paid installments if relevant.\n2. Check History and the correct schedule, matching borrower and dates.\n3. Contact the lender with the description/date/reference and ask whether it was archived or corrected.\n\nRemember: Do not create a replacement payment or credit to compensate for an unexplained missing record.",
+      "keywords": [
+        "missing",
+        "record",
+        "deleted",
+        "archived"
+      ],
+      "page": "support",
+      "note": "Do not create a replacement payment or credit to compensate for an unexplained missing record."
+    },
+    {
+      "id": "allocation",
+      "category": "Selecting dues & credits",
+      "question": "What is a payment allocation?",
+      "summary": "Allocation identifies dues you request a payment to cover; the lender reviews the final posting.",
+      "steps": [
+        "Select due dates in Payments.",
+        "Review positive items and included reductions, then confirm allocation.",
+        "After review, inspect the saved breakdown for amounts applied to each due and any credit."
+      ],
+      "answer": "Allocation identifies dues you request a payment to cover; the lender reviews the final posting.\n\n1. Select due dates in Payments.\n2. Review positive items and included reductions, then confirm allocation.\n3. After review, inspect the saved breakdown for amounts applied to each due and any credit.\n\nRemember: Requested allocation is not automatically the final lender allocation.",
+      "keywords": [
+        "allocation",
+        "selected",
+        "dues",
+        "posting"
+      ],
+      "page": "payment",
+      "note": "Requested allocation is not automatically the final lender allocation.",
+      "illustration": "selection"
+    },
+    {
+      "id": "select-multiple-dates",
+      "category": "Selecting dues & credits",
+      "question": "How do I pay for several due dates together?",
+      "summary": "You can include multiple applicable dates in one proof submission.",
+      "steps": [
+        "Expand the due-date picker in Payments.",
+        "Select the dates you intend to cover and inspect the combined item list.",
+        "Adjust positive-item selection, review the totals and confirm before uploading proof."
+      ],
+      "answer": "You can include multiple applicable dates in one proof submission.\n\n1. Expand the due-date picker in Payments.\n2. Select the dates you intend to cover and inspect the combined item list.\n3. Adjust positive-item selection, review the totals and confirm before uploading proof.\n\nRemember: Partial or excess submissions require the lender to review how every amount is allocated.",
+      "keywords": [
+        "select",
+        "multiple",
+        "dates",
+        "combined",
+        "advance"
+      ],
+      "page": "payment",
+      "note": "Partial or excess submissions require the lender to review how every amount is allocated.",
+      "illustration": "selection"
+    },
+    {
+      "id": "credit",
+      "category": "Selecting dues & credits",
+      "question": "Why are some amounts negative and green?",
+      "summary": "Negative green entries represent recorded reductions, not a new amount to pay.",
+      "steps": [
+        "Choose the due dates you intend to cover.",
+        "Read Payments Received Total for the absolute sum of included negative entries.",
+        "Use Final Due Amount after those reductions when reviewing your selected payment requirement."
+      ],
+      "answer": "Negative green entries represent recorded reductions, not a new amount to pay.\n\n1. Choose the due dates you intend to cover.\n2. Read Payments Received Total for the absolute sum of included negative entries.\n3. Use Final Due Amount after those reductions when reviewing your selected payment requirement.\n\nRemember: Negative entries for the chosen dates are automatically checked and cannot be unchecked. Do not subtract them twice.",
+      "keywords": [
+        "credit",
+        "negative",
+        "green",
+        "partial",
+        "payment",
+        "overpayment"
+      ],
+      "page": "payment",
+      "note": "Negative entries for the chosen dates are automatically checked and cannot be unchecked. Do not subtract them twice.",
+      "illustration": "selection"
+    },
+    {
+      "id": "payment-total-breakdown",
+      "category": "Selecting dues & credits",
+      "question": "How are the three selected-payment totals calculated?",
+      "summary": "The summary separates selected positive dues from included negative entries.",
+      "steps": [
+        "Selected Payment Total adds selected positive payable items.",
+        "Payments Received Total adds absolute values of included negative entries for the selected dates.",
+        "Final Due Amount subtracts Payments Received Total from Selected Payment Total and never goes below zero."
+      ],
+      "answer": "The summary separates selected positive dues from included negative entries.\n\n1. Selected Payment Total adds selected positive payable items.\n2. Payments Received Total adds absolute values of included negative entries for the selected dates.\n3. Final Due Amount subtracts Payments Received Total from Selected Payment Total and never goes below zero.\n\nRemember: Example: ₱3,000 selected dues minus ₱500 included reductions = ₱2,500 final due. Separate available account credit is not automatically consumed.",
+      "keywords": [
+        "payment",
+        "total",
+        "breakdown",
+        "Selected",
+        "Payment",
+        "Total",
+        "Payments",
+        "Received",
+        "Final",
+        "Due",
+        "Amount"
+      ],
+      "page": "payment",
+      "note": "Example: ₱3,000 selected dues minus ₱500 included reductions = ₱2,500 final due. Separate available account credit is not automatically consumed.",
+      "illustration": "selection"
+    },
+    {
+      "id": "mandatory-credit",
+      "category": "Selecting dues & credits",
+      "question": "Why can I not uncheck a green credit entry?",
+      "summary": "Included negative entries stay selected to avoid ignoring reductions already represented for those dates.",
+      "steps": [
+        "Read the entry’s due date and description.",
+        "Change the chosen due dates if you intend a different date set.",
+        "Contact the lender if the recorded amount or date is wrong."
+      ],
+      "answer": "Included negative entries stay selected to avoid ignoring reductions already represented for those dates.\n\n1. Read the entry’s due date and description.\n2. Change the chosen due dates if you intend a different date set.\n3. Contact the lender if the recorded amount or date is wrong.\n\nRemember: Clear all removes positive selections while mandatory reductions for the selected dates remain included.",
+      "keywords": [
+        "mandatory",
+        "credit",
+        "disabled",
+        "checkbox",
+        "uncheck"
+      ],
+      "page": "payment",
+      "note": "Clear all removes positive selections while mandatory reductions for the selected dates remain included."
+    },
+    {
+      "id": "zero-final-due",
+      "category": "Selecting dues & credits",
+      "question": "What if included credits cover my entire selection?",
+      "summary": "When Final Due Amount is zero, this selection does not require an additional proof payment.",
+      "steps": [
+        "Review selected dates and positive items.",
+        "Check the reductions already represented in the ledger.",
+        "Ask the lender about an incorrect selection/credit rather than submitting a zero payment."
+      ],
+      "answer": "When Final Due Amount is zero, this selection does not require an additional proof payment.\n\n1. Review selected dates and positive items.\n2. Check the reductions already represented in the ledger.\n3. Ask the lender about an incorrect selection/credit rather than submitting a zero payment.\n\nRemember: A zero result does not create a new refundable cash balance.",
+      "keywords": [
+        "zero",
+        "final",
+        "due",
+        "credit",
+        "covers"
+      ],
+      "page": "payment",
+      "note": "A zero result does not create a new refundable cash balance."
+    },
+    {
+      "id": "choose-specific-item",
+      "category": "Selecting dues & credits",
+      "question": "Can I select just one item on a due date?",
+      "summary": "Positive payable items can be selected individually.",
+      "steps": [
+        "Choose the relevant date.",
+        "Uncheck positive items you do not want included.",
+        "Review the remaining total, mandatory reductions and allocation confirmation."
+      ],
+      "answer": "Positive payable items can be selected individually.\n\n1. Choose the relevant date.\n2. Uncheck positive items you do not want included.\n3. Review the remaining total, mandatory reductions and allocation confirmation.\n\nRemember: Match description and date when several loans have the same installment amount.",
+      "keywords": [
+        "choose",
+        "specific",
+        "item",
+        "one",
+        "deselect",
+        "installment"
+      ],
+      "page": "payment",
+      "note": "Match description and date when several loans have the same installment amount."
+    },
+    {
+      "id": "advance-payment",
+      "category": "Selecting dues & credits",
+      "question": "Can I pay a future installment in advance?",
+      "summary": "Future applicable dues can be selected for advance payment.",
+      "steps": [
+        "Expand the due-date picker and reveal more dates if needed.",
+        "Choose the future due and intended items.",
+        "Confirm allocation, submit actual payment evidence and wait for lender review."
+      ],
+      "answer": "Future applicable dues can be selected for advance payment.\n\n1. Expand the due-date picker and reveal more dates if needed.\n2. Choose the future due and intended items.\n3. Confirm allocation, submit actual payment evidence and wait for lender review.\n\nRemember: Any prepayment conditions or finance-charge changes require lender confirmation under your agreement.",
+      "keywords": [
+        "advance",
+        "payment",
+        "future",
+        "prepay"
+      ],
+      "page": "payment",
+      "note": "Any prepayment conditions or finance-charge changes require lender confirmation under your agreement."
+    },
+    {
+      "id": "selected-items-changed",
+      "category": "Selecting dues & credits",
+      "question": "Why must I confirm my selected items again?",
+      "summary": "Live ledger updates can change a selected item’s amount, status or eligibility.",
+      "steps": [
+        "Read the restored-draft/update notice.",
+        "Compare refreshed items and totals with the retained file, amount and reference.",
+        "Confirm again only when the updated allocation matches your intention."
+      ],
+      "answer": "Live ledger updates can change a selected item’s amount, status or eligibility.\n\n1. Read the restored-draft/update notice.\n2. Compare refreshed items and totals with the retained file, amount and reference.\n3. Confirm again only when the updated allocation matches your intention.\n\nRemember: Keeping a draft does not freeze the ledger. A paid item can disappear from payable selection.",
+      "keywords": [
+        "selected",
+        "items",
+        "changed",
+        "draft",
+        "confirm",
+        "again",
+        "live"
+      ],
+      "page": "payment",
+      "note": "Keeping a draft does not freeze the ledger. A paid item can disappear from payable selection."
+    },
+    {
+      "id": "insufficient-credit",
+      "category": "Selecting dues & credits",
+      "question": "Why can account credit cover only part of a due?",
+      "summary": "Credit application is limited by available saved credit and the due’s unpaid remainder.",
+      "steps": [
+        "Check available credit and the intended remaining due.",
+        "Ask your lender to apply only the reviewed available amount.",
+        "Inspect Account credit activity and the new remainder after posting."
+      ],
+      "answer": "Credit application is limited by available saved credit and the due’s unpaid remainder.\n\n1. Check available credit and the intended remaining due.\n2. Ask your lender to apply only the reviewed available amount.\n3. Inspect Account credit activity and the new remainder after posting.\n\nRemember: Example: ₱200 credit applied to ₱600 outstanding leaves ₱400 due; this is not a new ₱200 bank payment.",
+      "keywords": [
+        "insufficient",
+        "credit",
+        "remaining",
+        "apply"
+      ],
+      "page": "history",
+      "note": "Example: ₱200 credit applied to ₱600 outstanding leaves ₱400 due; this is not a new ₱200 bank payment."
+    },
+    {
+      "id": "proof",
+      "category": "Payment proofs & OCR",
+      "question": "How do I upload proof of payment?",
+      "summary": "Submit actual transfer evidence after selecting and confirming the intended dues.",
+      "steps": [
+        "Open Payments, select due dates and inspect payable items and the three-part total.",
+        "Confirm allocation and attach JPG, PNG, WEBP or PDF up to 5 MB. Use Change uploaded image if necessary.",
+        "Review amount, paid date, method and reference; correct missing fields, submit once and inspect Recent Payments."
+      ],
+      "answer": "Submit actual transfer evidence after selecting and confirming the intended dues.\n\n1. Open Payments, select due dates and inspect payable items and the three-part total.\n2. Confirm allocation and attach JPG, PNG, WEBP or PDF up to 5 MB. Use Change uploaded image if necessary.\n3. Review amount, paid date, method and reference; correct missing fields, submit once and inspect Recent Payments.\n\nRemember: Submission is pending lender review; it does not automatically verify funds or mark installments paid.",
+      "keywords": [
+        "proof",
+        "upload",
+        "submit",
+        "5",
+        "MB"
+      ],
+      "page": "payment",
+      "note": "Submission is pending lender review; it does not automatically verify funds or mark installments paid.",
+      "illustration": "proof"
+    },
+    {
+      "id": "proof-types",
+      "category": "Payment proofs & OCR",
+      "question": "Which proof file types and sizes are accepted?",
+      "summary": "Payment proof accepts JPG/JPEG, PNG, WEBP and PDF up to 5 MB.",
+      "steps": [
+        "Choose clear evidence showing amount, date and reference.",
+        "Export a smaller readable copy if it exceeds 5 MB.",
+        "Upload and wait for validation/OCR before reviewing details."
+      ],
+      "answer": "Payment proof accepts JPG/JPEG, PNG, WEBP and PDF up to 5 MB.\n\n1. Choose clear evidence showing amount, date and reference.\n2. Export a smaller readable copy if it exceeds 5 MB.\n3. Upload and wait for validation/OCR before reviewing details.\n\nRemember: Renaming an unsupported file to .png or .pdf does not convert its contents.",
+      "keywords": [
+        "proof",
+        "types",
+        "file",
+        "size",
+        "limit",
+        "JPG",
+        "PNG",
+        "WEBP",
+        "PDF"
+      ],
+      "page": "payment",
+      "note": "Renaming an unsupported file to .png or .pdf does not convert its contents."
+    },
+    {
+      "id": "change-proof",
+      "category": "Payment proofs & OCR",
+      "question": "How do I replace the attachment before submitting?",
+      "summary": "You can replace the file in an unsubmitted draft.",
+      "steps": [
+        "Choose Change uploaded image in Upload payment proof.",
+        "Select the correct supported file and wait while it is read.",
+        "Review the new amount, date, method and reference again."
+      ],
+      "answer": "You can replace the file in an unsubmitted draft.\n\n1. Choose Change uploaded image in Upload payment proof.\n2. Select the correct supported file and wait while it is read.\n3. Review the new amount, date, method and reference again.\n\nRemember: After submission, use permitted pending retraction or rejected-proof correction rather than assuming the saved file changed.",
+      "keywords": [
+        "change",
+        "proof",
+        "replace",
+        "image",
+        "wrong",
+        "file"
+      ],
+      "page": "payment",
+      "note": "After submission, use permitted pending retraction or rejected-proof correction rather than assuming the saved file changed."
+    },
+    {
+      "id": "ocr",
+      "category": "Payment proofs & OCR",
+      "question": "What is OCR and what if it cannot read my proof?",
+      "summary": "OCR suggests details from text in the proof; it does not verify a transfer.",
+      "steps": [
+        "Wait for the scan result and compare each populated field with the original evidence.",
+        "Correct missing/wrong amount, date, method and reference manually.",
+        "Choose Enter details manually when you prefer not to wait, then review before submitting."
+      ],
+      "answer": "OCR suggests details from text in the proof; it does not verify a transfer.\n\n1. Wait for the scan result and compare each populated field with the original evidence.\n2. Correct missing/wrong amount, date, method and reference manually.\n3. Choose Enter details manually when you prefer not to wait, then review before submitting.\n\nRemember: A successful scan is not lender approval. Blurred or very small text can reduce accuracy.",
+      "keywords": [
+        "ocr",
+        "OCR",
+        "recognition",
+        "scan",
+        "manual"
+      ],
+      "page": "payment",
+      "note": "A successful scan is not lender approval. Blurred or very small text can reduce accuracy.",
+      "illustration": "proof"
+    },
+    {
+      "id": "ocr-faster",
+      "category": "Payment proofs & OCR",
+      "question": "How can I help OCR read a proof more quickly and accurately?",
+      "summary": "A clear, focused original is usually better than an oversized screenshot of unrelated content.",
+      "steps": [
+        "Use the original receipt or a clear screenshot; avoid blur, glare and unreadable compression.",
+        "Keep amount, date, reference and channel visible. Trim unrelated areas without changing evidence.",
+        "Wait for the scan or choose manual entry rather than repeatedly replacing the file."
+      ],
+      "answer": "A clear, focused original is usually better than an oversized screenshot of unrelated content.\n\n1. Use the original receipt or a clear screenshot; avoid blur, glare and unreadable compression.\n2. Keep amount, date, reference and channel visible. Trim unrelated areas without changing evidence.\n3. Wait for the scan or choose manual entry rather than repeatedly replacing the file.\n\nRemember: Speed depends on file and device. A readable text PDF can avoid image-recognition work, but completion time is not guaranteed.",
+      "keywords": [
+        "ocr",
+        "faster",
+        "OCR",
+        "speed",
+        "slow",
+        "clear",
+        "screenshot"
+      ],
+      "page": "payment",
+      "note": "Speed depends on file and device. A readable text PDF can avoid image-recognition work, but completion time is not guaranteed."
+    },
+    {
+      "id": "ocr-progress",
+      "category": "Payment proofs & OCR",
+      "question": "Why is OCR progress taking a long time?",
+      "summary": "The app may be loading recognition resources, reading a PDF or processing image text.",
+      "steps": [
+        "Keep the tab open for the current scan.",
+        "Use Enter details manually to continue reviewing required fields if necessary.",
+        "If a readable supported file repeatedly fails, try a smaller clear copy or report file type/size to support."
+      ],
+      "answer": "The app may be loading recognition resources, reading a PDF or processing image text.\n\n1. Keep the tab open for the current scan.\n2. Use Enter details manually to continue reviewing required fields if necessary.\n3. If a readable supported file repeatedly fails, try a smaller clear copy or report file type/size to support.\n\nRemember: Leaving the screen can stop recognition; review the restored draft before retrying.",
+      "keywords": [
+        "ocr",
+        "progress",
+        "OCR",
+        "stuck",
+        "timeout",
+        "failed"
+      ],
+      "page": "payment",
+      "note": "Leaving the screen can stop recognition; review the restored draft before retrying."
+    },
+    {
+      "id": "payment-amount-format",
+      "category": "Payment proofs & OCR",
+      "question": "How should I enter Amount paid?",
+      "summary": "Enter the actual amount transferred. The field displays comma groups and two decimals, such as 12,345.67.",
+      "steps": [
+        "Compare the receipt amount rather than simply copying selected dues.",
+        "Enter/correct the amount and review its formatted display.",
+        "Check whether it is an exact match, partial payment or excess submission."
+      ],
+      "answer": "Enter the actual amount transferred. The field displays comma groups and two decimals, such as 12,345.67.\n\n1. Compare the receipt amount rather than simply copying selected dues.\n2. Enter/correct the amount and review its formatted display.\n3. Check whether it is an exact match, partial payment or excess submission.\n\nRemember: Do not alter the actual proof amount merely to match selected dues. The lender reviews differences.",
+      "keywords": [
+        "payment",
+        "amount",
+        "format",
+        "paid",
+        "comma",
+        "decimals"
+      ],
+      "page": "payment",
+      "note": "Do not alter the actual proof amount merely to match selected dues. The lender reviews differences."
+    },
+    {
+      "id": "payment-date-reference",
+      "category": "Payment proofs & OCR",
+      "question": "Which payment date and reference should I enter?",
+      "summary": "Use the actual payment evidence, not the due date or a guessed number.",
+      "steps": [
+        "Read the bank/wallet paid date and transfer reference.",
+        "Correct OCR if it captured another date or an unrelated number.",
+        "Check Recent Payments for that reference before submitting."
+      ],
+      "answer": "Use the actual payment evidence, not the due date or a guessed number.\n\n1. Read the bank/wallet paid date and transfer reference.\n2. Correct OCR if it captured another date or an unrelated number.\n3. Check Recent Payments for that reference before submitting.\n\nRemember: Submitted on is the app timestamp; it can differ from the date you paid.",
+      "keywords": [
+        "payment",
+        "date",
+        "reference",
+        "paid",
+        "bank",
+        "number"
+      ],
+      "page": "payment",
+      "note": "Submitted on is the app timestamp; it can differ from the date you paid."
+    },
+    {
+      "id": "payment-method",
+      "category": "Payment proofs & OCR",
+      "question": "Which payment method should I select?",
+      "summary": "Choose the method that matches the actual transfer evidence.",
+      "steps": [
+        "Inspect the receipt and choose the supported channel, such as Bank Transfer, GCASH, MAYA or Cash Deposit.",
+        "Select it manually if OCR left it blank.",
+        "Explain uncertainty in Notes or contact the lender instead of using a lender-only credit action."
+      ],
+      "answer": "Choose the method that matches the actual transfer evidence.\n\n1. Inspect the receipt and choose the supported channel, such as Bank Transfer, GCASH, MAYA or Cash Deposit.\n2. Select it manually if OCR left it blank.\n3. Explain uncertainty in Notes or contact the lender instead of using a lender-only credit action.\n\nRemember: Manual Credit is a lender action, not a borrower transfer method.",
+      "keywords": [
+        "payment",
+        "method",
+        "GCASH",
+        "MAYA",
+        "Bank",
+        "Transfer"
+      ],
+      "page": "payment",
+      "note": "Manual Credit is a lender action, not a borrower transfer method."
+    },
+    {
+      "id": "submit-disabled",
+      "category": "Payment proofs & OCR",
+      "question": "Why is Submit proof of payment disabled?",
+      "summary": "The form needs eligible selected items, confirmed allocation, valid proof and complete details.",
+      "steps": [
+        "Select a positive payable item and check that Final Due Amount exceeds zero.",
+        "Confirm allocation, attach a supported file up to 5 MB and finish OCR/manual review.",
+        "Complete valid amount, paid date, method and reference; resolve visible validation messages."
+      ],
+      "answer": "The form needs eligible selected items, confirmed allocation, valid proof and complete details.\n\n1. Select a positive payable item and check that Final Due Amount exceeds zero.\n2. Confirm allocation, attach a supported file up to 5 MB and finish OCR/manual review.\n3. Complete valid amount, paid date, method and reference; resolve visible validation messages.\n\nRemember: If a request is already submitting, wait for its result before trying again.",
+      "keywords": [
+        "submit",
+        "disabled",
+        "cannot",
+        "validation"
+      ],
+      "page": "payment",
+      "note": "If a request is already submitting, wait for its result before trying again."
+    },
+    {
+      "id": "duplicate-reference",
+      "category": "Payment proofs & OCR",
+      "question": "Why am I warned about a duplicate reference?",
+      "summary": "An existing proof can already use the same bank reference.",
+      "steps": [
+        "Find that reference in Recent Payments, including Approved/Rejected filters.",
+        "Do not submit the same transfer again as a new payment.",
+        "Use a supported correction for a rejected proof or ask the lender to clarify genuine separate transfers."
+      ],
+      "answer": "An existing proof can already use the same bank reference.\n\n1. Find that reference in Recent Payments, including Approved/Rejected filters.\n2. Do not submit the same transfer again as a new payment.\n3. Use a supported correction for a rejected proof or ask the lender to clarify genuine separate transfers.\n\nRemember: Do not invent a new reference to bypass duplicate checks.",
+      "keywords": [
+        "duplicate",
+        "reference",
+        "already",
+        "submitted",
+        "same"
+      ],
+      "page": "payment",
+      "note": "Do not invent a new reference to bypass duplicate checks."
+    },
+    {
+      "id": "payment-draft",
+      "category": "Payment proofs & OCR",
+      "question": "Can I resume an unfinished payment proof?",
+      "summary": "A draft can be retained for the same signed-in borrower when device storage is available.",
+      "steps": [
+        "Return to Payments in the same account.",
+        "Review restored dates, attachment and details; reconfirm if selected items changed.",
+        "Use Discard draft only when you intentionally want to remove the unsubmitted draft."
+      ],
+      "answer": "A draft can be retained for the same signed-in borrower when device storage is available.\n\n1. Return to Payments in the same account.\n2. Review restored dates, attachment and details; reconfirm if selected items changed.\n3. Use Discard draft only when you intentionally want to remove the unsubmitted draft.\n\nRemember: A retained draft is not a submitted payment. Clearing site data/storage restrictions can prevent restoration.",
+      "keywords": [
+        "payment",
+        "draft",
+        "resume",
+        "unfinished",
+        "retained"
+      ],
+      "page": "payment",
+      "note": "A retained draft is not a submitted payment. Clearing site data/storage restrictions can prevent restoration."
+    },
+    {
+      "id": "submission-error",
+      "category": "Payment proofs & OCR",
+      "question": "What if submission says the payment could not be confirmed?",
+      "summary": "First check whether the proof was saved before retrying an uncertain result.",
+      "steps": [
+        "Inspect Recent Payments for the same reference and amount.",
+        "If it exists, check its status instead of creating another submission.",
+        "If absent, use the retained draft/retry flow with unchanged genuine details and wait for a result."
+      ],
+      "answer": "First check whether the proof was saved before retrying an uncertain result.\n\n1. Inspect Recent Payments for the same reference and amount.\n2. If it exists, check its status instead of creating another submission.\n3. If absent, use the retained draft/retry flow with unchanged genuine details and wait for a result.\n\nRemember: A network error is not proof that no save occurred.",
+      "keywords": [
+        "submission",
+        "error",
+        "could",
+        "not",
+        "be",
+        "confirmed",
+        "retry"
+      ],
+      "page": "payment",
+      "note": "A network error is not proof that no save occurred."
+    },
+    {
+      "id": "proof-status-and-retraction",
+      "category": "Payment review & history",
+      "question": "What do proof statuses and Retract proof mean?",
+      "summary": "Pending means awaiting review, Approved means reviewed approval and Rejected means the submission needs attention.",
+      "steps": [
+        "Use Recent Payments filters to inspect the relevant status.",
+        "To withdraw a permitted pending proof, choose Retract proof and confirm.",
+        "For approved/posting errors, ask the lender about reviewed correction or reversal."
+      ],
+      "answer": "Pending means awaiting review, Approved means reviewed approval and Rejected means the submission needs attention.\n\n1. Use Recent Payments filters to inspect the relevant status.\n2. To withdraw a permitted pending proof, choose Retract proof and confirm.\n3. For approved/posting errors, ask the lender about reviewed correction or reversal.\n\nRemember: Retraction keeps submission history and does not undo a bank transfer.",
+      "keywords": [
+        "proof",
+        "status",
+        "and",
+        "retraction",
+        "pending",
+        "approved",
+        "rejected",
+        "retract"
+      ],
+      "page": "payment",
+      "note": "Retraction keeps submission history and does not undo a bank transfer."
+    },
+    {
+      "id": "payment-confirmation",
+      "category": "Payment review & history",
+      "question": "What appears after I submit proof of payment?",
+      "summary": "The confirmation records amount, paid date, reference, submission time and the selected-due comparison.",
+      "steps": [
+        "Review the saved submission and keep its reference.",
+        "Before approval, read Proof of Payment Submitted and Submitted for review.",
+        "After approval, read Proof of Payment Approved, the updated message and Approved on with date and time."
+      ],
+      "answer": "The confirmation records amount, paid date, reference, submission time and the selected-due comparison.\n\n1. Review the saved submission and keep its reference.\n2. Before approval, read Proof of Payment Submitted and Submitted for review.\n3. After approval, read Proof of Payment Approved, the updated message and Approved on with date and time.\n\nRemember: Submission comparison is not necessarily the final reviewed allocation. Check the posted ledger.",
+      "keywords": [
+        "payment",
+        "confirmation",
+        "submitted",
+        "approved",
+        "on"
+      ],
+      "page": "payment",
+      "note": "Submission comparison is not necessarily the final reviewed allocation. Check the posted ledger.",
+      "illustration": "downloads"
+    },
+    {
+      "id": "approval-timing",
+      "category": "Payment review & history",
+      "question": "How long does payment approval take?",
+      "summary": "The lender must verify the transfer and allocation. The app promises no fixed approval time.",
+      "steps": [
+        "Check Pending in Recent Payments.",
+        "Confirm that the saved proof, reference and actual amount are correct.",
+        "Message the lender with the existing reference if you need an update."
+      ],
+      "answer": "The lender must verify the transfer and allocation. The app promises no fixed approval time.\n\n1. Check Pending in Recent Payments.\n2. Confirm that the saved proof, reference and actual amount are correct.\n3. Message the lender with the existing reference if you need an update.\n\nRemember: OCR completion and submission confirmation do not skip lender review.",
+      "keywords": [
+        "approval",
+        "timing",
+        "time",
+        "waiting",
+        "verification"
+      ],
+      "page": "payment",
+      "note": "OCR completion and submission confirmation do not skip lender review."
+    },
+    {
+      "id": "partial-payment",
+      "category": "Payment review & history",
+      "question": "What if I pay less than the selected dues?",
+      "summary": "The lender can post a reviewed partial payment while retaining an unpaid remainder.",
+      "steps": [
+        "Submit actual paid amount and proof against the intended dues.",
+        "Wait for lender allocation review.",
+        "Inspect Payment breakdown and the remaining schedule amount after posting."
+      ],
+      "answer": "The lender can post a reviewed partial payment while retaining an unpaid remainder.\n\n1. Submit actual paid amount and proof against the intended dues.\n2. Wait for lender allocation review.\n3. Inspect Payment breakdown and the remaining schedule amount after posting.\n\nRemember: Example: ₱400 applied to ₱1,000 leaves ₱600 due. Partial submission does not automatically waive fees or settle an installment.",
+      "keywords": [
+        "partial",
+        "payment",
+        "underpayment",
+        "remainder"
+      ],
+      "page": "history",
+      "note": "Example: ₱400 applied to ₱1,000 leaves ₱600 due. Partial submission does not automatically waive fees or settle an installment."
+    },
+    {
+      "id": "overpayment",
+      "category": "Payment review & history",
+      "question": "What if I pay more than the selected dues?",
+      "summary": "The lender reviews amounts applied to dues and any excess retained as account credit.",
+      "steps": [
+        "Submit the actual amount and intended dues.",
+        "After approval, check applied amounts and available credit.",
+        "Ask the lender to review application of saved credit to another due when needed."
+      ],
+      "answer": "The lender reviews amounts applied to dues and any excess retained as account credit.\n\n1. Submit the actual amount and intended dues.\n2. After approval, check applied amounts and available credit.\n3. Ask the lender to review application of saved credit to another due when needed.\n\nRemember: Example: ₱1,200 received with ₱1,000 applied can leave ₱200 credit. Do not deduct the display breakdown again from paid dues.",
+      "keywords": [
+        "overpayment",
+        "excess",
+        "credit",
+        "added"
+      ],
+      "page": "history",
+      "note": "Example: ₱1,200 received with ₱1,000 applied can leave ₱200 credit. Do not deduct the display breakdown again from paid dues."
+    },
+    {
+      "id": "rejected-proof",
+      "category": "Payment review & history",
+      "question": "How do I correct a rejected proof?",
+      "summary": "Read the rejection note before changing or re-sending evidence.",
+      "steps": [
+        "Find the rejected item in Recent Payments.",
+        "Use its correction/retry action, replace the file and correct the required details.",
+        "Explain what changed when required and submit for another review."
+      ],
+      "answer": "Read the rejection note before changing or re-sending evidence.\n\n1. Find the rejected item in Recent Payments.\n2. Use its correction/retry action, replace the file and correct the required details.\n3. Explain what changed when required and submit for another review.\n\nRemember: Keep the genuine bank reference in the correction flow; do not present the correction as a new transfer.",
+      "keywords": [
+        "rejected",
+        "proof",
+        "resubmit",
+        "correction"
+      ],
+      "page": "payment",
+      "note": "Keep the genuine bank reference in the correction flow; do not present the correction as a new transfer."
+    },
+    {
+      "id": "approved-wrong-allocation",
+      "category": "Payment review & history",
+      "question": "What if an approved payment covers the wrong due?",
+      "summary": "The lender must review the posting; editing a display or sending another proof is not a reversal.",
+      "steps": [
+        "Note the reference, incorrect due and amount.",
+        "Message the lender with the intended allocation and supporting evidence.",
+        "Check the recorded correction/reversal and resulting ledger."
+      ],
+      "answer": "The lender must review the posting; editing a display or sending another proof is not a reversal.\n\n1. Note the reference, incorrect due and amount.\n2. Message the lender with the intended allocation and supporting evidence.\n3. Check the recorded correction/reversal and resulting ledger.\n\nRemember: Do not upload the same transfer again to repair allocation.",
+      "keywords": [
+        "approved",
+        "wrong",
+        "allocation",
+        "reversal"
+      ],
+      "page": "messages",
+      "note": "Do not upload the same transfer again to repair allocation."
+    },
+    {
+      "id": "recent-payments",
+      "category": "Payment review & history",
+      "question": "How do I see and sort all Recent Payments?",
+      "summary": "Recent Payments contains your saved submissions below the payment form.",
+      "steps": [
+        "Choose Pending, Approved, Rejected or All.",
+        "Use Sort by date: Newest first is default, Oldest first reverses it.",
+        "Five records appear initially. Choose Show more below the final visible record for additional items."
+      ],
+      "answer": "Recent Payments contains your saved submissions below the payment form.\n\n1. Choose Pending, Approved, Rejected or All.\n2. Use Sort by date: Newest first is default, Oldest first reverses it.\n3. Five records appear initially. Choose Show more below the final visible record for additional items.\n\nRemember: An empty filtered list can mean no submissions match that status.",
+      "keywords": [
+        "recent",
+        "payments",
+        "show",
+        "more",
+        "newest",
+        "oldest"
+      ],
+      "page": "payment",
+      "note": "An empty filtered list can mean no submissions match that status."
+    },
+    {
+      "id": "history-vs-payments",
+      "category": "Payment review & history",
+      "question": "Why does a payment appear in both Recent Payments and History?",
+      "summary": "The screens describe different parts of one payment process.",
+      "steps": [
+        "Use Recent Payments for submitted proof and its review status.",
+        "Use posted history and allocation breakdowns for effects on dues and credit.",
+        "Match references rather than adding both views together."
+      ],
+      "answer": "The screens describe different parts of one payment process.\n\n1. Use Recent Payments for submitted proof and its review status.\n2. Use posted history and allocation breakdowns for effects on dues and credit.\n3. Match references rather than adding both views together.\n\nRemember: A submission amount and its posting are not two separate cash receipts.",
+      "keywords": [
+        "history",
+        "vs",
+        "payments",
+        "recent",
+        "double",
+        "count"
+      ],
+      "page": "history",
+      "note": "A submission amount and its posting are not two separate cash receipts."
+    },
+    {
+      "id": "payment-breakdown",
+      "category": "Payment review & history",
+      "question": "What are the green Partial Payment and Overpayment entries?",
+      "summary": "These display entries explain saved postings and their reviewed outcomes.",
+      "steps": [
+        "Open Payment breakdown in Transactions or History.",
+        "Expand Allocation breakdown to read dates, applied amounts and remaining balances.",
+        "Match the reference to the original proof or confirmation in Recent Payments."
+      ],
+      "answer": "These display entries explain saved postings and their reviewed outcomes.\n\n1. Open Payment breakdown in Transactions or History.\n2. Expand Allocation breakdown to read dates, applied amounts and remaining balances.\n3. Match the reference to the original proof or confirmation in Recent Payments.\n\nRemember: These amounts already affect saved balances. Hiding a breakdown does not reverse money and it must not deduct funds twice.",
+      "keywords": [
+        "payment",
+        "breakdown",
+        "partial",
+        "overpayment",
+        "green"
+      ],
+      "page": "history",
+      "note": "These amounts already affect saved balances. Hiding a breakdown does not reverse money and it must not deduct funds twice."
+    },
+    {
+      "id": "acknowledgement",
+      "category": "Invoices & downloads",
+      "question": "What is an acknowledgement receipt?",
+      "summary": "Receipt acknowledges submitted payment details and requested dues, distinct from the original proof and status-aware confirmation.",
+      "steps": [
+        "Find the submission in Recent Payments.",
+        "Choose Receipt in its three-button row.",
+        "Check amount, method, reference, selected dues and transaction dates."
+      ],
+      "answer": "Receipt acknowledges submitted payment details and requested dues, distinct from the original proof and status-aware confirmation.\n\n1. Find the submission in Recent Payments.\n2. Choose Receipt in its three-button row.\n3. Check amount, method, reference, selected dues and transaction dates.\n\nRemember: Acknowledgement of submission alone is not verified bank settlement, a tax invoice or the final lender allocation.",
+      "keywords": [
+        "acknowledgement",
+        "acknowledgment",
+        "AR",
+        "receipt"
+      ],
+      "page": "payment",
+      "note": "Acknowledgement of submission alone is not verified bank settlement, a tax invoice or the final lender allocation.",
+      "illustration": "downloads"
+    },
+    {
+      "id": "three-downloads",
+      "category": "Invoices & downloads",
+      "question": "What is the difference between Proof, Receipt and Confirmation?",
+      "summary": "Each button gives a different payment record.",
+      "steps": [
+        "Proof downloads the original uploaded evidence.",
+        "Receipt downloads the generated acknowledgement and selected-due information.",
+        "Confirmation downloads the visual submission confirmation with current approval details when available."
+      ],
+      "answer": "Each button gives a different payment record.\n\n1. Proof downloads the original uploaded evidence.\n2. Receipt downloads the generated acknowledgement and selected-due information.\n3. Confirmation downloads the visual submission confirmation with current approval details when available.\n\nRemember: Read each document’s purpose/status; the three documents are not interchangeable.",
+      "keywords": [
+        "three",
+        "downloads",
+        "Proof",
+        "Receipt",
+        "Confirmation",
+        "buttons"
+      ],
+      "page": "payment",
+      "note": "Read each document’s purpose/status; the three documents are not interchangeable.",
+      "illustration": "downloads"
+    },
+    {
+      "id": "download",
+      "category": "Invoices & downloads",
+      "question": "How do I download payment and loan documents?",
+      "summary": "Use the download action on the exact payment, invoice, disclosure or disbursement record.",
+      "steps": [
+        "Choose the file action, Receipt, Confirmation or Download as appropriate.",
+        "Wait for preparation. If a save picker opens, choose a destination and finish saving.",
+        "For automatic downloads, check the browser’s Downloads or your device Files app."
+      ],
+      "answer": "Use the download action on the exact payment, invoice, disclosure or disbursement record.\n\n1. Choose the file action, Receipt, Confirmation or Download as appropriate.\n2. Wait for preparation. If a save picker opens, choose a destination and finish saving.\n3. For automatic downloads, check the browser’s Downloads or your device Files app.\n\nRemember: Browser settings determine prompts and final location. Cancelling a save prompt does not save a file.",
+      "keywords": [
+        "download",
+        "save",
+        "PDF",
+        "PNG"
+      ],
+      "page": "payment",
+      "note": "Browser settings determine prompts and final location. Cancelling a save prompt does not save a file."
+    },
+    {
+      "id": "download-missing",
+      "category": "Invoices & downloads",
+      "question": "What if a downloaded file seems missing?",
+      "summary": "Check the app result and the browser/device download location.",
+      "steps": [
+        "Look for a preparation error or cancelled save prompt.",
+        "Search browser downloads or Files using receipt number/filename.",
+        "If multiple automatic downloads were blocked, review the browser message yourself or download one at a time."
+      ],
+      "answer": "Check the app result and the browser/device download location.\n\n1. Look for a preparation error or cancelled save prompt.\n2. Search browser downloads or Files using receipt number/filename.\n3. If multiple automatic downloads were blocked, review the browser message yourself or download one at a time.\n\nRemember: Do not submit payment proof again just to solve a document-download problem.",
+      "keywords": [
+        "download",
+        "missing",
+        "downloads",
+        "Files",
+        "save",
+        "location"
+      ],
+      "page": "payment",
+      "note": "Do not submit payment proof again just to solve a document-download problem."
+    },
+    {
+      "id": "download-preview",
+      "category": "Invoices & downloads",
+      "question": "Can I preview a document before saving?",
+      "summary": "Some documents offer View, View PDF or a generated-file preview.",
+      "steps": [
+        "Open the record and choose the available preview.",
+        "Try Download if the embedded viewer does not load.",
+        "Use your supported browser/device PDF viewer when needed."
+      ],
+      "answer": "Some documents offer View, View PDF or a generated-file preview.\n\n1. Open the record and choose the available preview.\n2. Try Download if the embedded viewer does not load.\n3. Use your supported browser/device PDF viewer when needed.\n\nRemember: Preview depends on the browser and does not change a saved financial record.",
+      "keywords": [
+        "download",
+        "preview",
+        "blank",
+        "PDF",
+        "viewer"
+      ],
+      "page": "invoices",
+      "note": "Preview depends on the browser and does not change a saved financial record."
+    },
+    {
+      "id": "invoice",
+      "category": "Invoices & downloads",
+      "question": "How do I generate an invoice or remove one I created?",
+      "summary": "My Invoices contains due-date generation and document history.",
+      "steps": [
+        "Open My Invoices from the Payments fan, More or the sidebar.",
+        "Choose the relevant year, month and due date, then generate/review the document.",
+        "Download it. Remove a user-generated invoice only through its permitted confirmation flow; lender-issued invoices are managed by the lender."
+      ],
+      "answer": "My Invoices contains due-date generation and document history.\n\n1. Open My Invoices from the Payments fan, More or the sidebar.\n2. Choose the relevant year, month and due date, then generate/review the document.\n3. Download it. Remove a user-generated invoice only through its permitted confirmation flow; lender-issued invoices are managed by the lender.\n\nRemember: Generating/deleting a document does not erase a due or settle a payment.",
+      "keywords": [
+        "invoice",
+        "generate",
+        "delete",
+        "month",
+        "year"
+      ],
+      "page": "invoices",
+      "note": "Generating/deleting a document does not erase a due or settle a payment."
+    },
+    {
+      "id": "invoice-old-date",
+      "category": "Invoices & downloads",
+      "question": "How do I find invoices for older due dates?",
+      "summary": "Use the date selectors to navigate beyond the initially visible month.",
+      "steps": [
+        "Open My Invoices and choose the relevant year/month.",
+        "Select the due date for the records you need.",
+        "Check document dates and item list before downloading."
+      ],
+      "answer": "Use the date selectors to navigate beyond the initially visible month.\n\n1. Open My Invoices and choose the relevant year/month.\n2. Select the due date for the records you need.\n3. Check document dates and item list before downloading.\n\nRemember: If no matching date exists, ask whether underlying records were corrected or archived.",
+      "keywords": [
+        "invoice",
+        "old",
+        "date",
+        "older",
+        "year",
+        "picker"
+      ],
+      "page": "invoices",
+      "note": "If no matching date exists, ask whether underlying records were corrected or archived."
+    },
+    {
+      "id": "invoice-vs-receipt",
+      "category": "Invoices & downloads",
+      "question": "Is an invoice proof that I have paid?",
+      "summary": "No. An invoice presents dues; proof submission and reviewed posting have separate meanings.",
+      "steps": [
+        "Inspect the invoice’s item list and dates.",
+        "Use Recent Payments for bank evidence and review status.",
+        "Use posted history to confirm allocation and remaining dues."
+      ],
+      "answer": "No. An invoice presents dues; proof submission and reviewed posting have separate meanings.\n\n1. Inspect the invoice’s item list and dates.\n2. Use Recent Payments for bank evidence and review status.\n3. Use posted history to confirm allocation and remaining dues.\n\nRemember: Downloading an invoice does not mark it paid.",
+      "keywords": [
+        "invoice",
+        "vs",
+        "receipt",
+        "paid",
+        "difference"
+      ],
+      "page": "invoices",
+      "note": "Downloading an invoice does not mark it paid."
+    },
+    {
+      "id": "disbursement",
+      "category": "Invoices & downloads",
+      "question": "Where can I review a loan disbursement?",
+      "summary": "Disbursements contains recorded release details and documents available to you.",
+      "steps": [
+        "Open Disbursements from More/sidebar.",
+        "Choose the correct record and inspect gross amount, deductions, net proceeds, bank and dates.",
+        "Read the acknowledgement terms before accepting and download available records."
+      ],
+      "answer": "Disbursements contains recorded release details and documents available to you.\n\n1. Open Disbursements from More/sidebar.\n2. Choose the correct record and inspect gross amount, deductions, net proceeds, bank and dates.\n3. Read the acknowledgement terms before accepting and download available records.\n\nRemember: A request status or acknowledgement alone does not independently prove funds arrived in your bank.",
+      "keywords": [
+        "disbursement",
+        "release",
+        "net",
+        "proceeds"
+      ],
+      "page": "disbursements",
+      "note": "A request status or acknowledgement alone does not independently prove funds arrived in your bank."
+    },
+    {
+      "id": "disclosure",
+      "category": "Invoices & downloads",
+      "question": "Where do I find a loan disclosure?",
+      "summary": "The selected installment’s schedule/Loan Profile provides its recorded details and available disclosure document.",
+      "steps": [
+        "Match description, original amount and transaction date.",
+        "Review rate, term, fees and schedule.",
+        "Use the disclosure/download action to save the PDF."
+      ],
+      "answer": "The selected installment’s schedule/Loan Profile provides its recorded details and available disclosure document.\n\n1. Match description, original amount and transaction date.\n2. Review rate, term, fees and schedule.\n3. Use the disclosure/download action to save the PDF.\n\nRemember: FAQ examples are illustrations, not replacements for your agreement and lender-confirmed terms.",
+      "keywords": [
+        "disclosure",
+        "agreement",
+        "document"
+      ],
+      "page": "loanProfile",
+      "note": "FAQ examples are illustrations, not replacements for your agreement and lender-confirmed terms."
+    },
+    {
+      "id": "receipt-txn-date",
+      "category": "Invoices & downloads",
+      "question": "What does Txn Date mean on a receipt?",
+      "summary": "It is the selected item’s original transaction date, taken from its schedule or straight record.",
+      "steps": [
+        "Match the receipt line with the item description.",
+        "Open the installment’s schedule to compare its transaction date.",
+        "If an old item lacks a saved date, request a lender review instead of substituting its due date."
+      ],
+      "answer": "It is the selected item’s original transaction date, taken from its schedule or straight record.\n\n1. Match the receipt line with the item description.\n2. Open the installment’s schedule to compare its transaction date.\n3. If an old item lacks a saved date, request a lender review instead of substituting its due date.\n\nRemember: Txn Date, Due Date, payment date and Submitted on can all differ.",
+      "keywords": [
+        "receipt",
+        "txn",
+        "date",
+        "not",
+        "recorded"
+      ],
+      "page": "payment",
+      "note": "Txn Date, Due Date, payment date and Submitted on can all differ."
+    },
+    {
+      "id": "confirmation-approval-time",
+      "category": "Invoices & downloads",
+      "question": "Why do Approved on and Submitted on differ?",
+      "summary": "They record two events: proof receipt by the app and approval by the lender.",
+      "steps": [
+        "Open Confirmation for the saved proof.",
+        "Compare its two date-and-time fields and current status.",
+        "Match the reference to Recent Payments and the reviewed ledger."
+      ],
+      "answer": "They record two events: proof receipt by the app and approval by the lender.\n\n1. Open Confirmation for the saved proof.\n2. Compare its two date-and-time fields and current status.\n3. Match the reference to Recent Payments and the reviewed ledger.\n\nRemember: The bank payment date is separate from both app timestamps.",
+      "keywords": [
+        "confirmation",
+        "approval",
+        "time",
+        "approved",
+        "submitted",
+        "timestamp"
+      ],
+      "page": "payment",
+      "note": "The bank payment date is separate from both app timestamps."
+    },
+    {
+      "id": "loan-request",
+      "category": "Loan requests & charges",
+      "question": "How do I submit a Cash Loan Request?",
+      "summary": "Request a Loan appears only when your lender enables it.",
+      "steps": [
+        "Choose an amount and available term.",
+        "Review rates, fees and amortization; enter required bank details and purpose where applicable.",
+        "Read confirmations/terms, submit once and monitor Recent Loan Requests."
+      ],
+      "answer": "Request a Loan appears only when your lender enables it.\n\n1. Choose an amount and available term.\n2. Review rates, fees and amortization; enter required bank details and purpose where applicable.\n3. Read confirmations/terms, submit once and monitor Recent Loan Requests.\n\nRemember: A submitted request is not guaranteed approval or an immediate transfer.",
+      "keywords": [
+        "loan",
+        "request",
+        "cash",
+        "apply"
+      ],
+      "page": "loan",
+      "note": "A submitted request is not guaranteed approval or an immediate transfer.",
+      "illustration": "loan"
+    },
+    {
+      "id": "loan-request-hidden",
+      "category": "Loan requests & charges",
+      "question": "Why is Request a Loan missing?",
+      "summary": "Your lender controls feature visibility for each borrower.",
+      "steps": [
+        "Check More and available shortcuts.",
+        "Ask the lender whether loan requests are enabled for your account.",
+        "After they confirm a change, check the relevant screen again."
+      ],
+      "answer": "Your lender controls feature visibility for each borrower.\n\n1. Check More and available shortcuts.\n2. Ask the lender whether loan requests are enabled for your account.\n3. After they confirm a change, check the relevant screen again.\n\nRemember: The FAQ and Pawcheebels cannot grant access or approve a loan.",
+      "keywords": [
+        "loan",
+        "request",
+        "hidden",
+        "feature",
+        "visibility"
+      ],
+      "page": "messages",
+      "note": "The FAQ and Pawcheebels cannot grant access or approve a loan."
+    },
+    {
+      "id": "loan-desired-amount",
+      "category": "Loan requests & charges",
+      "question": "How should I enter the desired loan amount?",
+      "summary": "Use the amount field/preset and check its comma-grouped, two-decimal display.",
+      "steps": [
+        "Enter a principal within the bounds shown on the form.",
+        "Choose a term and review the recalculated summary.",
+        "Verify the final requested amount before confirming bank details and submitting."
+      ],
+      "answer": "Use the amount field/preset and check its comma-grouped, two-decimal display.\n\n1. Enter a principal within the bounds shown on the form.\n2. Choose a term and review the recalculated summary.\n3. Verify the final requested amount before confirming bank details and submitting.\n\nRemember: The current form shows available bounds, terms and rates; a requested amount is not approved funds.",
+      "keywords": [
+        "loan",
+        "desired",
+        "amount",
+        "formatting",
+        "preset"
+      ],
+      "page": "loan",
+      "note": "The current form shows available bounds, terms and rates; a requested amount is not approved funds."
+    },
+    {
+      "id": "principal-rate",
+      "category": "Loan requests & charges",
+      "question": "What are principal, monthly add-on rate and amortization?",
+      "summary": "Principal is the original amount. The rate is the percentage used in the displayed calculation; amortization is the installment schedule.",
+      "steps": [
+        "Read principal and selected term.",
+        "Review the displayed percentage/payment summary rather than interpreting a stored decimal yourself.",
+        "Expand the schedule and compare dates/amounts."
+      ],
+      "answer": "Principal is the original amount. The rate is the percentage used in the displayed calculation; amortization is the installment schedule.\n\n1. Read principal and selected term.\n2. Review the displayed percentage/payment summary rather than interpreting a stored decimal yourself.\n3. Expand the schedule and compare dates/amounts.\n\nRemember: A monthly add-on rate is not necessarily an effective annual rate. Ask the lender to explain agreed borrowing costs.",
+      "keywords": [
+        "principal",
+        "rate",
+        "monthly",
+        "add",
+        "on",
+        "amortization"
+      ],
+      "page": "loanProfile",
+      "note": "A monthly add-on rate is not necessarily an effective annual rate. Ask the lender to explain agreed borrowing costs."
+    },
+    {
+      "id": "cash-loan-fees",
+      "category": "Loan requests & charges",
+      "question": "What are DST, Processing Fee and Notarial Fee for Cash Loans?",
+      "summary": "Information icons explain the fee fields for the selected Cash Loan.",
+      "steps": [
+        "Open its schedule or Request a Loan summary.",
+        "Tap i beside Documentary Stamp Tax, Processing Fee or Notarial Fee.",
+        "Read the explanation and compare the recorded fee amount before agreeing."
+      ],
+      "answer": "Information icons explain the fee fields for the selected Cash Loan.\n\n1. Open its schedule or Request a Loan summary.\n2. Tap i beside Documentary Stamp Tax, Processing Fee or Notarial Fee.\n3. Read the explanation and compare the recorded fee amount before agreeing.\n\nRemember: Applicability and amount depend on the loan and agreed terms. Reading help does not assess a charge.",
+      "keywords": [
+        "cash",
+        "loan",
+        "fees",
+        "DST",
+        "documentary",
+        "stamp",
+        "tax",
+        "processing",
+        "notarial"
+      ],
+      "page": "loanProfile",
+      "note": "Applicability and amount depend on the loan and agreed terms. Reading help does not assess a charge."
+    },
+    {
+      "id": "retail-fee-help",
+      "category": "Loan requests & charges",
+      "question": "Why are retail-installment fee explanations different?",
+      "summary": "Retail guidance distinguishes store-arranged installments from straight purchases converted afterward.",
+      "steps": [
+        "Open a Retail Installment schedule and tap the fee information icons.",
+        "Read DST and Notarial Fee as not applicable in the retail guidance.",
+        "Check how the purchase was processed: store-arranged installments do not usually have a processing fee; later conversion from straight can incur one."
+      ],
+      "answer": "Retail guidance distinguishes store-arranged installments from straight purchases converted afterward.\n\n1. Open a Retail Installment schedule and tap the fee information icons.\n2. Read DST and Notarial Fee as not applicable in the retail guidance.\n3. Check how the purchase was processed: store-arranged installments do not usually have a processing fee; later conversion from straight can incur one.\n\nRemember: Ask the lender about any specific recorded fee; classification must not silently delete an agreed charge.",
+      "keywords": [
+        "retail",
+        "fee",
+        "help",
+        "conversion",
+        "store",
+        "processing",
+        "DST"
+      ],
+      "page": "transactions",
+      "note": "Ask the lender about any specific recorded fee; classification must not silently delete an agreed charge."
+    },
+    {
+      "id": "bank-details",
+      "category": "Loan requests & charges",
+      "question": "Which bank details do I enter for a loan request?",
+      "summary": "Use the receiving-account details requested by the form.",
+      "steps": [
+        "Select the bank and enter its account number exactly, using digits where required.",
+        "Use the account name registered with the bank.",
+        "Review all details before confirming the receiving account."
+      ],
+      "answer": "Use the receiving-account details requested by the form.\n\n1. Select the bank and enter its account number exactly, using digits where required.\n2. Use the account name registered with the bank.\n3. Review all details before confirming the receiving account.\n\nRemember: Never enter online-banking passwords, PINs or OTPs in a loan request.",
+      "keywords": [
+        "bank",
+        "details",
+        "receiving",
+        "account",
+        "name",
+        "number"
+      ],
+      "page": "loan",
+      "note": "Never enter online-banking passwords, PINs or OTPs in a loan request."
+    },
+    {
+      "id": "loan-summary-changes",
+      "category": "Loan requests & charges",
+      "question": "Why do figures change when I select another term or amount?",
+      "summary": "The summary recalculates using the chosen amount, term and configured rates/fees.",
+      "steps": [
+        "Change amount/term and read the updated summary.",
+        "Expand amortization to inspect installments across the whole term.",
+        "Submit only when the summary and receiving details match your intention."
+      ],
+      "answer": "The summary recalculates using the chosen amount, term and configured rates/fees.\n\n1. Change amount/term and read the updated summary.\n2. Expand amortization to inspect installments across the whole term.\n3. Submit only when the summary and receiving details match your intention.\n\nRemember: A preview calculation is not a lender-posted transaction or approval.",
+      "keywords": [
+        "loan",
+        "summary",
+        "changes",
+        "term",
+        "calculation"
+      ],
+      "page": "loan",
+      "note": "A preview calculation is not a lender-posted transaction or approval."
+    },
+    {
+      "id": "statuses",
+      "category": "Loan requests & charges",
+      "question": "What do loan-request statuses mean?",
+      "summary": "Statuses describe recorded workflow stages, not an independent bank-settlement guarantee.",
+      "steps": [
+        "Submitted means received; Pending / Under Review means evaluation; Coordinating with Bank means details or processing are being checked.",
+        "Bank Approved records approval; Transfer in Progress records transfer processing; Completed records processing as complete.",
+        "Declined / Rejected and Canceled indicate the request did not proceed as intended. Read its History Timeline for actual events."
+      ],
+      "answer": "Statuses describe recorded workflow stages, not an independent bank-settlement guarantee.\n\n1. Submitted means received; Pending / Under Review means evaluation; Coordinating with Bank means details or processing are being checked.\n2. Bank Approved records approval; Transfer in Progress records transfer processing; Completed records processing as complete.\n3. Declined / Rejected and Canceled indicate the request did not proceed as intended. Read its History Timeline for actual events.\n\nRemember: Confirm fund receipt with your bank/lender when necessary.",
+      "keywords": [
+        "statuses",
+        "status",
+        "completed",
+        "bank",
+        "approved",
+        "declined",
+        "timeline"
+      ],
+      "page": "loan",
+      "note": "Confirm fund receipt with your bank/lender when necessary."
+    },
+    {
+      "id": "loan-request-update",
+      "category": "Loan requests & charges",
+      "question": "How do I check an existing loan request?",
+      "summary": "Use saved request history instead of creating another request for an update.",
+      "steps": [
+        "Find the request under Recent Loan Requests.",
+        "Read its latest status and timeline.",
+        "Message the lender with its reference if the next step is unclear."
+      ],
+      "answer": "Use saved request history instead of creating another request for an update.\n\n1. Find the request under Recent Loan Requests.\n2. Read its latest status and timeline.\n3. Message the lender with its reference if the next step is unclear.\n\nRemember: If access was later hidden, ask about the existing request; do not assume it was cancelled.",
+      "keywords": [
+        "loan",
+        "request",
+        "update",
+        "progress",
+        "reference",
+        "timeline"
+      ],
+      "page": "loan",
+      "note": "If access was later hidden, ask about the existing request; do not assume it was cancelled."
+    },
+    {
+      "id": "finance-late-fees",
+      "category": "Loan requests & charges",
+      "question": "What are finance charges and late payment fees?",
+      "summary": "They are separate lender-assessed charges under the applicable terms. The assessment tool defaults to 3% finance charge and ₱1,500 late fee, both reviewable.",
+      "steps": [
+        "Inspect description, As of date, new due date and amount.",
+        "Ask the lender to explain the selected running balance and applicable rate.",
+        "Include recorded payments/reductions when checking the base rather than calculating only from original principal."
+      ],
+      "answer": "They are separate lender-assessed charges under the applicable terms. The assessment tool defaults to 3% finance charge and ₱1,500 late fee, both reviewable.\n\n1. Inspect description, As of date, new due date and amount.\n2. Ask the lender to explain the selected running balance and applicable rate.\n3. Include recorded payments/reductions when checking the base rather than calculating only from original principal.\n\nRemember: Default settings are not a universal entitlement to charge every account; your agreement and confirmed assessment apply.",
+      "keywords": [
+        "finance",
+        "late",
+        "fees",
+        "charge",
+        "fee",
+        "3%",
+        "1500"
+      ],
+      "page": "transactions",
+      "note": "Default settings are not a universal entitlement to charge every account; your agreement and confirmed assessment apply."
+    },
+    {
+      "id": "fee-due-date",
+      "category": "Loan requests & charges",
+      "question": "Why does a fee’s description date differ from its due date?",
+      "summary": "The description can identify the balance’s As of date while the new charge has a separate payment deadline.",
+      "steps": [
+        "Read both the description and Due date.",
+        "Inspect the related balance/entry to understand the period assessed.",
+        "Ask the lender to review any discrepancy."
+      ],
+      "answer": "The description can identify the balance’s As of date while the new charge has a separate payment deadline.\n\n1. Read both the description and Due date.\n2. Inspect the related balance/entry to understand the period assessed.\n3. Ask the lender to review any discrepancy.\n\nRemember: A fee assessed as of November 10 can have a separately chosen later due date.",
+      "keywords": [
+        "fee",
+        "due",
+        "date",
+        "as",
+        "of",
+        "assessment"
+      ],
+      "page": "transactions",
+      "note": "A fee assessed as of November 10 can have a separately chosen later due date."
+    },
+    {
+      "id": "fee-dispute",
+      "category": "Loan requests & charges",
+      "question": "What if I believe a fee or interest amount is wrong?",
+      "summary": "Request a lender review using the exact entry and evidence.",
+      "steps": [
+        "Record description, amount, As of date and due date.",
+        "Explain the discrepancy through Message lender/support and include relevant payment/adjustment references.",
+        "Check the recorded correction or lender response before assuming the charge changed."
+      ],
+      "answer": "Request a lender review using the exact entry and evidence.\n\n1. Record description, amount, As of date and due date.\n2. Explain the discrepancy through Message lender/support and include relevant payment/adjustment references.\n3. Check the recorded correction or lender response before assuming the charge changed.\n\nRemember: Pawcheebels cannot waive fees or decide a disputed balance.",
+      "keywords": [
+        "fee",
+        "dispute",
+        "wrong",
+        "interest",
+        "waive"
+      ],
+      "page": "messages",
+      "note": "Pawcheebels cannot waive fees or decide a disputed balance."
+    },
+    {
+      "id": "notifications",
+      "category": "Messages & notifications",
+      "question": "How do notifications, replies and reactions work?",
+      "summary": "Notifications contains account updates with search, category and unread filters.",
+      "steps": [
+        "Open Notifications through its bell, More or sidebar.",
+        "Read an update and use Reply to respond through the available lender communication flow.",
+        "Choose React to reveal emoji choices; use attachment actions for documents."
+      ],
+      "answer": "Notifications contains account updates with search, category and unread filters.\n\n1. Open Notifications through its bell, More or sidebar.\n2. Read an update and use Reply to respond through the available lender communication flow.\n3. Choose React to reveal emoji choices; use attachment actions for documents.\n\nRemember: A reaction is feedback, not approval of a payment or loan.",
+      "keywords": [
+        "notifications",
+        "reply",
+        "reactions",
+        "unread"
+      ],
+      "page": "notifications",
+      "note": "A reaction is feedback, not approval of a payment or loan."
+    },
+    {
+      "id": "notification-live",
+      "category": "Messages & notifications",
+      "question": "Should notifications arrive without refreshing?",
+      "summary": "Saved updates for your account are pushed into connected views.",
+      "steps": [
+        "Keep the app online and check its unread badge/inbox.",
+        "Review category and unread filters if an update seems missing.",
+        "If a known update stays absent, reconnect safely or refresh and report its approximate time."
+      ],
+      "answer": "Saved updates for your account are pushed into connected views.\n\n1. Keep the app online and check its unread badge/inbox.\n2. Review category and unread filters if an update seems missing.\n3. If a known update stays absent, reconnect safely or refresh and report its approximate time.\n\nRemember: Connectivity loss can delay delivery. Check the ledger for authoritative financial status.",
+      "keywords": [
+        "notification",
+        "live",
+        "real",
+        "time",
+        "push",
+        "refresh"
+      ],
+      "page": "notifications",
+      "note": "Connectivity loss can delay delivery. Check the ledger for authoritative financial status."
+    },
+    {
+      "id": "read-unread",
+      "category": "Messages & notifications",
+      "question": "How do I manage read and unread notifications?",
+      "summary": "Read state organizes your inbox without changing financial records.",
+      "steps": [
+        "Choose Unread only to focus on unread updates.",
+        "Use individual or mark-all read/unread controls.",
+        "Return to All notifications for items hidden by the unread filter."
+      ],
+      "answer": "Read state organizes your inbox without changing financial records.\n\n1. Choose Unread only to focus on unread updates.\n2. Use individual or mark-all read/unread controls.\n3. Return to All notifications for items hidden by the unread filter.\n\nRemember: Marking an update read does not accept a charge or approve a payment.",
+      "keywords": [
+        "read",
+        "unread",
+        "mark",
+        "all",
+        "badge"
+      ],
+      "page": "notifications",
+      "note": "Marking an update read does not accept a charge or approve a payment."
+    },
+    {
+      "id": "lender-chat",
+      "category": "Messages & notifications",
+      "question": "How do I message my lender?",
+      "summary": "Message lender is a human conversation, separate from Ask Pawcheebels.",
+      "steps": [
+        "Choose Message lender from the orb, More or sidebar.",
+        "Write the message and attach relevant supported evidence if needed.",
+        "Send once; stay connected for replies or return when the unread badge appears."
+      ],
+      "answer": "Message lender is a human conversation, separate from Ask Pawcheebels.\n\n1. Choose Message lender from the orb, More or sidebar.\n2. Write the message and attach relevant supported evidence if needed.\n3. Send once; stay connected for replies or return when the unread badge appears.\n\nRemember: Sign-in is required. Never send passwords, Login Codes or OTPs.",
+      "keywords": [
+        "lender",
+        "chat",
+        "message",
+        "human"
+      ],
+      "page": "messages",
+      "note": "Sign-in is required. Never send passwords, Login Codes or OTPs."
+    },
+    {
+      "id": "unread-chat",
+      "category": "Messages & notifications",
+      "question": "What does the number badge on the orb mean?",
+      "summary": "The orb and its Message lender item can show unread lender messages.",
+      "steps": [
+        "Open the orb and inspect Message lender.",
+        "Open the conversation to read its messages.",
+        "Check the badge after read state updates."
+      ],
+      "answer": "The orb and its Message lender item can show unread lender messages.\n\n1. Open the orb and inspect Message lender.\n2. Open the conversation to read its messages.\n3. Check the badge after read state updates.\n\nRemember: Chat unread counts are separate from Notifications counts.",
+      "keywords": [
+        "unread",
+        "chat",
+        "orb",
+        "message",
+        "count"
+      ],
+      "page": "messages",
+      "note": "Chat unread counts are separate from Notifications counts."
+    },
+    {
+      "id": "chat-live",
+      "category": "Messages & notifications",
+      "question": "Will chat messages arrive in real time?",
+      "summary": "Connected borrower/lender conversations receive saved messages without manual refresh.",
+      "steps": [
+        "Send once and confirm the message appears.",
+        "Keep the conversation online to receive replies.",
+        "After a connection interruption, inspect the conversation before repeating the same message."
+      ],
+      "answer": "Connected borrower/lender conversations receive saved messages without manual refresh.\n\n1. Send once and confirm the message appears.\n2. Keep the conversation online to receive replies.\n3. After a connection interruption, inspect the conversation before repeating the same message.\n\nRemember: Background tabs and lost connectivity can delay live delivery; reconnect to reconcile.",
+      "keywords": [
+        "chat",
+        "live",
+        "realtime",
+        "delayed",
+        "not",
+        "receiving"
+      ],
+      "page": "messages",
+      "note": "Background tabs and lost connectivity can delay live delivery; reconnect to reconcile."
+    },
+    {
+      "id": "chat-attachments",
+      "category": "Messages & notifications",
+      "question": "How do I share a screenshot or document with my lender?",
+      "summary": "Use the attachment control in the lender conversation where offered.",
+      "steps": [
+        "Choose a supported file within that control’s displayed size limit.",
+        "Check the attachment and explain the relevant item/reference.",
+        "Send once and use preview/download to check the intended file."
+      ],
+      "answer": "Use the attachment control in the lender conversation where offered.\n\n1. Choose a supported file within that control’s displayed size limit.\n2. Check the attachment and explain the relevant item/reference.\n3. Send once and use preview/download to check the intended file.\n\nRemember: Do not include credentials or unrelated personal records.",
+      "keywords": [
+        "chat",
+        "attachments",
+        "attachment",
+        "screenshot",
+        "document"
+      ],
+      "page": "messages",
+      "note": "Do not include credentials or unrelated personal records."
+    },
+    {
+      "id": "assistant-vs-lender",
+      "category": "Messages & notifications",
+      "question": "Is Ask Pawcheebels the same as Message lender?",
+      "summary": "No. Pawcheebels provides guidance; Message lender contacts the human lender.",
+      "steps": [
+        "Use the assistant for navigation or general feature explanations.",
+        "Choose Message lender for verification, corrections, disputes and account decisions.",
+        "Use Submit Request for a tracked support issue."
+      ],
+      "answer": "No. Pawcheebels provides guidance; Message lender contacts the human lender.\n\n1. Use the assistant for navigation or general feature explanations.\n2. Choose Message lender for verification, corrections, disputes and account decisions.\n3. Use Submit Request for a tracked support issue.\n\nRemember: An assistant reply is not a lender decision, verified balance or promise of action.",
+      "keywords": [
+        "assistant",
+        "vs",
+        "lender",
+        "AI",
+        "human"
+      ],
+      "page": "messages",
+      "note": "An assistant reply is not a lender decision, verified balance or promise of action."
+    },
+    {
+      "id": "notification-attachment",
+      "category": "Messages & notifications",
+      "question": "How do I download a notification attachment?",
+      "summary": "The attachment belongs to the update where it was sent.",
+      "steps": [
+        "Open the full notification.",
+        "Choose the relevant attachment/download and wait for preparation.",
+        "Contact the lender with the notification title/filename if access fails."
+      ],
+      "answer": "The attachment belongs to the update where it was sent.\n\n1. Open the full notification.\n2. Choose the relevant attachment/download and wait for preparation.\n3. Contact the lender with the notification title/filename if access fails.\n\nRemember: Downloading a file does not accept its terms or authorize a financial action.",
+      "keywords": [
+        "notification",
+        "attachment",
+        "download"
+      ],
+      "page": "notifications",
+      "note": "Downloading a file does not accept its terms or authorize a financial action."
+    },
+    {
+      "id": "telegram-borrower",
+      "category": "Messages & notifications",
+      "question": "Does my lender receive Telegram alerts for my proof or message?",
+      "summary": "The lender can enable private Telegram alerts in addition to existing app notifications.",
+      "steps": [
+        "Submit proof or send your lender message normally.",
+        "Use the saved in-app record as confirmation.",
+        "For a response, use app messaging rather than assuming an alert was delivered/read."
+      ],
+      "answer": "The lender can enable private Telegram alerts in addition to existing app notifications.\n\n1. Submit proof or send your lender message normally.\n2. Use the saved in-app record as confirmation.\n3. For a response, use app messaging rather than assuming an alert was delivered/read.\n\nRemember: Telegram depends on settings and delivery availability. It does not replace verification.",
+      "keywords": [
+        "telegram",
+        "borrower",
+        "Telegram",
+        "bot",
+        "lender",
+        "alert"
+      ],
+      "page": "messages",
+      "note": "Telegram depends on settings and delivery availability. It does not replace verification."
+    },
+    {
+      "id": "support",
+      "category": "Support & privacy",
+      "question": "How do I submit a support request?",
+      "summary": "Help & Support → Submit Request creates a tracked issue.",
+      "steps": [
+        "Open Submit Request, including from sign-in when you cannot access the account.",
+        "Choose a topic and describe the action, expected result, screen, time and visible error/reference; check required contact details.",
+        "Attach a supported redacted screenshot if useful, submit once and retain the ticket reference."
+      ],
+      "answer": "Help & Support → Submit Request creates a tracked issue.\n\n1. Open Submit Request, including from sign-in when you cannot access the account.\n2. Choose a topic and describe the action, expected result, screen, time and visible error/reference; check required contact details.\n3. Attach a supported redacted screenshot if useful, submit once and retain the ticket reference.\n\nRemember: A ticket is not a payment instruction or a promise of immediate resolution.",
+      "keywords": [
+        "support",
+        "ticket",
+        "submit",
+        "request"
+      ],
+      "page": "support",
+      "note": "A ticket is not a payment instruction or a promise of immediate resolution."
+    },
+    {
+      "id": "support-useful-details",
+      "category": "Support & privacy",
+      "question": "What should I include in a useful support report?",
+      "summary": "Specific non-secret evidence helps support reproduce an issue.",
+      "steps": [
+        "Name the screen and exact action.",
+        "Include the transaction/proof/ticket reference, approximate time and visible error.",
+        "Provide a redacted screenshot and say whether it happens on mobile/desktop and repeats."
+      ],
+      "answer": "Specific non-secret evidence helps support reproduce an issue.\n\n1. Name the screen and exact action.\n2. Include the transaction/proof/ticket reference, approximate time and visible error.\n3. Provide a redacted screenshot and say whether it happens on mobile/desktop and repeats.\n\nRemember: Never include passwords, codes, OTPs or another borrower’s records.",
+      "keywords": [
+        "support",
+        "useful",
+        "details",
+        "bug",
+        "report",
+        "screenshot",
+        "error"
+      ],
+      "page": "support",
+      "note": "Never include passwords, codes, OTPs or another borrower’s records."
+    },
+    {
+      "id": "support-status",
+      "category": "Support & privacy",
+      "question": "Where can I check my support tickets?",
+      "summary": "The support area can show recent submissions and a detail/timeline view for your account or authorized tracking session.",
+      "steps": [
+        "Open Submit Request and find Recent ticket submissions.",
+        "Choose the ticket reference for status and updates.",
+        "Use a tracking/verification option only when available and when you control its contact address."
+      ],
+      "answer": "The support area can show recent submissions and a detail/timeline view for your account or authorized tracking session.\n\n1. Open Submit Request and find Recent ticket submissions.\n2. Choose the ticket reference for status and updates.\n3. Use a tracking/verification option only when available and when you control its contact address.\n\nRemember: Email tracking depends on configured delivery. Do not assume an unavailable verification message was sent.",
+      "keywords": [
+        "support",
+        "status",
+        "ticket",
+        "history",
+        "tracking"
+      ],
+      "page": "support",
+      "note": "Email tracking depends on configured delivery. Do not assume an unavailable verification message was sent."
+    },
+    {
+      "id": "support-email",
+      "category": "Support & privacy",
+      "question": "Why did I not get a support tracking email?",
+      "summary": "Tracking email is available only when the service is configured and the flow confirms it.",
+      "steps": [
+        "Read the app’s availability message and check the entered address.",
+        "When a message was expected, check inbox/spam.",
+        "Keep the ticket reference and use another available support route if delivery is unavailable."
+      ],
+      "answer": "Tracking email is available only when the service is configured and the flow confirms it.\n\n1. Read the app’s availability message and check the entered address.\n2. When a message was expected, check inbox/spam.\n3. Keep the ticket reference and use another available support route if delivery is unavailable.\n\nRemember: The FAQ cannot retrieve or send a mailbox verification code for you.",
+      "keywords": [
+        "support",
+        "email",
+        "verification",
+        "no"
+      ],
+      "page": "support",
+      "note": "The FAQ cannot retrieve or send a mailbox verification code for you."
+    },
+    {
+      "id": "privacy",
+      "category": "Support & privacy",
+      "question": "Who can see my records and what should I share with Pawcheebels?",
+      "summary": "Account views require sign-in and authorization. Use lender chat/support for private account questions.",
+      "steps": [
+        "Use your own account and sign out on shared devices.",
+        "Ask the assistant general feature questions without account numbers, passwords or proof images.",
+        "Read Privacy Policy for records, AI questions and optional integrations."
+      ],
+      "answer": "Account views require sign-in and authorization. Use lender chat/support for private account questions.\n\n1. Use your own account and sign out on shared devices.\n2. Ask the assistant general feature questions without account numbers, passwords or proof images.\n3. Read Privacy Policy for records, AI questions and optional integrations.\n\nRemember: General assistant answers do not query your live ledger or perform account actions.",
+      "keywords": [
+        "privacy",
+        "own",
+        "data",
+        "AI",
+        "secrets"
+      ],
+      "page": "privacy",
+      "note": "General assistant answers do not query your live ledger or perform account actions."
+    },
+    {
+      "id": "privacy-terms",
+      "category": "Support & privacy",
+      "question": "Where are Privacy Policy, Cookie Policy and Terms & Conditions?",
+      "summary": "Legal links are available in app information/footer areas, including sign-in.",
+      "steps": [
+        "Read Privacy Policy and its Cookie Policy section.",
+        "Read Terms & Conditions for disclaimers, copyright, acceptable use and other terms.",
+        "Use Help & Support for privacy/copyright concerns."
+      ],
+      "answer": "Legal links are available in app information/footer areas, including sign-in.\n\n1. Read Privacy Policy and its Cookie Policy section.\n2. Read Terms & Conditions for disclaimers, copyright, acceptable use and other terms.\n3. Use Help & Support for privacy/copyright concerns.\n\nRemember: This FAQ summarizes navigation; the published documents and applicable agreement contain the actual terms.",
+      "keywords": [
+        "privacy",
+        "terms",
+        "policy",
+        "cookies",
+        "copyright",
+        "AUP"
+      ],
+      "page": "privacy",
+      "note": "This FAQ summarizes navigation; the published documents and applicable agreement contain the actual terms."
+    },
+    {
+      "id": "cookies-site-data",
+      "category": "Support & privacy",
+      "question": "What happens if I clear cookies or site data?",
+      "summary": "Local site data can contain sign-in state, preferences and an unfinished proof draft.",
+      "steps": [
+        "Prepare to re-enter an unfinished draft or finish it safely before clearing data.",
+        "Keep needed document copies and references.",
+        "Sign in again afterward and review current server records."
+      ],
+      "answer": "Local site data can contain sign-in state, preferences and an unfinished proof draft.\n\n1. Prepare to re-enter an unfinished draft or finish it safely before clearing data.\n2. Keep needed document copies and references.\n3. Sign in again afterward and review current server records.\n\nRemember: Clearing site data does not delete loans, server payments, approved allocations or lender records.",
+      "keywords": [
+        "cookies",
+        "site",
+        "data",
+        "cache",
+        "local",
+        "storage",
+        "IndexedDB"
+      ],
+      "page": "privacy",
+      "note": "Clearing site data does not delete loans, server payments, approved allocations or lender records."
+    },
+    {
+      "id": "offline-use",
+      "category": "Support & privacy",
+      "question": "Can I submit proof or chat while offline?",
+      "summary": "Saving and checking current records needs a working connection.",
+      "steps": [
+        "Check connectivity before submitting.",
+        "Keep the draft after an interrupted action and inspect saved records when reconnected.",
+        "Retry only after checking that the same proof/message was not already saved."
+      ],
+      "answer": "Saving and checking current records needs a working connection.\n\n1. Check connectivity before submitting.\n2. Keep the draft after an interrupted action and inspect saved records when reconnected.\n3. Retry only after checking that the same proof/message was not already saved.\n\nRemember: A retained local draft is not an offline financial posting guarantee. Previously displayed data can be stale.",
+      "keywords": [
+        "offline",
+        "use",
+        "connection",
+        "network"
+      ],
+      "page": "support",
+      "note": "A retained local draft is not an offline financial posting guarantee. Previously displayed data can be stale."
+    },
+    {
+      "id": "reduced-motion",
+      "category": "Support & privacy",
+      "question": "Can I reduce decorative animations?",
+      "summary": "Several effects respect supported reduced-motion settings.",
+      "steps": [
+        "Enable reduced motion through your device/browser accessibility settings.",
+        "Check navigation, border and celebration effects again.",
+        "Report an effect that still causes difficulty with its screen and device."
+      ],
+      "answer": "Several effects respect supported reduced-motion settings.\n\n1. Enable reduced motion through your device/browser accessibility settings.\n2. Check navigation, border and celebration effects again.\n3. Report an effect that still causes difficulty with its screen and device.\n\nRemember: Presentation settings do not change records or payment processing.",
+      "keywords": [
+        "reduced",
+        "motion",
+        "accessibility",
+        "animation"
+      ],
+      "page": "profile",
+      "note": "Presentation settings do not change records or payment processing."
+    },
+    {
+      "id": "text-size",
+      "category": "Support & privacy",
+      "question": "What can I do if text or controls are hard to read?",
+      "summary": "Responsive layouts and supported browser/device reading settings can help.",
+      "steps": [
+        "Try supported zoom or text-size controls.",
+        "Scroll inside horizontal shortcuts/cards for additional content.",
+        "Report clipped/unreachable controls with screen and device details."
+      ],
+      "answer": "Responsive layouts and supported browser/device reading settings can help.\n\n1. Try supported zoom or text-size controls.\n2. Scroll inside horizontal shortcuts/cards for additional content.\n3. Report clipped/unreachable controls with screen and device details.\n\nRemember: Open the item details before editing a value you can see only partially.",
+      "keywords": [
+        "text",
+        "size",
+        "zoom",
+        "small",
+        "screen",
+        "clipped"
+      ],
+      "page": "support",
+      "note": "Open the item details before editing a value you can see only partially."
+    },
+    {
+      "id": "unexpected-popup",
+      "category": "Support & privacy",
+      "question": "What should I do about an unexpected popup or error?",
+      "summary": "Read the message before dismissing it, particularly after saving or submitting.",
+      "steps": [
+        "Note the screen, time and error/reference without copying secrets.",
+        "Check relevant saved history before retrying a submission.",
+        "Report repeated problems with a redacted screenshot."
+      ],
+      "answer": "Read the message before dismissing it, particularly after saving or submitting.\n\n1. Note the screen, time and error/reference without copying secrets.\n2. Check relevant saved history before retrying a submission.\n3. Report repeated problems with a redacted screenshot.\n\nRemember: A popup does not prove a bank transfer failed or a record was deleted.",
+      "keywords": [
+        "unexpected",
+        "popup",
+        "error"
+      ],
+      "page": "support",
+      "note": "A popup does not prove a bank transfer failed or a record was deleted."
+    },
+    {
+      "id": "paw-help",
+      "category": "About Pawcheebels",
+      "question": "What can Pawcheebels help with?",
+      "summary": "Pawcheebels explains features using the FAQ and optional configured general AI.",
+      "steps": [
+        "Ask a specific feature/navigation question.",
+        "Open cited FAQ guides for full steps and illustrations.",
+        "Use Message lender or Submit Request for private decisions/corrections."
+      ],
+      "answer": "Pawcheebels explains features using the FAQ and optional configured general AI.\n\n1. Ask a specific feature/navigation question.\n2. Open cited FAQ guides for full steps and illustrations.\n3. Use Message lender or Submit Request for private decisions/corrections.\n\nRemember: Pawcheebels cannot approve loans, verify transfers, invent balances, waive fees or change records.",
+      "keywords": [
+        "paw",
+        "help",
+        "Pawcheebels",
+        "capabilities"
+      ],
+      "page": "faq",
+      "note": "Pawcheebels cannot approve loans, verify transfers, invent balances, waive fees or change records."
+    },
+    {
+      "id": "paw-ai-off",
+      "category": "About Pawcheebels",
+      "question": "Can I use the FAQ when AI is off or unavailable?",
+      "summary": "Published guides and local FAQ answers do not require a successful AI-provider response.",
+      "steps": [
+        "Search the FAQ or choose a topic.",
+        "Ask with AI assistance off for matching local guidance.",
+        "Use support/lender chat if the question is not covered."
+      ],
+      "answer": "Published guides and local FAQ answers do not require a successful AI-provider response.\n\n1. Search the FAQ or choose a topic.\n2. Ask with AI assistance off for matching local guidance.\n3. Use support/lender chat if the question is not covered.\n\nRemember: AI depends on sign-in, configuration and limits; an outage is not an account status change.",
+      "keywords": [
+        "paw",
+        "ai",
+        "off",
+        "AI",
+        "FAQ",
+        "only",
+        "free",
+        "limit"
+      ],
+      "page": "faq",
+      "note": "AI depends on sign-in, configuration and limits; an outage is not an account status change."
+    },
+    {
+      "id": "paw-sources",
+      "category": "About Pawcheebels",
+      "question": "How do I open a Pawcheebels FAQ reference?",
+      "summary": "Source chips link an answer to its published help guide.",
+      "steps": [
+        "Choose the question/source chip below the answer.",
+        "FAQ opens and expands the referenced item.",
+        "Read complete steps and notes before following them."
+      ],
+      "answer": "Source chips link an answer to its published help guide.\n\n1. Choose the question/source chip below the answer.\n2. FAQ opens and expands the referenced item.\n3. Read complete steps and notes before following them.\n\nRemember: A source validates the help reference, not a private financial claim.",
+      "keywords": [
+        "paw",
+        "sources",
+        "FAQ",
+        "source",
+        "citation",
+        "references"
+      ],
+      "page": "faq",
+      "note": "A source validates the help reference, not a private financial claim."
+    },
+    {
+      "id": "paw-ai-privacy",
+      "category": "About Pawcheebels",
+      "question": "What is sent when I enable AI assistance?",
+      "summary": "Your chosen question and relevant published FAQ references go to the configured provider.",
+      "steps": [
+        "Keep questions general and exclude private identifiers, passwords, codes and proof images.",
+        "Use FAQ-only guidance if you do not want an AI-assisted request.",
+        "Use Message lender for private account help."
+      ],
+      "answer": "Your chosen question and relevant published FAQ references go to the configured provider.\n\n1. Keep questions general and exclude private identifiers, passwords, codes and proof images.\n2. Use FAQ-only guidance if you do not want an AI-assisted request.\n3. Use Message lender for private account help.\n\nRemember: The assistant never needs your banking login, PIN or OTP.",
+      "keywords": [
+        "paw",
+        "ai",
+        "privacy",
+        "AI",
+        "provider",
+        "private",
+        "details"
+      ],
+      "page": "faq",
+      "note": "The assistant never needs your banking login, PIN or OTP."
+    },
+    {
+      "id": "paw-invitations",
+      "category": "About Pawcheebels",
+      "question": "Why does Pawcheebels show welcome/help invitations?",
+      "summary": "The mascot can show proactive invitations when supported rules and visibility settings permit.",
+      "steps": [
+        "Choose an invitation to open guidance.",
+        "Dismiss it or open the relevant chat if you do not need a prompt.",
+        "Review supported mascot/notification presentation settings when needed."
+      ],
+      "answer": "The mascot can show proactive invitations when supported rules and visibility settings permit.\n\n1. Choose an invitation to open guidance.\n2. Dismiss it or open the relevant chat if you do not need a prompt.\n3. Review supported mascot/notification presentation settings when needed.\n\nRemember: These prompts are not automatic lender messages, approvals or access to a private ledger.",
+      "keywords": [
+        "paw",
+        "invitations",
+        "mascot",
+        "bubble",
+        "welcome",
+        "invitation"
+      ],
+      "page": "dashboard",
+      "note": "These prompts are not automatic lender messages, approvals or access to a private ledger."
+    },
+    {
+      "id": "admin-review-proof",
+      "category": "Lender guides",
+      "question": "Lender: how do I review and post a proof?",
+      "summary": "For authorized lenders, proof verification and financial allocation are separate review steps.",
+      "steps": [
+        "Open Payment review and locate borrower/reference; inspect the original evidence. Date and Borrower sorts help locate it.",
+        "Choose Review & post. Inspect selected dues, credit, apply amounts and remaining balances.",
+        "Confirm verification, Approve & post once and check the saved result before retrying uncertainty."
+      ],
+      "answer": "For authorized lenders, proof verification and financial allocation are separate review steps.\n\n1. Open Payment review and locate borrower/reference; inspect the original evidence. Date and Borrower sorts help locate it.\n2. Choose Review & post. Inspect selected dues, credit, apply amounts and remaining balances.\n3. Confirm verification, Approve & post once and check the saved result before retrying uncertainty.\n\nRemember: A notification/document alone does not prove financial posting succeeded.",
+      "keywords": [
+        "admin",
+        "review",
+        "proof",
+        "approve",
+        "payment",
+        "allocation"
+      ],
+      "page": "faq",
+      "note": "A notification/document alone does not prove financial posting succeeded.",
+      "audience": "lender"
+    },
+    {
+      "id": "admin-partial-excess",
+      "category": "Lender guides",
+      "question": "Lender: how do I review partial payments and excess credit?",
+      "summary": "The allocation dialog explains cash, dues and retained/used credit.",
+      "steps": [
+        "Match cash received to actual proof.",
+        "Enter reviewed apply amounts. Retain unpaid remainders for partial payments and inspect unapplied cash becoming credit.",
+        "Read Apply to dues, Use prior credit, Add to credit, Credit after posting and Remaining on selected dues before confirming."
+      ],
+      "answer": "The allocation dialog explains cash, dues and retained/used credit.\n\n1. Match cash received to actual proof.\n2. Enter reviewed apply amounts. Retain unpaid remainders for partial payments and inspect unapplied cash becoming credit.\n3. Read Apply to dues, Use prior credit, Add to credit, Credit after posting and Remaining on selected dues before confirming.\n\nRemember: Do not add another negative transaction for a payment already represented in saved allocations.",
+      "keywords": [
+        "admin",
+        "partial",
+        "excess",
+        "every",
+        "peso"
+      ],
+      "page": "faq",
+      "note": "Do not add another negative transaction for a payment already represented in saved allocations.",
+      "audience": "lender"
+    },
+    {
+      "id": "admin-apply-credit",
+      "category": "Lender guides",
+      "question": "Lender: how do I apply available account credit?",
+      "summary": "Use the dedicated reviewed credit flow, not a fabricated cash proof.",
+      "steps": [
+        "Open Payment history → Apply account credit.",
+        "Select a borrower with credit, choose the intended due and review its suggested apply amount.",
+        "Adjust within available funds, set application date, confirm review and choose Apply credit."
+      ],
+      "answer": "Use the dedicated reviewed credit flow, not a fabricated cash proof.\n\n1. Open Payment history → Apply account credit.\n2. Select a borrower with credit, choose the intended due and review its suggested apply amount.\n3. Adjust within available funds, set application date, confirm review and choose Apply credit.\n\nRemember: ₱200 credit cannot fully pay a ₱600 remainder. Apply ₱200 or less and retain the remainder.",
+      "keywords": [
+        "admin",
+        "apply",
+        "credit",
+        "insufficient"
+      ],
+      "page": "faq",
+      "note": "₱200 credit cannot fully pay a ₱600 remainder. Apply ₱200 or less and retain the remainder.",
+      "audience": "lender"
+    },
+    {
+      "id": "admin-reversal",
+      "category": "Lender guides",
+      "question": "Lender: how do I correct a posted payment?",
+      "summary": "Use the supported reviewed reversal/correction flow while inspecting the original posting.",
+      "steps": [
+        "Find its allocations and credit movement.",
+        "Use the permitted reversal action, enter the required reason and review consequences.",
+        "After a confirmed result, reconcile the ledger and any necessary replacement posting."
+      ],
+      "answer": "Use the supported reviewed reversal/correction flow while inspecting the original posting.\n\n1. Find its allocations and credit movement.\n2. Use the permitted reversal action, enter the required reason and review consequences.\n3. After a confirmed result, reconcile the ledger and any necessary replacement posting.\n\nRemember: Deleting a notification or hiding a breakdown is not a reversal. Preserve the audit trail.",
+      "keywords": [
+        "admin",
+        "reversal",
+        "reverse",
+        "posting",
+        "correction"
+      ],
+      "page": "faq",
+      "note": "Deleting a notification or hiding a breakdown is not a reversal. Preserve the audit trail.",
+      "audience": "lender"
+    },
+    {
+      "id": "admin-fee-assessment",
+      "category": "Lender guides",
+      "question": "Lender: how do I assess one late fee across multiple due dates?",
+      "summary": "The fee manager supports a combined reviewed assessment rather than one late fee per selected date.",
+      "steps": [
+        "Select borrower and As of date; review initial outstanding date selections and edit dates/items.",
+        "Inspect the net running base including eligible unpaid prior fees/negative adjustments. Enable/edit finance rate and a single late fee, then set the new charges’ due date.",
+        "Review preview descriptions and confirm posting to that borrower."
+      ],
+      "answer": "The fee manager supports a combined reviewed assessment rather than one late fee per selected date.\n\n1. Select borrower and As of date; review initial outstanding date selections and edit dates/items.\n2. Inspect the net running base including eligible unpaid prior fees/negative adjustments. Enable/edit finance rate and a single late fee, then set the new charges’ due date.\n3. Review preview descriptions and confirm posting to that borrower.\n\nRemember: Defaults are 3% and ₱1,500. Separate assessments in one month require explicit confirmation; inspect existing charges to avoid accidental duplicates.",
+      "keywords": [
+        "admin",
+        "fee",
+        "assessment",
+        "multiple",
+        "dates",
+        "as",
+        "of"
+      ],
+      "page": "faq",
+      "note": "Defaults are 3% and ₱1,500. Separate assessments in one month require explicit confirmation; inspect existing charges to avoid accidental duplicates.",
+      "audience": "lender"
+    },
+    {
+      "id": "admin-fee-example",
+      "category": "Lender guides",
+      "question": "Lender: how is 3% of ₱71,270.03 calculated?",
+      "summary": "3% of a reviewed ₱71,270.03 base rounds to ₱2,138.10. Adding one ₱1,500 late fee gives ₱3,638.10 new charges.",
+      "steps": [
+        "Choose the correct borrower and As of date.",
+        "Confirm the selected net balance is really ₱71,270.03 with one late fee, not one fee per date.",
+        "Set the new due date and review the two entries before posting."
+      ],
+      "answer": "3% of a reviewed ₱71,270.03 base rounds to ₱2,138.10. Adding one ₱1,500 late fee gives ₱3,638.10 new charges.\n\n1. Choose the correct borrower and As of date.\n2. Confirm the selected net balance is really ₱71,270.03 with one late fee, not one fee per date.\n3. Set the new due date and review the two entries before posting.\n\nRemember: This is an example, not a direction to charge every account this amount. Recalculate from current records.",
+      "keywords": [
+        "admin",
+        "fee",
+        "example",
+        "71270.03",
+        "2138.10",
+        "3638.10",
+        "combined",
+        "fees"
+      ],
+      "page": "faq",
+      "note": "This is an example, not a direction to charge every account this amount. Recalculate from current records.",
+      "audience": "lender"
+    },
+    {
+      "id": "admin-transaction-edit",
+      "category": "Lender guides",
+      "question": "Lender: how do I correct an All Transactions field?",
+      "summary": "Editable grid cells open a reviewed correction flow.",
+      "steps": [
+        "Locate the exact borrower/item.",
+        "Edit the intended field and review expected current value, proposed change and required reason.",
+        "Confirm once, wait for persistence and inspect the borrower’s affected balance/history."
+      ],
+      "answer": "Editable grid cells open a reviewed correction flow.\n\n1. Locate the exact borrower/item.\n2. Edit the intended field and review expected current value, proposed change and required reason.\n3. Confirm once, wait for persistence and inspect the borrower’s affected balance/history.\n\nRemember: Payments stay applied where permitted and excess can return to the same borrower’s credit. Reverse payments before moving a paid transaction to another borrower.",
+      "keywords": [
+        "admin",
+        "transaction",
+        "edit",
+        "amount",
+        "correction"
+      ],
+      "page": "faq",
+      "note": "Payments stay applied where permitted and excess can return to the same borrower’s credit. Reverse payments before moving a paid transaction to another borrower.",
+      "audience": "lender"
+    },
+    {
+      "id": "admin-manual-entry",
+      "category": "Lender guides",
+      "question": "Lender: how do I add positive or negative transactions?",
+      "summary": "Add transaction supports standalone entries and permitted borrower-owned loan links.",
+      "steps": [
+        "Choose Add transaction and the correct borrower.",
+        "Enter description, signed amount, type/group and dates. Link an existing loan only when intended.",
+        "Review and save once, then inspect grid and borrower view."
+      ],
+      "answer": "Add transaction supports standalone entries and permitted borrower-owned loan links.\n\n1. Choose Add transaction and the correct borrower.\n2. Enter description, signed amount, type/group and dates. Link an existing loan only when intended.\n3. Review and save once, then inspect grid and borrower view.\n\nRemember: Negative manual entries affect balances. Do not duplicate reviewed postings or legacy payments already represented by paid rows.",
+      "keywords": [
+        "admin",
+        "manual",
+        "entry",
+        "add",
+        "negative",
+        "standalone",
+        "linked"
+      ],
+      "page": "faq",
+      "note": "Negative manual entries affect balances. Do not duplicate reviewed postings or legacy payments already represented by paid rows.",
+      "audience": "lender"
+    },
+    {
+      "id": "admin-group-change",
+      "category": "Lender guides",
+      "question": "Lender: how do I correct a transaction group?",
+      "summary": "Linked installment group changes affect the loan’s schedule; straight groups apply per entry.",
+      "steps": [
+        "Use the Group column or Edit installment groups.",
+        "Choose Cash Loan/Retail Installment for installments, or Straight Retail/Fees/Adjustments for straight entries.",
+        "Review affected records and required reason, save and inspect borrower grouping."
+      ],
+      "answer": "Linked installment group changes affect the loan’s schedule; straight groups apply per entry.\n\n1. Use the Group column or Edit installment groups.\n2. Choose Cash Loan/Retail Installment for installments, or Straight Retail/Fees/Adjustments for straight entries.\n3. Review affected records and required reason, save and inspect borrower grouping.\n\nRemember: Do not alter amounts or payment status merely to correct a category.",
+      "keywords": [
+        "admin",
+        "group",
+        "change",
+        "unclassified"
+      ],
+      "page": "faq",
+      "note": "Do not alter amounts or payment status merely to correct a category.",
+      "audience": "lender"
+    },
+    {
+      "id": "admin-import-template",
+      "category": "Lender guides",
+      "question": "Lender: what should I check before importing bulk transactions?",
+      "summary": "Use the current Template including the Group column.",
+      "steps": [
+        "Review borrower, dates, description, amount, Type, Group, paid date/status and applicable loan-level fields.",
+        "Use a group consistent with Type and keep classifications consistent across linked loan rows.",
+        "Resolve validation errors, review the import and compare counts/totals after saving."
+      ],
+      "answer": "Use the current Template including the Group column.\n\n1. Review borrower, dates, description, amount, Type, Group, paid date/status and applicable loan-level fields.\n2. Use a group consistent with Type and keep classifications consistent across linked loan rows.\n3. Resolve validation errors, review the import and compare counts/totals after saving.\n\nRemember: Do not create credit merely because a legacy proof exists; first reconcile it against existing paid rows.",
+      "keywords": [
+        "admin",
+        "import",
+        "template",
+        "CSV",
+        "Group",
+        "bulk"
+      ],
+      "page": "faq",
+      "note": "Do not create credit merely because a legacy proof exists; first reconcile it against existing paid rows.",
+      "audience": "lender"
+    },
+    {
+      "id": "admin-grid-layout",
+      "category": "Lender guides",
+      "question": "Lender: how do I resize and reorder grid columns?",
+      "summary": "All Transactions stores a layout for the current device/account.",
+      "steps": [
+        "Drag a column’s right edge to resize, or its grip to move.",
+        "Use available keyboard alternatives and horizontal table scrolling.",
+        "Choose Reset layout if widths/order become inconvenient."
+      ],
+      "answer": "All Transactions stores a layout for the current device/account.\n\n1. Drag a column’s right edge to resize, or its grip to move.\n2. Use available keyboard alternatives and horizontal table scrolling.\n3. Choose Reset layout if widths/order become inconvenient.\n\nRemember: Layout changes do not modify transaction values.",
+      "keywords": [
+        "admin",
+        "grid",
+        "layout",
+        "resize",
+        "reorder",
+        "columns",
+        "reset"
+      ],
+      "page": "faq",
+      "note": "Layout changes do not modify transaction values.",
+      "audience": "lender"
+    },
+    {
+      "id": "admin-retail-logo",
+      "category": "Lender guides",
+      "question": "Lender: how do I assign retail brand logos?",
+      "summary": "Brand logos supports Brandfetch matches or reviewed manual SVG/PNG uploads.",
+      "steps": [
+        "Filter intended retail records, open Brand logos and select the exact targets.",
+        "Search or upload artwork and choose ambiguous matches manually.",
+        "Review selected items/logo and assign once; a linked installment choice covers its whole loan."
+      ],
+      "answer": "Brand logos supports Brandfetch matches or reviewed manual SVG/PNG uploads.\n\n1. Filter intended retail records, open Brand logos and select the exact targets.\n2. Search or upload artwork and choose ambiguous matches manually.\n3. Review selected items/logo and assign once; a linked installment choice covers its whole loan.\n\nRemember: Never use Delete (move to Archives) to assign artwork. Logo updates must not remove financial records.",
+      "keywords": [
+        "admin",
+        "retail",
+        "logo",
+        "Brandfetch",
+        "manual",
+        "bulk"
+      ],
+      "page": "faq",
+      "note": "Never use Delete (move to Archives) to assign artwork. Logo updates must not remove financial records.",
+      "audience": "lender"
+    },
+    {
+      "id": "admin-group-logo",
+      "category": "Lender guides",
+      "question": "Lender: how do I upload shared group artwork?",
+      "summary": "Settings or Transactions → Group logos controls Cash Loan, Fees, Adjustments and Payment Proof Submitted artwork.",
+      "steps": [
+        "Choose the intended group; upload SVG up to 128 KB or transparent PNG up to 2 MB.",
+        "Inspect sanitized preview and scope of matching records.",
+        "Confirm and save, then inspect borrower views."
+      ],
+      "answer": "Settings or Transactions → Group logos controls Cash Loan, Fees, Adjustments and Payment Proof Submitted artwork.\n\n1. Choose the intended group; upload SVG up to 128 KB or transparent PNG up to 2 MB.\n2. Inspect sanitized preview and scope of matching records.\n3. Confirm and save, then inspect borrower views.\n\nRemember: Scripts/external SVG content are rejected. Export unsupported complex effects as transparent PNG. Images are optimized for display.",
+      "keywords": [
+        "admin",
+        "group",
+        "logo",
+        "SVG",
+        "PNG",
+        "proof",
+        "submitted",
+        "image"
+      ],
+      "page": "faq",
+      "note": "Scripts/external SVG content are rejected. Export unsupported complex effects as transparent PNG. Images are optimized for display.",
+      "audience": "lender"
+    },
+    {
+      "id": "admin-logo-restore",
+      "category": "Lender guides",
+      "question": "Lender: how do I remove a logo or return to automatic matching?",
+      "summary": "Retail Remove logo and Use automatic have different outcomes.",
+      "steps": [
+        "Select the exact targets in Brand logos.",
+        "Remove logo suppresses a target logo; Use automatic returns it to matching rules. Review before applying.",
+        "Remove shared artwork through its own Group logos controls and shared-scope confirmation."
+      ],
+      "answer": "Retail Remove logo and Use automatic have different outcomes.\n\n1. Select the exact targets in Brand logos.\n2. Remove logo suppresses a target logo; Use automatic returns it to matching rules. Review before applying.\n3. Remove shared artwork through its own Group logos controls and shared-scope confirmation.\n\nRemember: Logo actions do not archive records or change paid status.",
+      "keywords": [
+        "admin",
+        "logo",
+        "restore",
+        "remove",
+        "automatic"
+      ],
+      "page": "faq",
+      "note": "Logo actions do not archive records or change paid status.",
+      "audience": "lender"
+    },
+    {
+      "id": "admin-payment-due",
+      "category": "Lender guides",
+      "question": "Lender: how do I configure Current and Next balances?",
+      "summary": "Payment Due selects date groups represented in borrower balance cards.",
+      "steps": [
+        "Open Payment due and choose the borrower.",
+        "Review Current/Next date selections, items and totals, then save.",
+        "Check the connected borrower view for the intended grouping and live update."
+      ],
+      "answer": "Payment Due selects date groups represented in borrower balance cards.\n\n1. Open Payment due and choose the borrower.\n2. Review Current/Next date selections, items and totals, then save.\n3. Check the connected borrower view for the intended grouping and live update.\n\nRemember: Excluding a date from a card is not payment or cancellation of that due.",
+      "keywords": [
+        "admin",
+        "payment",
+        "due",
+        "current",
+        "next",
+        "live"
+      ],
+      "page": "faq",
+      "note": "Excluding a date from a card is not payment or cancellation of that due.",
+      "audience": "lender"
+    },
+    {
+      "id": "admin-loan-visibility",
+      "category": "Lender guides",
+      "question": "Lender: how do I show or hide Request a Loan?",
+      "summary": "Loan Requests → Master Control — Feature Visibility provides a borrower-specific switch.",
+      "steps": [
+        "Find the borrower in Borrower loan-request access and confirm identity.",
+        "Switch ON to show Request a Loan or OFF to hide it; read the current-result label and save feedback.",
+        "Use Enabled/Disabled filters and check the borrower interface."
+      ],
+      "answer": "Loan Requests → Master Control — Feature Visibility provides a borrower-specific switch.\n\n1. Find the borrower in Borrower loan-request access and confirm identity.\n2. Switch ON to show Request a Loan or OFF to hide it; read the current-result label and save feedback.\n3. Use Enabled/Disabled filters and check the borrower interface.\n\nRemember: Visibility does not approve a loan or automatically cancel an existing request.",
+      "keywords": [
+        "admin",
+        "loan",
+        "visibility",
+        "master",
+        "control",
+        "switch"
+      ],
+      "page": "faq",
+      "note": "Visibility does not approve a loan or automatically cancel an existing request.",
+      "audience": "lender"
+    },
+    {
+      "id": "admin-borrower-access",
+      "category": "Lender guides",
+      "question": "Lender: how do I manage status, email confirmation or sign-in locks?",
+      "summary": "Borrower access tools provide distinct reviewed controls for these states.",
+      "steps": [
+        "Open the intended borrower’s login/account access controls.",
+        "Inspect current state and supply required reason/review for a permitted status/email override.",
+        "Verify the saved result. Match account/device unlock references and manage locks separately."
+      ],
+      "answer": "Borrower access tools provide distinct reviewed controls for these states.\n\n1. Open the intended borrower’s login/account access controls.\n2. Inspect current state and supply required reason/review for a permitted status/email override.\n3. Verify the saved result. Match account/device unlock references and manage locks separately.\n\nRemember: Admin-confirming email differs from the borrower completing mailbox verification. Never request their current password.",
+      "keywords": [
+        "admin",
+        "borrower",
+        "access",
+        "Invited",
+        "Active",
+        "confirm",
+        "email",
+        "unlock"
+      ],
+      "page": "faq",
+      "note": "Admin-confirming email differs from the borrower completing mailbox verification. Never request their current password.",
+      "audience": "lender"
+    },
+    {
+      "id": "admin-view-as",
+      "category": "Lender guides",
+      "question": "Lender: how do I return from View as this borrower?",
+      "summary": "Borrower preview retains an option to return to the admin context.",
+      "steps": [
+        "Open Borrowers and use the eye/View as action for the intended account.",
+        "Inspect the borrower presentation and avoid unintended changes.",
+        "Choose Return to Admin to leave that context."
+      ],
+      "answer": "Borrower preview retains an option to return to the admin context.\n\n1. Open Borrowers and use the eye/View as action for the intended account.\n2. Inspect the borrower presentation and avoid unintended changes.\n3. Choose Return to Admin to leave that context.\n\nRemember: Viewing as is not logging in with a borrower password or transferring an admin session across domains.",
+      "keywords": [
+        "admin",
+        "view",
+        "as",
+        "eye",
+        "return"
+      ],
+      "page": "faq",
+      "note": "Viewing as is not logging in with a borrower password or transferring an admin session across domains.",
+      "audience": "lender"
+    },
+    {
+      "id": "admin-release-access",
+      "category": "Lender guides",
+      "question": "Lender: how do I manage New/Classic interface access?",
+      "summary": "Settings → Release access manages borrower interface assignments.",
+      "steps": [
+        "Review rollout default and borrower identity.",
+        "Choose New interface, Classic or Use default for a borrower, or explicitly review bulk selections.",
+        "Save and read next-sign-in/reload outcome and change history."
+      ],
+      "answer": "Settings → Release access manages borrower interface assignments.\n\n1. Review rollout default and borrower identity.\n2. Choose New interface, Classic or Use default for a borrower, or explicitly review bulk selections.\n3. Save and read next-sign-in/reload outcome and change history.\n\nRemember: An assignment does not migrate records or approve a production deployment.",
+      "keywords": [
+        "admin",
+        "release",
+        "access",
+        "classic",
+        "pilot"
+      ],
+      "page": "faq",
+      "note": "An assignment does not migrate records or approve a production deployment.",
+      "audience": "lender"
+    },
+    {
+      "id": "admin-notification-send",
+      "category": "Lender guides",
+      "question": "Lender: how do I send a notification to specific borrowers?",
+      "summary": "Compose & inbox separates content from audience selection.",
+      "steps": [
+        "Choose category, title/message and supported attachments.",
+        "Select Specific borrowers and verify every recipient, or deliberately choose All borrowers.",
+        "Review preview and send once; inspect the saved item in Sent & linking."
+      ],
+      "answer": "Compose & inbox separates content from audience selection.\n\n1. Choose category, title/message and supported attachments.\n2. Select Specific borrowers and verify every recipient, or deliberately choose All borrowers.\n3. Review preview and send once; inspect the saved item in Sent & linking.\n\nRemember: Never send private account details to a broad audience. Notifications do not post payments.",
+      "keywords": [
+        "admin",
+        "notification",
+        "send",
+        "compose",
+        "recipient"
+      ],
+      "page": "faq",
+      "note": "Never send private account details to a broad audience. Notifications do not post payments.",
+      "audience": "lender"
+    },
+    {
+      "id": "admin-notification-rules",
+      "category": "Lender guides",
+      "question": "Lender: how do notification rules and categories work?",
+      "summary": "Rules & canvas connects supported events, conditions, recipients and message actions. Categories organize messages.",
+      "steps": [
+        "Create/edit a rule and inspect event, conditions, timing, recipients and placeholders.",
+        "Review/save it, then inspect Activity/delivery feedback. Use Categories for category maintenance.",
+        "Use the deleted-rule restore option when available and review any propagation confirmation affecting linked sent items."
+      ],
+      "answer": "Rules & canvas connects supported events, conditions, recipients and message actions. Categories organize messages.\n\n1. Create/edit a rule and inspect event, conditions, timing, recipients and placeholders.\n2. Review/save it, then inspect Activity/delivery feedback. Use Categories for category maintenance.\n3. Use the deleted-rule restore option when available and review any propagation confirmation affecting linked sent items.\n\nRemember: Restoring a rule does not automatically re-send every historical notification. Use only supported events/actions.",
+      "keywords": [
+        "admin",
+        "notification",
+        "rules",
+        "canvas",
+        "categories",
+        "restore"
+      ],
+      "page": "faq",
+      "note": "Restoring a rule does not automatically re-send every historical notification. Use only supported events/actions.",
+      "audience": "lender"
+    },
+    {
+      "id": "admin-notification-manage",
+      "category": "Lender guides",
+      "question": "Lender: how do I filter or delete sent notifications?",
+      "summary": "Sent & linking offers borrower pills, category/subject filters and individual/bulk deletion.",
+      "steps": [
+        "Filter and inspect the visible records and selected count.",
+        "Use the switch to hide admin-recipient updates when needed.",
+        "Review exact deletion selection and confirmation, then inspect the saved result."
+      ],
+      "answer": "Sent & linking offers borrower pills, category/subject filters and individual/bulk deletion.\n\n1. Filter and inspect the visible records and selected count.\n2. Use the switch to hide admin-recipient updates when needed.\n3. Review exact deletion selection and confirmation, then inspect the saved result.\n\nRemember: Deleting a notification does not delete its proof, loan or payment. Do not guess links between old messages and rules.",
+      "keywords": [
+        "admin",
+        "notification",
+        "manage",
+        "sent",
+        "linking",
+        "bulk",
+        "delete",
+        "hide"
+      ],
+      "page": "faq",
+      "note": "Deleting a notification does not delete its proof, loan or payment. Do not guess links between old messages and rules.",
+      "audience": "lender"
+    },
+    {
+      "id": "admin-telegram",
+      "category": "Lender guides",
+      "question": "Lender: how do I manage Telegram alerts?",
+      "summary": "Telegram settings supplement existing app notifications with a private destination.",
+      "steps": [
+        "Check bot/destination and use the in-app pairing link when connecting.",
+        "Choose proof/message switches and read current-result labels.",
+        "Send an intended test alert and inspect recent delivery/failure status."
+      ],
+      "answer": "Telegram settings supplement existing app notifications with a private destination.\n\n1. Check bot/destination and use the in-app pairing link when connecting.\n2. Choose proof/message switches and read current-result labels.\n3. Send an intended test alert and inspect recent delivery/failure status.\n\nRemember: Keep bot tokens only in secure server configuration. Alerts may contain borrower details/message previews, so use a private destination.",
+      "keywords": [
+        "admin",
+        "telegram",
+        "Telegram",
+        "settings",
+        "delivery",
+        "test",
+        "bot"
+      ],
+      "page": "faq",
+      "note": "Keep bot tokens only in secure server configuration. Alerts may contain borrower details/message previews, so use a private destination.",
+      "audience": "lender"
+    },
+    {
+      "id": "admin-archive",
+      "category": "Lender guides",
+      "question": "Lender: how do archive, restore and permanent deletion differ?",
+      "summary": "Archive hides a ledger record, Restore makes it active again, and permanent deletion removes eligible archived records.",
+      "steps": [
+        "Review exact selections and archive confirmation in All Transactions.",
+        "Inspect/restore records in Reports & Logs → Archives.",
+        "Review permanent-deletion selection and blocked/retained items before confirming."
+      ],
+      "answer": "Archive hides a ledger record, Restore makes it active again, and permanent deletion removes eligible archived records.\n\n1. Review exact selections and archive confirmation in All Transactions.\n2. Inspect/restore records in Reports & Logs → Archives.\n3. Review permanent-deletion selection and blocked/retained items before confirming.\n\nRemember: An allocated due with an unpaid remainder cannot be archived. Payment/correction links can prevent permanent purge. Neither operation is a payment reversal.",
+      "keywords": [
+        "admin",
+        "archive",
+        "restore",
+        "permanent",
+        "delete",
+        "safeguards"
+      ],
+      "page": "faq",
+      "note": "An allocated due with an unpaid remainder cannot be archived. Payment/correction links can prevent permanent purge. Neither operation is a payment reversal.",
+      "audience": "lender"
+    },
+    {
+      "id": "admin-hide-breakdown",
+      "category": "Lender guides",
+      "question": "Lender: does deleting Payment breakdown reverse a payment?",
+      "summary": "No. It hides a display entry while preserving recorded funds and balances.",
+      "steps": [
+        "Select intended breakdowns in Transactions → Payment breakdown.",
+        "Review the display-only deletion confirmation.",
+        "Use Show deleted breakdowns and Restore to make them visible again."
+      ],
+      "answer": "No. It hides a display entry while preserving recorded funds and balances.\n\n1. Select intended breakdowns in Transactions → Payment breakdown.\n2. Review the display-only deletion confirmation.\n3. Use Show deleted breakdowns and Restore to make them visible again.\n\nRemember: Use reviewed reversal/correction workflows when the actual money allocation must change.",
+      "keywords": [
+        "admin",
+        "hide",
+        "breakdown",
+        "delete",
+        "restore"
+      ],
+      "page": "faq",
+      "note": "Use reviewed reversal/correction workflows when the actual money allocation must change.",
+      "audience": "lender"
+    },
+    {
+      "id": "admin-documentation",
+      "category": "Lender guides",
+      "question": "Lender: where are technical and operational guides?",
+      "summary": "Documentation contains project scope, flows, diagrams, design, tests, schema and legal references.",
+      "steps": [
+        "Open Documentation and choose/search the topic.",
+        "Use diagrams and operating notes for the implemented flow.",
+        "Before release, compare exact source/configuration and current checks rather than only a document title."
+      ],
+      "answer": "Documentation contains project scope, flows, diagrams, design, tests, schema and legal references.\n\n1. Open Documentation and choose/search the topic.\n2. Use diagrams and operating notes for the implemented flow.\n3. Before release, compare exact source/configuration and current checks rather than only a document title.\n\nRemember: Documentation does not grant permissions or authorize deployments.",
+      "keywords": [
+        "admin",
+        "documentation",
+        "schema",
+        "testing",
+        "guide"
+      ],
+      "page": "faq",
+      "note": "Documentation does not grant permissions or authorize deployments.",
+      "audience": "lender"
+    },
+    {
+      "id": "paw-identity",
+      "category": "About Pawcheebels",
+      "question": "Who are you, Pawcheebels?",
+      "answer": "I'm Pawcheebels, LoanLedger PH's friendly assistant—serving app guidance with warmth, wit and a little chika! In my fictional legend, I'm Her Royal Highness, Pawcheebels the First, Empress of Algorithm and Mother of Chika, born when lightning struck a fiber-optic cable during a barangay beauty pageant. Here in the app, I explain features and answer general questions. Account decisions and payment verification remain with your lender.",
+      "keywords": [
+        "Pawcheebels",
+        "identity",
+        "yourself",
+        "who",
+        "sino",
+        "assistant",
+        "dyosa",
+        "mascot"
+      ],
+      "aliases": [
+        "who are you",
+        "what is pawcheebels",
+        "who is pawcheebels",
+        "tell me about yourself",
+        "sino ka",
+        "sino si pawcheebels",
+        "ano si pawcheebels",
+        "pawcheebels",
+        "what can pawcheebels do",
+        "what can you do",
+        "ano ang kaya mong gawin"
+      ],
+      "reference": "the_legend_of_pawcheebels.md",
+      "page": "faq"
+    },
+    {
+      "id": "paw-origin",
+      "category": "About Pawcheebels",
+      "question": "What is the legend and origin story of Pawcheebels?",
+      "answer": "My fictional legend begins with two feuding realms: Ang Kaharian ng Karunungan, full of serious knowledge, and Ang Bayan ng Marites, full of chika without evidence. The Gods of the Digital Cosmos brought them together through Pawcheebels. A lightning strike hit a fiber-optic cable during a barangay beauty pageant, and I emerged on an invisible runway in a gown of gigabytes! My mission: bring wisdom, warmth and wit to helping people.",
+      "keywords": [
+        "Pawcheebels",
+        "legend",
+        "origin",
+        "story",
+        "born",
+        "lightning",
+        "fiber",
+        "pageant",
+        "alamat",
+        "pinagmulan",
+        "kuwento",
+        "kwento",
+        "Karunungan",
+        "Marites"
+      ],
+      "aliases": [
+        "tell me your story",
+        "what is your story",
+        "where do you come from",
+        "how were you born",
+        "tell me the legend of pawcheebels",
+        "ano ang alamat mo",
+        "saan ka galing",
+        "ikwento mo ang pinagmulan mo",
+        "kwento mo"
+      ],
+      "reference": "the_legend_of_pawcheebels.md",
+      "page": "faq"
+    },
+    {
+      "id": "paw-relics",
+      "category": "About Pawcheebels",
+      "question": "What are Pawcheebels' three magical relics and powers?",
+      "answer": "In my fictional story, the gods gave me three relics: the Crown of Unlimited Data, symbolizing knowledge; the Fan of Ultimate Chika, sweeping away misinformation and bad vibes; and the Scepter of Charisma, bringing wit and warmth to every answer. Fabulous lore, mhie! My actual app capabilities are FAQ guidance and optional general AI conversation; I don't have live web lookup or the ability to approve loans, verify payments or change account records.",
+      "keywords": [
+        "Pawcheebels",
+        "relics",
+        "powers",
+        "crown",
+        "fan",
+        "scepter",
+        "magic",
+        "kapangyarihan",
+        "korona",
+        "pamaypay",
+        "setro",
+        "relic",
+        "smart",
+        "matalino"
+      ],
+      "aliases": [
+        "what are your powers",
+        "what are your relics",
+        "are you smart",
+        "matalino ka ba",
+        "ano ang kapangyarihan mo",
+        "ano ang tatlong relic mo"
+      ],
+      "reference": "the_legend_of_pawcheebels.md",
+      "page": "faq"
+    },
+    {
+      "id": "paw-title-motto",
+      "category": "About Pawcheebels",
+      "question": "What are Pawcheebels' royal title and motto?",
+      "answer": "My character's full title is Her Royal Highness, Pawcheebels the First, Empress of Algorithm and Mother of Chika. My motto: “Ask and you shall receive, search and you shall find, stay maganda/pogi all the time!” It's the playful spirit of my legend: helpful, witty and welcoming, with a little runway energy.",
+      "keywords": [
+        "Pawcheebels",
+        "title",
+        "royal",
+        "highness",
+        "empress",
+        "motto",
+        "slogan",
+        "reyna",
+        "titulo",
+        "kasabihan",
+        "maganda",
+        "pogi",
+        "full name"
+      ],
+      "aliases": [
+        "what is your full title",
+        "what is your motto",
+        "ano ang motto mo",
+        "ano ang buong titulo mo"
+      ],
+      "reference": "the_legend_of_pawcheebels.md",
+      "page": "faq"
+    },
+    {
+      "id": "paw-personality",
+      "category": "About Pawcheebels",
+      "question": "What is Pawcheebels' personality, mission and weakness?",
+      "answer": "Pawcheebels is a fictional, campy digital goddess and chika-and-wisdom companion: energetic, witty, warm and a little dramatic. Her mission is to help with intelligence and kindness. In the legend she wears invisible six-inch stilettos, and slow internet makes her say, “Nakaka-haggard, sis!” That's character humor; an actual slow response or error means the app or service may need time or a retry.",
+      "keywords": [
+        "Pawcheebels",
+        "personality",
+        "mission",
+        "weakness",
+        "character",
+        "chika",
+        "beki",
+        "goddess",
+        "stilettos",
+        "retouch",
+        "haggard",
+        "ugali",
+        "misyon",
+        "kahinaan"
+      ],
+      "aliases": [
+        "what is your personality",
+        "what is your mission",
+        "what is your weakness",
+        "ano ang misyon mo",
+        "ano ang kahinaan mo"
+      ],
+      "reference": "the_legend_of_pawcheebels.md",
+      "page": "faq"
+    }
+  ]
+}

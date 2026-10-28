@@ -4,15 +4,28 @@
 
 // The category set an admin assigns and a borrower filters by. `icon` is a name
 // from components/Icon.jsx; `tone` styles the category chip.
-export const NOTIFICATION_CATEGORIES = [
+const DEFAULT_CATEGORIES = [
   { value: 'payment', label: 'Payment', icon: 'wallet', tone: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200' },
   { value: 'document', label: 'Document', icon: 'file', tone: 'bg-blue-50 text-blue-700 ring-1 ring-blue-200' },
   { value: 'account', label: 'Account', icon: 'users', tone: 'bg-violet-50 text-violet-700 ring-1 ring-violet-200' },
   { value: 'general', label: 'General', icon: 'alert', tone: 'bg-slate-100 text-slate-700 ring-1 ring-slate-200' },
+  { value: 'promo', label: 'Promotion', icon: 'bell', tone: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200' },
+  { value: 'feature', label: 'Feature update', icon: 'bell', tone: 'bg-blue-50 text-blue-700 ring-1 ring-blue-200' },
 ]
-
-export const categoryMeta = (value) =>
-  NOTIFICATION_CATEGORIES.find((c) => c.value === value) ?? NOTIFICATION_CATEGORIES[3]
+export const CATEGORY_COLORS = {
+  slate:'bg-slate-100 text-slate-700 ring-1 ring-slate-200',blue:'bg-blue-50 text-blue-700 ring-1 ring-blue-200',
+  emerald:'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',violet:'bg-violet-50 text-violet-700 ring-1 ring-violet-200',
+  amber:'bg-amber-50 text-amber-700 ring-1 ring-amber-200',rose:'bg-rose-50 text-rose-700 ring-1 ring-rose-200',
+}
+// Consumers share active choices. Deleted metadata stays available for history.
+export const NOTIFICATION_CATEGORIES = [...DEFAULT_CATEGORIES]
+let allCategories = [...DEFAULT_CATEGORIES]
+export function installNotificationCategories(rows) {
+  allCategories = rows?.length ? rows.map(row=>({value:row.value,label:row.label,filipinoLabel:row.filipino_label||'',icon:row.icon,color:row.color,tone:CATEGORY_COLORS[row.color]||CATEGORY_COLORS.slate,deleted:!!row.deleted_at,version:row.version})) : [...DEFAULT_CATEGORIES]
+  NOTIFICATION_CATEGORIES.splice(0,NOTIFICATION_CATEGORIES.length,...allCategories.filter(row=>!row.deleted))
+  return [...allCategories]
+}
+export const categoryMeta = value => allCategories.find(c=>c.value===value) ?? DEFAULT_CATEGORIES[3]
 
 // Attachments are embedded as data URLs — the same approach the payment-proof
 // and invoice features use, so no storage bucket is required. Capped so a demo

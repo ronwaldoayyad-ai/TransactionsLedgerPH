@@ -3,6 +3,8 @@ import { useApp } from '../../context/AppContext'
 import { PageHeader } from '../../components/AppShell'
 import BorrowerScheduleTable from '../../components/BorrowerScheduleTable'
 import RefreshButton from '../../components/RefreshButton'
+import PaymentAdjustmentActivity from '../../components/PaymentAdjustmentActivity'
+import BorrowerCreditActivity from '../../components/BorrowerCreditActivity'
 import { Card, CardHeader, EmptyState, MultiSelect, Switch } from '../../components/ui'
 import { usePersistedState } from '../../hooks/usePersistedState'
 import { formatPeso, toISODate } from '../../lib/amortization'
@@ -66,6 +68,8 @@ export default function StraightTransactions() {
         action={<RefreshButton />}
       />
 
+      <PaymentAdjustmentActivity />
+      <BorrowerCreditActivity />
       <Card>
         <CardHeader
           title="My Straight Transactions"
@@ -73,12 +77,11 @@ export default function StraightTransactions() {
           action={
             <div className="flex flex-wrap items-center gap-2">
               <label className="mr-1 flex cursor-pointer items-center gap-2 text-sm text-slate-600">
-                <Switch
+                <Switch stateLabels={{"on":"Only open transactions are shown","off":"All transactions are shown"}}
                   checked={hideSettled}
                   onChange={setHideSettled}
-                  label={hideSettled ? 'Show all transactions' : 'Hide fully paid, refunded, and cancelled transactions'}
+                  label="Hide settled transactions"
                 />
-                {hideSettled ? 'Show all transactions' : 'Hide fully paid/refunded/cancelled'}
               </label>
               <span className="text-xs font-medium text-slate-500">Status</span>
               <MultiSelect

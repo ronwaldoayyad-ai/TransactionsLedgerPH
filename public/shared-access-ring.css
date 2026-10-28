@@ -1,0 +1,12 @@
+/* Shared Finder colors. The gradient rotates on its own composited layer. */
+.animated-access-ring { position: relative; isolation: isolate; overflow: hidden; --access-ring-surface: #fff; }
+.animated-access-ring::before { content: ''; position: absolute; z-index: -2; top: 50%; left: 50%; width: 220%; aspect-ratio: 1; background: conic-gradient(#20efff, #3575ff 18%, #a148ff 40%, #ff6cce 62%, #e7fbff 70%, #20efff); transform: translate(-50%, -50%) rotate(0deg); pointer-events: none; }
+.animated-access-ring::after { content: ''; position: absolute; z-index: -1; inset: 1.5px; border-radius: inherit; background: var(--access-ring-surface); pointer-events: none; }
+.aw-search-control.animated-access-ring { border-color: transparent; background: transparent; --access-ring-surface: #f7faff; }
+.aw-search-control.animated-access-ring::before { animation: access-ring-orbit 5s linear infinite; will-change: transform; }
+.aw-search-control.animated-access-ring:focus-within { --access-ring-surface: #fff; }
+.login-code-cell.animated-access-ring::before { opacity: 0; }
+.login-code-cell.animated-access-ring::after { inset: 1.5px; }
+.login-code-cell.animated-access-ring.is-entering::before { opacity: 1; animation: access-ring-orbit 900ms linear 1; will-change: transform; }
+@keyframes access-ring-orbit { to { transform: translate(-50%, -50%) rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .animated-access-ring::before { animation: none !important; will-change: auto !important; } }

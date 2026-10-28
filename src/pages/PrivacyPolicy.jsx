@@ -1,66 +1,35 @@
-// Public privacy policy page — required by the App Store / Play Store
-// listings for the mobile app. No auth; linked from App Store Connect.
-const SECTIONS = [
-  {
-    h: 'Who we are',
-    p: `LoanLedger PH is a private loan-ledger service that lets an individual lender and their
-invited borrowers track loan schedules, payments, and account communications. Access is by
-invitation only — there is no public registration.`,
-  },
-  {
-    h: 'Information we collect',
-    p: `We store only what is needed to service your loan account: your name, email address, phone
-number, and optional profile photo; your loan, installment, and payment records; proof-of-payment
-files you upload (images or PDFs); messages you exchange with your lender inside the app; and basic
-security logs of account activity.`,
-  },
-  {
-    h: 'How we use it',
-    p: `Your information is used solely to operate your loan account: showing your schedules and
-balances, verifying payments you submit, sending you in-app announcements, and keeping an audit
-trail. We do not sell, rent, or share your personal information with third parties, and we do not
-use it for advertising.`,
-  },
-  {
-    h: 'Camera and photos',
-    p: `The mobile app asks for camera or photo-library access only when you choose to attach a
-proof of payment or update your profile photo. Files you attach are uploaded to private storage
-and are visible only to you and your lender.`,
-  },
-  {
-    h: 'Where your data lives',
-    p: `Data is stored with Supabase (our database and file-storage provider) behind row-level
-security: each borrower can only ever read their own records. Payment-proof files are kept in
-private buckets and served through short-lived signed links.`,
-  },
-  {
-    h: 'Retention and deletion',
-    p: `Records are kept for as long as your loan account is active or as required for bookkeeping.
-You may request correction or deletion of your personal data at any time by contacting your lender
-or emailing the address below; deletion requests are honoured except where records must be retained
-to document a completed transaction.`,
-  },
-  {
-    h: 'Contact',
-    p: `For any privacy question or request, email ronayyad@gmail.com.`,
-  },
-]
+import {useEffect} from 'react'
+import {Link, useLocation} from 'react-router-dom'
+import legal from '../../public/legal-content.json'
 
-export default function PrivacyPolicy() {
-  return (
-    <div className="min-h-screen bg-slate-50 px-6 py-12">
-      <div className="mx-auto w-full max-w-2xl">
-        <h1 className="text-3xl font-bold text-slate-900">Privacy Policy</h1>
-        <p className="mt-1 text-sm text-slate-500">LoanLedger PH · Last updated July 3, 2026</p>
-        <div className="mt-8 space-y-8">
-          {SECTIONS.map((s) => (
-            <section key={s.h}>
-              <h2 className="text-lg font-semibold text-slate-900">{s.h}</h2>
-              <p className="mt-2 whitespace-pre-line text-sm leading-6 text-slate-600">{s.p}</p>
-            </section>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
+// Both public routes and the borrower frame use this same policy source.
+export default function PrivacyPolicy({kind='privacy'}) {
+  const {hash}=useLocation()
+  const isTerms=kind==='terms',title=isTerms?'Terms & Conditions':'Privacy Policy'
+  const sections=isTerms?legal.terms:legal.privacy
+  useEffect(()=>{const previous=document.title;document.title=title+' | LoanLedger PH';return()=>{document.title=previous}},[title])
+  useEffect(()=>{const frame=requestAnimationFrame(()=>{const target=hash&&document.getElementById(hash.slice(1));if(target)target.scrollIntoView({block:'start'});else window.scrollTo(0,0)});return()=>cancelAnimationFrame(frame)},[kind,hash])
+  return <div className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 sm:py-12">
+    <article className="mx-auto w-full max-w-3xl rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-8">
+      <Link to="/login" className="text-sm font-medium text-blue-700 underline underline-offset-2">Back to app</Link>
+      <nav aria-label="Legal documents" className="my-5 flex flex-wrap gap-4 text-sm">
+        <Link to="/privacy" aria-current={!isTerms?'page':undefined} className="font-semibold text-blue-700 underline underline-offset-2">Privacy Policy</Link>
+        <Link to="/terms" aria-current={isTerms?'page':undefined} className="font-semibold text-blue-700 underline underline-offset-2">Terms & Conditions</Link>
+      </nav>
+      <h1 className="text-3xl font-bold text-slate-900">{title}</h1>
+      <p className="mt-2 text-sm text-slate-500">LoanLedger PH · Updated {legal.updated}</p>
+      <nav aria-label="On this page" className="my-6 rounded-xl border border-blue-100 bg-blue-50 p-4">
+        <h2 className="mb-2 text-sm font-bold text-slate-800">On this page</h2>
+        <ol className="list-decimal space-y-1 pl-5 text-sm">{sections.map(s=><li key={s.id}><a href={'#'+s.id} className="text-blue-800 underline underline-offset-2">{s.title}</a></li>)}</ol>
+      </nav>
+      <div className="space-y-8">{sections.map((s,i)=><section key={s.id} id={s.id} className="scroll-mt-5 break-words">
+        <h2 className="text-lg font-semibold text-slate-900">{i+1}. {s.title}</h2>
+        <p className="mt-2 text-sm leading-7 text-slate-700">{s.text}</p>
+        {s.intro&&<p className="mt-3 text-sm leading-7 text-slate-700">{s.intro}</p>}
+        {!!s.items?.length&&<ul className="mt-3 list-disc space-y-3 pl-5 text-sm leading-7 text-slate-700">{s.items.map((item,n)=><li key={n}>{item}</li>)}</ul>}
+        {(s.paragraphs||[]).map((p,n)=><p key={n} className="mt-3 text-sm leading-7 text-slate-700">{p}</p>)}
+        {s.link&&/^https:\/\//.test(s.link.url)&&<a className="mt-3 inline-block text-sm text-blue-700 underline underline-offset-2" href={s.link.url} target="_blank" rel="noopener noreferrer">{s.link.label}</a>}
+      </section>)}</div>
+    </article>
+  </div>
 }

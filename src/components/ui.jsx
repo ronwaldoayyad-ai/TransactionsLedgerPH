@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { forwardRef, useEffect, useId, useRef, useState } from 'react'
 import Icon from './Icon'
 import { formatAmount, parseAmount } from '../lib/amortization'
+import './search-input.css'
 
 const badgeStyles = {
   pending: 'bg-amber-50 text-amber-700 border-amber-200',
@@ -48,7 +49,7 @@ export function Badge({ status, children }) {
 export function Card({ className = '', children, ...props }) {
   return (
     <div
-      className={`rounded-xl border border-white/60 bg-white/80 shadow-sm backdrop-blur-xl ${className}`}
+      className={`ui-card rounded-xl border border-white/60 bg-white/80 shadow-sm backdrop-blur-xl ${className}`}
       {...props}
     >
       {children}
@@ -189,14 +190,22 @@ export function FloatingInput({ id, label, type = 'text', className = '', ...pro
   )
 }
 
+// Keep the native input and accessible name while sharing the Finder border.
+export const SearchInput=forwardRef(function SearchInput({className='',...props},ref) {
+  return <span data-disabled={props.disabled||undefined} className={'admin-search-field animated-access-ring '+className}><input {...props} ref={ref} type="search" className="admin-search-native"/></span>
+})
+
 // Modern iOS-style toggle. Knob slides with a transform (GPU, 200ms ease-out).
-export function Switch({ checked, onChange, label }) {
-  return (
+export function Switch({ checked, onChange, label, disabled = false, stateLabels }) {
+  const stateId=useId()
+  const control=(
     <button
       type="button"
       role="switch"
+      disabled={disabled}
       aria-checked={checked}
       aria-label={label}
+      aria-describedby={stateLabels?stateId:undefined}
       onClick={() => onChange(!checked)}
       className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy-800 ${
         checked ? 'bg-navy-800' : 'bg-slate-300'
@@ -209,6 +218,7 @@ export function Switch({ checked, onChange, label }) {
       />
     </button>
   )
+  return stateLabels?<span className="ui-switch-with-state"><span id={stateId} className="ui-switch-result" aria-live="polite">{checked?stateLabels.on:stateLabels.off}</span>{control}</span>:control
 }
 
 // Amount input: accepts free typing of digits/commas/decimal point, reports

@@ -11,6 +11,17 @@ node_modules
 dist
 dist-ssr
 *.local
+.env*
+!.env.example
+!.env.hosted.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.kdbx
+*.secrets.json
+.npmrc
+!.npmrc.example
 
 # Editor directories and files
 .vscode/*
@@ -27,3 +38,13 @@ dist-ssr
 .claude/
 graphify-out/
 vite.config 2.js
+
+# Browser verification outputs
+playwright-report/
+test-results/
+.release/
+
+.npm-cache/
+
+supabase/.temp/
+.vercel

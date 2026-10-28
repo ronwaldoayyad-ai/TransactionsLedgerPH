@@ -109,12 +109,11 @@ export default function ConsolidatedLoans() {
           action={
             <div className="flex flex-wrap items-center gap-2">
               <label className="mr-1 flex cursor-pointer items-center gap-2 text-sm text-slate-600">
-                <Switch
+                <Switch stateLabels={{"on":"Only open transactions are shown","off":"All transactions are shown"}}
                   checked={hideSettled}
                   onChange={setHideSettled}
-                  label={hideSettled ? 'Show all transactions' : 'Hide fully paid, refunded, and cancelled transactions'}
+                  label="Hide settled transactions"
                 />
-                {hideSettled ? 'Show all transactions' : 'Hide fully paid/refunded/cancelled'}
               </label>
               <span className="text-xs font-medium text-slate-500">Type</span>
               <MultiSelect

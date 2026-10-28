@@ -1,0 +1,78 @@
+/* Keep the sphere stable; only its light layers move. */
+.finder-orb.siri-animation {
+  --finder-orbit-duration: 5.6s;
+  --finder-flare-duration: 5s;
+  --finder-motion-ease: cubic-bezier(.45, 0, .55, 1);
+}
+.finder-orb.siri-animation::before,
+.finder-orb.siri-animation::after {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: 50%;
+}
+.finder-orb.siri-animation::before {
+  inset: -13px;
+  background: radial-gradient(ellipse at 32% 42%, #4ce8ff66, transparent 60%), radial-gradient(ellipse at 72% 60%, #b26dff66, transparent 62%);
+  filter: blur(5px);
+  animation: finder-flare-breathe var(--finder-flare-duration) var(--finder-motion-ease) infinite;
+  will-change: transform, opacity;
+}
+.finder-orb.siri-animation::after {
+  inset: -6px -17px;
+  background: linear-gradient(90deg, transparent 0%, #7edbff66 23%, #efffff 50%, #bc9aff66 77%, transparent 100%);
+  transform: rotate(-28deg) scaleY(.055);
+  opacity: .65;
+}
+.finder-orb .rainbow-container {
+  overflow: hidden;
+  transform: translateZ(0);
+  transform-style: flat;
+  perspective: none;
+  border-color: #d5f5ffb3;
+  background: radial-gradient(circle at 35% 27%, #446ba1, #1c335d 50%, #101d3d 100%);
+  box-shadow: 0 0 8px #5adfff66, 0 0 15px #a76dff44, inset 0 0 9px #9c7fff80;
+  animation: none;
+}
+.finder-orb .rainbow-container > div {
+  inset: 1px;
+  width: auto;
+  height: auto;
+  backface-visibility: hidden;
+  filter: none;
+  will-change: transform;
+}
+.finder-orb .rainbow-container .green {
+  background: conic-gradient(from 20deg, transparent 8%, #59eacb22 28%, #64f8e7ed 43%, #8bdfffa6 49%, transparent 64%);
+  transform: rotate(0deg);
+  animation: finder-light-orbit var(--finder-orbit-duration) linear infinite;
+}
+.finder-orb .rainbow-container .pink {
+  background: conic-gradient(from 190deg, transparent 12%, #9c8cff22 30%, #d79dffed 44%, #82b7ff99 50%, transparent 64%);
+  transform: rotate(0deg);
+  animation: finder-light-orbit 7.4s linear infinite reverse;
+}
+.finder-orb .rainbow-container .blue {
+  inset: 5px;
+  background: radial-gradient(circle at 38% 30%, #9adfff44, transparent 58%);
+  transform: none;
+  will-change: auto;
+}
+.finder-orb .rainbow-container::after {
+  inset: 3px;
+  background: radial-gradient(ellipse at 35% 20%, #ecfbff66, transparent 52%);
+  border-top: 1px solid #e1faffaa;
+}
+@keyframes finder-light-orbit { to { transform: rotate(360deg); } }
+@keyframes finder-flare-breathe {
+  0%, 100% { opacity: .65; transform: scale(.94); }
+  50% { opacity: 1; transform: scale(1.06); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .finder-orb.siri-animation::before,
+  .finder-orb .rainbow-container > div { animation: none !important; will-change: auto; }
+  .finder-orb.siri-animation::before { transform: none; opacity: .8; }
+  .finder-orb .rainbow-container .green { transform: rotate(35deg); }
+  .finder-orb .rainbow-container .pink { transform: rotate(145deg); }
+}

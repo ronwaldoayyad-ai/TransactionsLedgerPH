@@ -1,0 +1,349 @@
+{
+  "status": "rehearsal candidate; production approval required",
+  "classic_commit": "db08a917120a6455b8d2d0d42ddf981c5b3cbd63",
+  "sha256": "5c576fec0bfe808a1f068484d6a472ded445f886af63ca93fbb7a805b1a5e61f",
+  "transaction_boundaries": [
+    {
+      "file": "release/option3/foundation.sql",
+      "begins": 8,
+      "commits": 8
+    },
+    {
+      "file": "supabase/migrations/20261013041107_notification_interactions_guest_support.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261013061101_borrower_invoice_deletion.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261014033328_borrower_account_numbers.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261016090000_borrower_profile_updates.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261016091000_session_check_initplan.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261016133725_login_access_lockout.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261016143643_notification_rules_and_delivery.sql",
+      "begins": 3,
+      "commits": 3
+    },
+    {
+      "file": "supabase/migrations/20261016205239_release_access.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261016230322_notification_categories.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261017002202_optimize_portfolio_read_policies.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261017134229_release_runtime_hardening.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261017142819_proof_submission_timestamp.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261017145342_login_gate_compatibility.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261017215448_restrict_classic_anonymous_rpcs.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261018023949_reviewed_payment_posting.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261018120945_accounting_lookup_index.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261018131233_legacy_session_boundaries.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261018184226_payment_proof_five_mb.sql",
+      "begins": 0,
+      "commits": 0
+    },
+    {
+      "file": "supabase/migrations/20261018201527_monthly_fee_assessment.sql",
+      "begins": 0,
+      "commits": 0
+    },
+    {
+      "file": "supabase/migrations/20261018223454_borrower_access_overrides.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261019000052_borrower_realtime_signals.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261019162523_admin_transaction_corrections.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261019165316_correction_reversal_credit_history.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261020165218_notification_delivery_signals.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261020172823_ledger_live_and_archive_deletion.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261021230453_guest_support_tracking.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261023182733_combined_fee_assessment.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261023192521_non_retrying_transaction_conflicts.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261023195500_loan_request_access_realtime.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261024180858_telegram_proof_alerts.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261024204957_telegram_borrower_message_alerts.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261025010004_transaction_groups.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261025190607_retail_brand_logos.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261025210130_retail_brand_lookup_indexes.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261026133642_transaction_group_logos.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261026214552_uploaded_retail_and_proof_activity_logos.sql",
+      "begins": 1,
+      "commits": 1
+    }
+  ],
+  "sources": [
+    {
+      "file": "release/option3/foundation.sql",
+      "sha256": "2833a32e36882cabbad812e0c7a89080639f3f58eb46339e98c89d3ae53c4e88"
+    },
+    {
+      "file": "supabase/migrations/20261013041107_notification_interactions_guest_support.sql",
+      "sha256": "d314aaa293118a23175eb26651f840a312f1dd04f46ca92bd123216c38263a29"
+    },
+    {
+      "file": "supabase/migrations/20261013061101_borrower_invoice_deletion.sql",
+      "sha256": "fe6e5d4f773ad69ad82cb73b2fecad5742d80aa92cc9f599f22daa054171b60e"
+    },
+    {
+      "file": "supabase/migrations/20261014033328_borrower_account_numbers.sql",
+      "sha256": "00e8ddf961bf7c662edbd3c6862dab6bc5ae7d76465199177f7c354000cc5c75"
+    },
+    {
+      "file": "supabase/migrations/20261016090000_borrower_profile_updates.sql",
+      "sha256": "3efc6e554a54c378589e182916f0cd94940dda544adc4bdf6368c795428054d6"
+    },
+    {
+      "file": "supabase/migrations/20261016091000_session_check_initplan.sql",
+      "sha256": "c620cc84f9d92453b4a2521031ec69df4b98be827c9555036ca23b516e42c772"
+    },
+    {
+      "file": "supabase/migrations/20261016133725_login_access_lockout.sql",
+      "sha256": "56fa30a8cd12581dd8ab1f3a5b74992283066b56428f547496089772fb54cde1"
+    },
+    {
+      "file": "supabase/migrations/20261016143643_notification_rules_and_delivery.sql",
+      "sha256": "e8ec238cfc8945817b68655bc68eb9b7041a269159d6bbf44834b2d8000fab0f"
+    },
+    {
+      "file": "supabase/migrations/20261016205239_release_access.sql",
+      "sha256": "6f1901acb72e19a928ee40e75fa1178135b924500556280c3f53b3a28e0678a9"
+    },
+    {
+      "file": "supabase/migrations/20261016230322_notification_categories.sql",
+      "sha256": "642618bda8db0f7cefb12fb4717696b1cdd8af9a102ff535ea2a4ed8ee5dcc22"
+    },
+    {
+      "file": "supabase/migrations/20261017002202_optimize_portfolio_read_policies.sql",
+      "sha256": "8555cd8ff69c89df33c4cb9a5e000b7addce6b0310c893d028435be779a3d981"
+    },
+    {
+      "file": "supabase/migrations/20261017134229_release_runtime_hardening.sql",
+      "sha256": "e5cee562838bb86fca7b736c0b3dc8d2efe3f15e50dc1974c2d12f4b4fb2c867"
+    },
+    {
+      "file": "supabase/migrations/20261017142819_proof_submission_timestamp.sql",
+      "sha256": "0b2fe217665dbd510f92c159784ef1f646bd91e06cb6e0eca0e0b07ed3bd9018"
+    },
+    {
+      "file": "supabase/migrations/20261017145342_login_gate_compatibility.sql",
+      "sha256": "237a70ce8db73b6ed98335e1a0728cf02b7a7d62b0706dc9a1058db2eb19e318"
+    },
+    {
+      "file": "supabase/migrations/20261017215448_restrict_classic_anonymous_rpcs.sql",
+      "sha256": "aa4a5f35f3ef03ce6a40da229db72316036a7a628a8e91a77b289b638187182b"
+    },
+    {
+      "file": "supabase/migrations/20261018023949_reviewed_payment_posting.sql",
+      "sha256": "aebb0596db42cc53d4712564469e108c4999978b60750ea0d5640f4ca9713e4f"
+    },
+    {
+      "file": "supabase/migrations/20261018120945_accounting_lookup_index.sql",
+      "sha256": "45b7679a683dd3d9c7bc5c26d7524508abef8382d492864bdf9af6518a0f91c0"
+    },
+    {
+      "file": "supabase/migrations/20261018131233_legacy_session_boundaries.sql",
+      "sha256": "7f7d76763d99be079c1a013d4cfc78819519baaae9e66a0145f2daad097ce3a6"
+    },
+    {
+      "file": "supabase/migrations/20261018184226_payment_proof_five_mb.sql",
+      "sha256": "5f801efe19283d00e9ab67a3b835455d6b8d37b2f131906a98282d47354f18ef"
+    },
+    {
+      "file": "supabase/migrations/20261018201527_monthly_fee_assessment.sql",
+      "sha256": "a9a06e22cc556ba88c020fd31f5ea479534d5cf36b23b16e9e1940ea0902a4e7"
+    },
+    {
+      "file": "supabase/migrations/20261018223454_borrower_access_overrides.sql",
+      "sha256": "bcc73aae3eea4921ec4e46b48693d588aa222e5e305246f97fbea45200f419f1"
+    },
+    {
+      "file": "supabase/migrations/20261019000052_borrower_realtime_signals.sql",
+      "sha256": "91cb18a05775c22eeceb0331c39b0a52b46ed1bb078810217b2356b57600b040"
+    },
+    {
+      "file": "supabase/migrations/20261019162523_admin_transaction_corrections.sql",
+      "sha256": "211857ee0418cb3faf4be42ef526fb27c591275bbccc99e71f50b2081ea7cd91"
+    },
+    {
+      "file": "supabase/migrations/20261019165316_correction_reversal_credit_history.sql",
+      "sha256": "0cf0951cb64e94cd679411a90f55763c2c0fa6679f64aeadd58272c995075945"
+    },
+    {
+      "file": "supabase/migrations/20261020165218_notification_delivery_signals.sql",
+      "sha256": "cdd8d3126d37082153f746e46a737f09bd8ce27b4bd0f9d687c50c1bb03d4868"
+    },
+    {
+      "file": "supabase/migrations/20261020172823_ledger_live_and_archive_deletion.sql",
+      "sha256": "ea2d8db7bcab32eae68feb42b4fe3205a80fa579b6fb0a010c00648e71ea30fe"
+    },
+    {
+      "file": "supabase/migrations/20261021230453_guest_support_tracking.sql",
+      "sha256": "b720794e4b25114306469b6a408004879cf7689622a299cbebae01da9766e84f"
+    },
+    {
+      "file": "supabase/migrations/20261023182733_combined_fee_assessment.sql",
+      "sha256": "d2ec31c04b980e32eaa0e9d706552602f47e5ebc83207e692e058feab38a6ddb"
+    },
+    {
+      "file": "supabase/migrations/20261023192521_non_retrying_transaction_conflicts.sql",
+      "sha256": "08684611d1ca10cf69d2f4178d2bc36bb57f4fe48d9efada072e6951acf509aa"
+    },
+    {
+      "file": "supabase/migrations/20261023195500_loan_request_access_realtime.sql",
+      "sha256": "c69e1f26283ca3b46244edc6c796d80090d040b5e594c8c646dfcb9da970e717"
+    },
+    {
+      "file": "supabase/migrations/20261024180858_telegram_proof_alerts.sql",
+      "sha256": "b6e65a6bfb72db5a910f60fc22aae77fa6d0e5c73aba41001f4691ad4244db6e"
+    },
+    {
+      "file": "supabase/migrations/20261024204957_telegram_borrower_message_alerts.sql",
+      "sha256": "dda444fa3c8960a91cda2d1f8f5c006965822595f6314c75775e8f267d5eb100"
+    },
+    {
+      "file": "supabase/migrations/20261025010004_transaction_groups.sql",
+      "sha256": "6d1f1963a1b5d50a96748faef04575c546cbf29c1a392a93e5a8c286402b40b5"
+    },
+    {
+      "file": "supabase/migrations/20261025190607_retail_brand_logos.sql",
+      "sha256": "fbcc85c09dc2354a857d563416706828dd999beffe84cd7cdd73fa3c5aa230ca"
+    },
+    {
+      "file": "supabase/migrations/20261025210130_retail_brand_lookup_indexes.sql",
+      "sha256": "8b02cb3e4163906973d341affa481339b5773f8e07c46004037e74a5eefdff86"
+    },
+    {
+      "file": "supabase/migrations/20261026133642_transaction_group_logos.sql",
+      "sha256": "2623296c32ad05c658197a94b96ec20ce987b4c282652e3e352d69a3c6e1e5e9"
+    },
+    {
+      "file": "supabase/migrations/20261026214552_uploaded_retail_and_proof_activity_logos.sql",
+      "sha256": "ca68fd12b4c65483bbe1229514630c1358ff92e45a5b64eb340e0e8745964f5a"
+    }
+  ],
+  "adaptations": [
+    "Preserve Classic borrower payment/message policies",
+    "Do not infer or backfill loan categories",
+    "Schema-qualify imported disbursement return type for empty search_path",
+    "SQL-aware single transaction; paused rollout and default Classic",
+    "No staging accounts, passwords, codes or enrollments"
+  ]
+}

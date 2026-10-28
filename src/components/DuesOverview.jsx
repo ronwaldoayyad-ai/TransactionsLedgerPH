@@ -94,6 +94,7 @@ export default function DuesOverview({
   // Segment → Consolidated ledger, prefiltered by borrower status (same
   // page-state seeding the dashboard tiles already use).
   const goStatus = (key) => {
+    if(key==='paid'&&mode==='amount'&&scopedTxns.some(t=>t.paidAmount>0&&['unpaid','past_due'].includes(t.status))){navigate('/portal/payment-logs');return}
     setPageEntry('consolidated.statusSel', new Set([key]))
     setPageEntry('consolidated.dueDateSel', new Set())
     setPageEntry('consolidated.typeSel', new Set(['Installment']))
@@ -144,12 +145,11 @@ export default function DuesOverview({
           <div className="flex flex-wrap items-center justify-end gap-3">
             {hasFullyPaid && (
               <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-slate-600">
-                <Switch
+                <Switch stateLabels={{"on":"Fully paid loans are hidden","off":"Fully paid loans are shown"}}
                   checked={hidePaidLoans}
                   onChange={setHidePaidLoans}
                   label="Hide fully paid loans"
                 />
-                Hide fully paid
               </label>
             )}
             <ModeToggle mode={mode} onChange={setMode} />

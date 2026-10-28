@@ -1,5 +1,6 @@
 // Pure calculation module for the Dynamic Loan Amortization & Disclosure
 // engine. No UI dependencies — intended to be ported as-is to the backend.
+import {spreadsheetSafeCSV} from './csv.js'
 
 const peso = new Intl.NumberFormat('en-PH', {
   style: 'currency',
@@ -32,11 +33,14 @@ export function parseAmount(text) {
 
 export function formatDate(date) {
   if (!date) return '—'
-  const d = typeof date === 'string' ? parseISODate(date) : date
+  const timestamp = typeof date === 'string' && !/^\d{4}-\d{2}-\d{2}$/.test(date)
+  const d = typeof date === 'string' ? timestamp ? new Date(date) : parseISODate(date) : date
+  if (!(d instanceof Date) || !Number.isFinite(d.getTime())) return '—'
   return d.toLocaleDateString('en-PH', {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
+    ...(timestamp ? { timeZone: 'Asia/Manila' } : {}),
   })
 }
 
@@ -223,7 +227,7 @@ export function scheduleToCSV(schedule, view = 'admin') {
 }
 
 export function downloadCSV(filename, csv) {
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const blob = new Blob([spreadsheetSafeCSV(csv)], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
