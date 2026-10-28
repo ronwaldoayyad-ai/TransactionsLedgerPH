@@ -35,7 +35,7 @@ showPawProactiveBubble=stage=>{
  const shown=originalManagedPawShow(stage);if(shown)rememberManagedAction(managedPawChosen);return shown;
 };
 const originalManagedPaymentModel=paymentConfirmationModel;
-paymentConfirmationModel=record=>{const model=originalManagedPaymentModel(record);return Object.freeze({...model,managedCopy:managedConfirmationCopy(model,'popup.payment_submitted','Proof of Payment Submitted!','Your submission is awaiting verification.')});};
+paymentConfirmationModel=record=>{const model=originalManagedPaymentModel(record);return Object.freeze({...model,managedCopy:model.status==='Submitted for review'?managedConfirmationCopy(model,'popup.payment_submitted',model.title,model.subtitle):{title:model.title,body:model.subtitle,visible:true,channel:'popup',delay:0}});};
 const originalManagedPaymentHTML=paymentConfirmationHTML;
 paymentConfirmationHTML=model=>{const host=document.createElement('template');host.innerHTML=originalManagedPaymentHTML(model);const copy=model.managedCopy;host.content.querySelector('#paymentConfirmationHeading').textContent=copy.title;host.content.querySelector('.payment-confirmation-heading p').textContent=copy.body;return host.innerHTML;};
 const originalManagedPaymentShow=showPaymentConfirmation;

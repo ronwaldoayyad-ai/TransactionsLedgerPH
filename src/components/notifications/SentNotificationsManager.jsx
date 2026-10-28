@@ -1,14 +1,14 @@
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react'
 import {useApp} from '../../context/AppContext'
 import {useNotifications} from '../../context/NotificationsContext'
-import {Button,Modal,Switch,inputClass} from '../ui'
+import {SearchInput, Button,Modal,Switch,inputClass} from '../ui'
 import {notificationRuleRequest as request} from '../../lib/notificationRules'
 import {categoryMeta} from '../../lib/notifications'
 import {EVENTS,FIELDS} from '../../../public/notification-rule-core'
 
 const defaults={borrowerIds:[],category:'',subject:'',includeArchived:false,hideAdmin:false,offset:0}
 const Field=({label,children})=><label className="nr-field"><span>{label}</span>{children}</label>
-const Text=({value,onChange,...props})=><input className={inputClass} value={value??''} onChange={e=>onChange(e.target.value)} {...props}/>
+const Text=({value,onChange,...props})=>{const Input=props.type==='search'?SearchInput:'input';return <Input className={inputClass} value={value??''} onChange={e=>onChange(e.target.value)} {...props}/>}
 const Select=({value,onChange,options,...props})=><select className={inputClass} value={value} onChange={e=>onChange(e.target.value)} {...props}>{options.map(o=><option key={o.value} value={o.value}>{o.label}</option>)}</select>
 
 export default function SentNotificationsManager(){
@@ -51,7 +51,7 @@ export default function SentNotificationsManager(){
  return <section className="nr-sent" aria-label="Sent notifications management" aria-busy={busy}>
   <div className="ns-heading"><div><h2>Sent notifications</h2><p>Filter, link and manage delivered messages.</p></div><span className="ns-count">{total} matching</span></div>
   <div className="ns-filters">
-   <div className="ns-borrower-head"><span>Borrower</span><input type="search" aria-label="Find borrower filter" placeholder="Find a borrower…" value={borrowerQuery} onChange={e=>setBorrowerQuery(e.target.value)} className={inputClass}/></div>
+   <div className="ns-borrower-head"><span>Borrower</span><SearchInput type="search" aria-label="Find borrower filter" placeholder="Find a borrower…" value={borrowerQuery} onChange={e=>setBorrowerQuery(e.target.value)} className={inputClass}/></div>
    <div className="ns-pills" role="group" aria-label="Filter notifications by borrower">
     <button type="button" disabled={busy} aria-pressed={!filters.borrowerIds.length} onClick={()=>changeFilters({borrowerIds:[]})}>All borrowers</button>
     {visibleBorrowers.map(b=><button type="button" key={b.id} disabled={busy} aria-pressed={filters.borrowerIds.includes(b.id)} onClick={()=>changeFilters({borrowerIds:filters.borrowerIds.includes(b.id)?filters.borrowerIds.filter(id=>id!==b.id):[...filters.borrowerIds,b.id]})}><span aria-hidden="true">{b.name.slice(0,1)}</span>{b.name}</button>)}
@@ -64,7 +64,7 @@ export default function SentNotificationsManager(){
     <Button type="submit" disabled={busy}>Apply / refresh</Button>
     <button type="button" className="ns-clear" disabled={busy} onClick={()=>{setSubject('');setBorrowerQuery('');setSelected(new Set());setFilters({...defaults})}}>Clear filters</button>
    </form>
-   <div className="ns-display-options"><label className="ns-include"><input type="checkbox" checked={filters.includeArchived} disabled={busy} onChange={e=>changeFilters({includeArchived:e.target.checked})}/> Include deleted</label><div className="ns-hide-admin"><Switch label="Hide admin notifications" checked={filters.hideAdmin} disabled={busy} onChange={hideAdmin=>changeFilters({hideAdmin})}/><span>Hide admin notifications</span></div></div>
+   <div className="ns-display-options"><label className="ns-include"><input type="checkbox" checked={filters.includeArchived} disabled={busy} onChange={e=>changeFilters({includeArchived:e.target.checked})}/> Include deleted</label><div className="ns-hide-admin"><Switch stateLabels={{"on":"Admin notifications are hidden","off":"Admin notifications are shown"}} label="Hide admin notifications" checked={filters.hideAdmin} disabled={busy} onChange={hideAdmin=>changeFilters({hideAdmin})}/></div></div>
    {filters.hideAdmin&&<p className="nr-muted">Admin-only messages are hidden. Shared notices addressed to borrowers remain visible.</p>}
   </div>
   {notice&&<p className="nr-success" role="status">{notice}</p>}{error&&!deleting&&!editing&&!linking&&<p className="nr-error" role="alert">{error}</p>}

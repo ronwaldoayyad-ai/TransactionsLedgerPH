@@ -1,14 +1,14 @@
-let installmentPresentation='list',installmentPresentationOwner=null;
+let installmentPresentation='cards',installmentPresentationOwner=null;
 const installmentDeckSelections=new Map();
-function installmentStatusBadge(g){const paid=Number(g[3])>=100,past=!paid&&installmentPastDueCount(g)>0;return '<span class="installment-deck-status '+(paid?'is-paid':past?'is-overdue':'')+'">'+(paid?'Fully paid':past?'Past Due':'In progress')+'</span>';}
+function installmentStatusBadge(g){const loan=stagingLoans().find(l=>l.id===g[5]),state=loan?installmentGroupState(loan,stagingIndex().byLoan.get(loan.id)||[],localToday()):Number(g[3])>=100?'Fully Paid':installmentPastDueCount(g)>0?'Past Due':'In Progress';const tone={'Fully Paid':'is-paid','Refunded':'is-refunded','Past Due':'is-overdue'}[state]||'',label={'Fully Paid':'Fully paid','In Progress':'In progress'}[state]||state;return '<span class="installment-deck-status '+tone+'">'+label+'</span>';}
 function decorateInstallmentList(host){host.querySelectorAll('.installment-group-row,.settings-row[onclick^="openInstallment("]').forEach(row=>{const index=Number(row.getAttribute('onclick')?.match(/openInstallment\((\d+)\)/)?.[1]),g=stagingGroups()[index];if(!g)return;row.querySelector('.schedule-overdue-label')?.remove();const copy=row.querySelector('.itext,.settings-copy'),title=copy?.querySelector('b');if(!title)return;const oldStatus=copy.querySelector('small[style^="color:"]');oldStatus?.remove();const heading=document.createElement('span');heading.className='installment-list-heading';title.before(heading);heading.append(title);heading.insertAdjacentHTML('beforeend',installmentStatusBadge(g));});}
 function installmentViewControl(){return '<div class="installment-view-control" role="group" aria-label="Installment view">'+[['list','List'],['cards','Cards']].map(([id,label])=>'<button type="button" aria-pressed="'+(installmentPresentation===id)+'" class="'+(installmentPresentation===id?'sel':'')+'" onclick="setInstallmentPresentation(\''+id+'\')">'+label+'</button>').join('')+'</div>';}
 function setInstallmentPresentation(value){if(!['list','cards'].includes(value)||value===installmentPresentation)return;installmentPresentation=value;render();}
 function installmentDeckHTML(entries,key){
  if(!entries.length)return '<div class="glass empty-state">No installment groups to show.</div>';
  return '<section class="installment-deck" data-deck="'+key+'" aria-label="Installment cards"><p class="installment-deck-hint">Swipe left or right, or use the arrows. Tap a card to view its schedule.</p><div class="installment-deck-stage" role="region" aria-roledescription="carousel" aria-label="Installment plans">'+entries.map(({group:g,index,loan})=>{
-  const progress=Math.max(0,Math.min(100,Number(g[3])||0));
-  return '<button type="button" class="installment-deck-card" data-loan="'+htmlSafe(loan.id)+'" data-index="'+index+'" onclick="openInstallmentDeckCard(event,this)"><span class="installment-deck-top"><span>'+htmlSafe(loanProfileCategory(g))+'</span>'+installmentStatusBadge(g)+'</span><h3 data-no-translate>'+g[0]+'</h3><small>Original installment amount</small><strong class="installment-deck-amount">'+g[1]+'</strong><p>'+g[2]+'</p><p class="transaction-date-label"><span>Transaction Date</span> · '+g[4]+'</p><span class="group-progress" role="progressbar" aria-label="Payment progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+progress+'"><span style="width:'+progress+'%"></span></span><span class="installment-deck-bottom"><span>'+progress+'% paid</span><span>View schedule ›</span></span></button>';
+  const progress=Math.max(0,Math.min(100,Number(g[3])||0)),cashLoan=stagingCategory(loan)==='cash_loan';
+  return '<button type="button" class="installment-deck-card'+(cashLoan?' installment-deck-card--cash':'')+'" data-loan="'+htmlSafe(loan.id)+'" data-index="'+index+'" onclick="openInstallmentDeckCard(event,this)"><span class="installment-deck-top">'+(cashLoan?'':'<span>'+htmlSafe(loanProfileCategory(g))+'</span>')+installmentStatusBadge(g)+'</span><h3 data-no-translate>'+g[0]+'</h3><small>Original installment amount</small><strong class="installment-deck-amount">'+g[1]+'</strong><p>'+g[2]+'</p><p class="transaction-date-label"><span>Transaction Date</span> · '+g[4]+'</p><span class="group-progress" role="progressbar" aria-label="Payment progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+progress+'"><span style="width:'+progress+'%"></span></span><span class="installment-deck-bottom"><span>'+progress+'% paid</span><span>View schedule ›</span></span></button>';
  }).join('')+'</div><div class="installment-deck-navigation"><button type="button" data-step="-1" aria-label="Previous installment">‹</button><span class="installment-deck-position" role="status" aria-live="polite"></span><button type="button" data-step="1" aria-label="Next installment">›</button></div></section>';
 }
 const listInstallmentGroupCards=installmentGroupCards;
@@ -17,7 +17,8 @@ installmentGroupCards=()=>{
  const tabs=host.querySelector('.installment-category-tabs');tabs?.insertAdjacentHTML('afterend',installmentViewControl());
  if(installmentPresentation==='cards'){
   host.querySelectorAll('.installment-category-section').forEach(section=>section.remove());
-  host.insertAdjacentHTML('beforeend',installmentDeckHTML(stagingVisibleGroups(),'transactions'));
+  const entries=stagingVisibleGroups(),totals=[['cash_loan','Cash Loan'],['retail_installment','Retail Installments']].filter(([key])=>installmentCategoryFilter==='all'||installmentCategoryFilter===key).map(([key,title])=>'<div><span>'+title+'</span>'+transactionTotalHTML(displayedAmountTotal(entries.filter(entry=>stagingCategory(entry.loan)===key).map(entry=>entry.loan.principal)))+'</div>').join('');
+  host.insertAdjacentHTML('beforeend','<div class="installment-card-totals" aria-label="Matching installment amounts">'+totals+'</div>'+installmentDeckHTML(entries,'transactions'));
  }
  decorateInstallmentList(host);return host.innerHTML;
 };
@@ -54,4 +55,4 @@ function initializeInstallmentDecks(){
  });
 }
 const renderBeforeInstallmentDecks=render;
-render=()=>{const owner=stagingData?.user?.id||null;if(owner!==installmentPresentationOwner){installmentPresentationOwner=owner;installmentPresentation='list';installmentDeckSelections.clear();}renderBeforeInstallmentDecks();initializeInstallmentDecks();};
+render=()=>{const owner=stagingData?.user?.id||null;if(owner!==installmentPresentationOwner){installmentPresentationOwner=owner;installmentPresentation='cards';installmentDeckSelections.clear();}renderBeforeInstallmentDecks();initializeInstallmentDecks();};

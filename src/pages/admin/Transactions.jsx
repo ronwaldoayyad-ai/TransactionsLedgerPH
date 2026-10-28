@@ -5,20 +5,26 @@ import PaymentAdjustmentActivity from '../../components/PaymentAdjustmentActivit
 import { PageHeader } from '../../components/AppShell'
 import Icon from '../../components/Icon'
 import RefreshButton from '../../components/RefreshButton'
-import { Badge, Button, Card, EmptyState, Modal, MultiSelect, Switch, inputClass } from '../../components/ui'
+import {SearchInput,  Badge, Button, Card, EmptyState, Modal, MultiSelect, Switch, inputClass } from '../../components/ui'
 import Pagination from '../../components/Pagination'
 import { usePagination } from '../../hooks/usePagination'
 import { downloadCSV, formatDate, formatPeso, toISODate } from '../../lib/amortization'
 import { STATUS_LABELS, effectiveStatus } from '../../lib/transactions'
+import { presentationFeeKind } from '../../lib/feePresentation'
 import { parseCSV, parseCSVAmount, parseCSVDate } from '../../lib/csv'
 import InstallmentGroupEditor from '../../components/admin/InstallmentGroupEditor'
 import TransactionEntryForm from '../../components/admin/TransactionEntryForm'
+import TransactionGroupCell from '../../components/admin/TransactionGroupCell'
+import {transactionGroup,parseTransactionGroup,TRANSACTION_GROUPS} from '../../lib/transactionGroups'
 import TransactionGrid from '../../components/admin/TransactionGrid'
+import RetailBrandManager from '../../components/admin/RetailBrandManager'
+import GroupLogoSettings from '../../components/admin/GroupLogoSettings'
+import RetailBrandLogo from '../../components/RetailBrandLogo'
 import TransactionFieldCell from '../../components/admin/TransactionFieldCell'
 import TransactionCorrectionReview from '../../components/admin/TransactionCorrectionReview'
 import { TransactionAmountCell, TransactionTypeCell, TransactionStatusCell } from '../../components/admin/TransactionValueCells'
 
-const IMPORT_HEADERS = ['Borrower', 'Txn Date', 'Item Description', 'Amount', 'Type', 'Due Date', 'Date Paid', 'Status']
+const IMPORT_HEADERS = ['Borrower', 'Txn Date', 'Item Description', 'Amount', 'Type', 'Group', 'Due Date', 'Date Paid', 'Status']
 // Loan-level columns (repeat per row; first non-empty value per loan wins).
 // When present, the import creates a real loan per group so it appears in
 // My Loan Schedules with a full Loan Disclosure Statement.
@@ -77,7 +83,7 @@ function computeReplacement(desc, { find, replace, mode, matchCase }) {
 // Status written here is the same store the borrower views read from.
 export default function Transactions() {
   const {
-    session, users, transactions, setTransactionStatus, correctTransaction, archiveTransactions,
+    session, users, loans, transactions, setTransactionStatus, correctTransaction, archiveTransactions,
     replaceTransactionDescriptions, importTransactions, importLoans,
   } = useApp()
   const borrowers = users.filter((u) => u.role === 'user')
@@ -94,12 +100,18 @@ export default function Transactions() {
   // Type filter (Installment / Straight): surfaced in the mobile filter sheet;
   // empty set = all, so it's inert on desktop where no control exposes it.
   const [typeSel, setTypeSel] = usePersistedState('txn.typeSel', () => new Set())
+  const [groupFilter,setGroupFilter]=usePersistedState('txn.groupFilter','all')
+  const selectedGroup=Object.hasOwn(TRANSACTION_GROUPS,groupFilter)?groupFilter:'all'
+  const groupKeys=useMemo(()=>{const byLoan=new Map(loans.map(loan=>[loan.id,loan]));return new Map(transactions.map(row=>[row.id,transactionGroup(row,byLoan.get(row.loanId))]))},[transactions,loans])
   // Sorting applies after filtering, so it works on any filtered view.
   const [sortKey, setSortKey] = usePersistedState('txn.sortKey', 'dueDate') // dueDate | txnDate
   const [sortDir, setSortDir] = usePersistedState('txn.sortDir', 'asc')
   // Hide settled (Paid/Refunded/Cancelled) transactions when on. Default ON.
   const [hideSettled, setHideSettled] = usePersistedState('txn.hideSettled', true)
   const [selected, setSelected] = useState(() => new Set())
+  const [archiveReview,setArchiveReview]=useState(null)
+  const [archiveBusy,setArchiveBusy]=useState(false)
+  const [archiveError,setArchiveError]=useState('')
   const [bulkStatus, setBulkStatus] = useState('paid')
   // Mobile-only UI: a filter bottom sheet and a per-row status action sheet
   // (the desktop table's inline controls don't fit a phone width).
@@ -107,6 +119,8 @@ export default function Transactions() {
   const [actionTxn, setActionTxn] = useState(null)
   const liveActionTxn=transactions.find(transaction=>transaction.id===actionTxn?.id)||actionTxn
   const [addOpen,setAddOpen]=useState(false)
+  const [brandTargets,setBrandTargets]=useState(null)
+  const [logoGroup,setLogoGroup]=useState(null),[groupLogoBusy,setGroupLogoBusy]=useState(false)
   const [correction,setCorrection]=useState(null)
   const pendingCorrection=useRef(null)
   useEffect(()=>()=>{pendingCorrection.current?.({error:'Correction cancelled.'});pendingCorrection.current=null},[])
@@ -128,7 +142,7 @@ export default function Transactions() {
 
   const nameOf = (userId) => users.find((u) => u.id === userId)?.name ?? userId
 
-  const filtered = useMemo(
+  const filterBase = useMemo(
     () =>
       transactions
         .filter((t) => {
@@ -154,6 +168,9 @@ export default function Transactions() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- nameOf derives from users
     [transactions, borrowerSel, statusSel, typeSel, txnDateSel, dueDateSel, datePaidSel, query, users, today, sortKey, sortDir, hideSettled],
   )
+
+  const filtered=useMemo(()=>selectedGroup==='all'?filterBase:filterBase.filter(row=>groupKeys.get(row.id)===selectedGroup),[filterBase,selectedGroup,groupKeys])
+  const groupCounts=useMemo(()=>{const counts={};for(const row of filterBase){const key=groupKeys.get(row.id);counts[key]=(counts[key]||0)+1}return counts},[filterBase,groupKeys])
 
   // Distinct date options come from the full ledger, not the filtered view.
   const dateOptions = useMemo(() => {
@@ -187,7 +204,7 @@ export default function Transactions() {
   // (A Set carrying a desktop multi-selection collapses to "All" here.)
   const activeFilterCount =
     borrowerSel.size + statusSel.size + typeSel.size +
-    txnDateSel.size + dueDateSel.size + datePaidSel.size
+    txnDateSel.size + dueDateSel.size + datePaidSel.size + (selectedGroup==='all'?0:1)
 
   // Paginate the visible rows; select-all / totals still operate on the full
   // filtered set, so paging never changes what an action applies to.
@@ -221,8 +238,16 @@ export default function Transactions() {
   }
 
   const deleteSelected = () => {
-    archiveTransactions(selectedInView)
-    setSelected(new Set())
+    reviewArchive(selectedInView)
+  }
+  const reviewArchive=ids=>{setArchiveError('');setArchiveReview(transactions.filter(t=>ids.includes(t.id)).map(t=>({...t})))}
+  const confirmArchive=async()=>{
+    if(archiveBusy||!archiveReview?.length)return
+    if(archiveReview.some(row=>JSON.stringify(transactions.find(t=>t.id===row.id))!==JSON.stringify(row))){setArchiveError('These records changed. Close this review and select them again.');return}
+    setArchiveBusy(true);setArchiveError('')
+    try{if(await archiveTransactions(archiveReview.map(t=>t.id))===true){setSelected(new Set());setArchiveReview(null)}else setArchiveError('The records could not be archived. Review any message shown and try again.')}
+    catch{setArchiveError('The records could not be archived. Please retry.')}
+    finally{setArchiveBusy(false)}
   }
 
   // --- CSV import: parse, match borrowers, validate, preview, then insert.
@@ -280,7 +305,7 @@ export default function Transactions() {
       )
       if (!borrower) return errors.push(`Row ${rowNo}: no borrower matches "${cells[idx.borrower]}" (use the exact name or email)`)
       const amount = parseCSVAmount(cells[idx.amount])
-      if (amount == null || amount < 0) return errors.push(`Row ${rowNo}: invalid amount "${cells[idx.amount]}"`)
+      if (amount == null) return errors.push(`Row ${rowNo}: invalid amount "${cells[idx.amount]}"`)
       const txnDate = parseCSVDate(cells[idx.txnDate])
       if (!txnDate) return errors.push(`Row ${rowNo}: invalid Txn Date "${cells[idx.txnDate]}"`)
       const dueDate = parseCSVDate(cells[idx.dueDate])
@@ -291,7 +316,9 @@ export default function Transactions() {
       if (status === 'paid' && !datePaid) datePaid = dueDate
       if (['unpaid', 'cancelled', 'past_due'].includes(status)) datePaid = null
       const description = String(cells[idx.description] ?? '').trim() || 'Imported item'
-      const isStraight = /straight/i.test(String(cells[idx.type] ?? ''))
+      const typeText=String(cells[idx.type]??'').trim().toLowerCase();if(!['straight','installment'].includes(typeText))return errors.push('Row '+rowNo+': Type must be Straight or Installment.');
+      const isStraight=typeText==='straight'
+      let transactionGroupValue;try{transactionGroupValue=parseTransactionGroup(col('Group')<0?'':cells[col('Group')],isStraight?'Straight':'Installment',{description,amount})}catch(e){return errors.push('Row '+rowNo+': '+e.message)}
       const row = {
         id: `imp-${stamp}-${i + 1}`,
         loanId: null,
@@ -300,6 +327,7 @@ export default function Transactions() {
         description,
         amount,
         type: isStraight ? 'Straight' : 'Installment',
+        transactionGroup: transactionGroupValue,
         txnDate,
         dueDate,
         status,
@@ -311,6 +339,7 @@ export default function Transactions() {
 
       const lv = (h) => String(cells[loanIdx[h]] ?? '').trim()
       const startsLoan = lv('Principal Amount') !== ''
+      if(isStraight&&!startsLoan){loanGroups.push({standalone:true,loan:{userId:borrower.id,label:description,principal:Math.abs(amount),straight:true},rows:[row]});return}
 
       if (startsLoan) {
         const principal = parseCSVAmount(lv('Principal Amount'))
@@ -337,6 +366,7 @@ export default function Transactions() {
             // Net Proceeds < principal ⇒ fees were deducted from proceeds.
             deductFromProceeds: netProceeds == null ? true : netProceeds < principal - 0.005,
             straight: isStraight,
+            loanCategory:isStraight?null:transactionGroupValue,
           },
           rows: [],
         }
@@ -348,6 +378,8 @@ export default function Transactions() {
         return
       }
       // Sequential numbering within the loan guarantees a unique (loan, n).
+      if(current.loan.userId!==borrower.id||current.loan.straight!==isStraight)return errors.push('Row '+rowNo+': Borrower and Type must match the opened loan.');
+      if(!isStraight){if(col('Group')>=0&&String(cells[col('Group')]??'').trim()&&transactionGroupValue!==current.loan.loanCategory)return errors.push('Row '+rowNo+': All installments of a linked loan must use the same Group.');row.transactionGroup=current.loan.loanCategory;}
       current.rows.push({ ...row, n: current.rows.length + 1 })
     })
 
@@ -359,6 +391,7 @@ export default function Transactions() {
     // Finalize each group: duration defaults to the row count; straight loans
     // are single-payment. Build the final loan shape importLoans expects.
     const finalGroups = loanGroups.map((g) => {
+      if(g.standalone)return g;
       const { durationCol, straight, ...loanRest } = g.loan
       const isStraight = straight && g.rows.length === 1
       return {
@@ -378,14 +411,15 @@ export default function Transactions() {
   // disclosure statement (values repeat on each row of the same loan).
   const downloadTemplate = () => {
     const borrowers = users.filter((u) => u.role === 'user')
-    const name = (i) => borrowers[i % Math.max(borrowers.length, 1)]?.name ?? 'Juan Dela Cruz'
+    const name = (i) => '"'+String(borrowers[i % Math.max(borrowers.length, 1)]?.name ?? 'Juan Dela Cruz').replaceAll('"','""')+'"'
     const lines = [
       [...IMPORT_HEADERS, ...LOAN_HEADERS].join(','),
-      `${name(0)},2026-01-01,"HENRY'S-FUJIFILM XA5 (1 of 3)","2,499.17",Installment,2026-06-10,2026-06-10,Paid,"7,200.00",1.8934,3,2026-06-10,54.00,150.00,0.00,204.00,"6,996.00"`,
-      `${name(0)},2026-01-01,"HENRY'S-FUJIFILM XA5 (2 of 3)","2,499.17",Installment,2026-07-10,,Unpaid,,,,,,,,,`,
-      `${name(0)},2026-01-01,"HENRY'S-FUJIFILM XA5 (3 of 3)","2,499.17",Installment,2026-08-10,,Unpaid,,,,,,,,,`,
-      `${name(1)},2026-01-04,GRAB,"1,000.00",Straight,2026-02-10,2026-02-08,Paid,"1,000.00",0,1,2026-02-10,0.00,0.00,0.00,0.00,"1,000.00"`,
+      `${name(0)},2026-01-01,"HENRY'S-FUJIFILM XA5 (1 of 3)","2,499.17",Installment,Retail Installment,2026-06-10,2026-06-10,Paid,"7,200.00",1.8934,3,2026-06-10,54.00,150.00,0.00,204.00,"6,996.00"`,
+      `${name(0)},2026-01-01,"HENRY'S-FUJIFILM XA5 (2 of 3)","2,499.17",Installment,Retail Installment,2026-07-10,,Unpaid,,,,,,,,,`,
+      `${name(0)},2026-01-01,"HENRY'S-FUJIFILM XA5 (3 of 3)","2,499.17",Installment,Retail Installment,2026-08-10,,Unpaid,,,,,,,,,`,
+      `${name(1)},2026-01-04,GRAB,"1,000.00",Straight,Straight Retail,2026-02-10,2026-02-08,Paid,"1,000.00",0,1,2026-02-10,0.00,0.00,0.00,0.00,"1,000.00"`,
     ]
+    lines.push(`${name(0)},2026-01-04,Cash Loan (1 of 1),5000.00,Installment,Cash Loan,2026-03-10,,Unpaid,5000.00,0,1,2026-03-10,0,0,0,0,5000.00`,`${name(0)},2026-01-04,Late Payment Fee,1500.00,Straight,Fees,2026-03-10,,Unpaid,,,,,,,,,`,`${name(0)},2026-01-04,Partial Payment adjustment,-1000.00,Straight,Adjustments,2026-03-10,,Unpaid,,,,,,,,,`);
     downloadCSV('transactions-import-template.csv', lines.join('\n'))
   }
 
@@ -410,12 +444,12 @@ export default function Transactions() {
   }
 
   const exportCSV = () => {
-    const header = 'Borrower,Loan,Item Description,Txn Date,Amount,Type,Due Date,Date Paid,Status'
+    const header = 'Borrower,Loan,Item Description,Txn Date,Amount,Type,Group,Due Date,Date Paid,Status'
     const rows = filtered.map(
       (t) =>
-        `"${nameOf(t.userId)}",${t.loanId ?? ''},"${t.description}",${t.txnDate},${(t.originalAmount??t.amount).toFixed(2)},${t.type},${t.dueDate},${t.datePaid ?? ''},${STATUS_LABELS[effectiveStatus(t, today)]}`,
+        `"${nameOf(t.userId)}",${t.loanId ?? ''},"${t.description}",${t.txnDate},${(t.originalAmount??t.amount).toFixed(2)},${t.type},${TRANSACTION_GROUPS[transactionGroup(t,loans.find(l=>l.id===t.loanId))]},${t.dueDate},${t.datePaid ?? ''},${STATUS_LABELS[effectiveStatus(t, today)]}`,
     )
-    rows.push(`FILTERED TOTAL,,,,${filteredTotal.toFixed(2)},,,,`)
+    rows.push(`FILTERED TOTAL,,,,${filteredTotal.toFixed(2)},,,,,`)
     downloadCSV(
       `overall-transactions-${today}.csv`,
       [header, ...rows].join('\n'),
@@ -486,8 +520,12 @@ export default function Transactions() {
     setTimeout(() => setImportNotice(''), 6000)
   }
 
+  const groupPills=<div className="transaction-group-pills" role="group" aria-label="Filter transactions by group">{[['all','All groups'],...Object.entries(TRANSACTION_GROUPS)].map(([value,label])=><button type="button" key={value} aria-pressed={selectedGroup===value} onClick={()=>{setGroupFilter(value);pag.setPage(1)}}>{label}<span>{value==='all'?filterBase.length:groupCounts[value]||0}</span></button>)}</div>
+
   return (
     <>
+      {brandTargets&&<RetailBrandManager transactions={transactions.filter(t=>brandTargets.some(target=>target.id===t.id))} onClose={()=>setBrandTargets(null)}/>}
+      {logoGroup&&<Modal open title="Shared transaction group logos" onClose={()=>{if(!groupLogoBusy)setLogoGroup(null)}} footer={<Button variant="secondary" disabled={groupLogoBusy} onClick={()=>setLogoGroup(null)}>Done</Button>}><GroupLogoSettings initialGroup={logoGroup} onBusyChange={setGroupLogoBusy}/></Modal>}
       <PageHeader
         title="Overall Transactions"
         subtitle="Every amortization installment across all borrowers. Status changes here update each borrower's dashboard instantly."
@@ -495,6 +533,7 @@ export default function Transactions() {
           <div className="flex flex-wrap gap-2">
             <Button onClick={()=>setAddOpen(true)}><Icon name="plus" className="h-4 w-4" />Add transaction</Button>
             <InstallmentGroupEditor />
+            <Button variant="secondary" onClick={()=>setBrandTargets(filtered)}>Brand logos</Button>
             <RefreshButton />
             <input
               ref={importInputRef}
@@ -519,6 +558,7 @@ export default function Transactions() {
               <Icon name="file" className="h-4 w-4" />
               Template
             </Button>
+            <Button variant="secondary" onClick={()=>setLogoGroup('cash_loan')}>Group logos</Button>
             <Button variant="secondary" onClick={() => importInputRef.current?.click()}>
               <Icon name="upload" className="h-4 w-4" />
               Import CSV
@@ -609,6 +649,7 @@ export default function Transactions() {
               <Icon name="trash" className="h-4 w-4" />
               Delete (move to Archives)
             </Button>
+            <Button variant="secondary" onClick={()=>setBrandTargets(filtered.filter(t=>selected.has(t.id)))}>Assign brand logos</Button>
           </div>
         </div>
       )}
@@ -617,11 +658,12 @@ export default function Transactions() {
         {/* Mobile toolbar: search + filter-sheet trigger, then record count
             and the hide-settled toggle (mirrors the mobile app's header). */}
         <div className="md:hidden">
+          {groupPills}
           <div className="flex items-center gap-2 px-4 pt-4">
             <label htmlFor="txn-search-mobile" className="sr-only">
               Search transactions
             </label>
-            <input
+            <SearchInput
               id="txn-search-mobile"
               type="search"
               value={query}
@@ -648,11 +690,10 @@ export default function Transactions() {
               {filtered.length} record{filtered.length === 1 ? '' : 's'}
             </span>
             <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-500">
-              Hide settled
-              <Switch
+              <Switch stateLabels={{"on":"Only open transactions are shown","off":"All transactions are shown"}}
                 checked={hideSettled}
                 onChange={setHideSettled}
-                label={hideSettled ? 'Show all transactions' : 'Hide paid, refunded, and cancelled transactions'}
+                label="Hide settled transactions"
               />
             </label>
           </div>
@@ -670,13 +711,13 @@ export default function Transactions() {
               return (
                 <button
                   key={t.id}
-                  data-fee-kind={t.feeKind||undefined}
+                  data-fee-kind={presentationFeeKind(t)||undefined}
                   type="button"
                   onClick={() => setActionTxn(t)}
                   className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50 active:bg-slate-100 ${
                     idx > 0 ? 'border-t border-slate-100' : 'border-t border-slate-200'
                   } ${
-                    t.amount < 0 || eff === 'paid' ? 'bg-emerald-50/50' : t.feeKind ? 'bg-red-50/50' : eff === 'past_due' ? 'bg-red-50/50' : ''
+                    t.amount < 0 || eff === 'paid' ? 'bg-emerald-50/50' : presentationFeeKind(t) ? 'bg-red-50/50' : eff === 'past_due' ? 'bg-red-50/50' : ''
                   }`}
                 >
                   <div className="min-w-0 flex-1">
@@ -702,11 +743,13 @@ export default function Transactions() {
 
           </>
         )}
-        <TransactionGrid key={session?.user?.id||'anonymous'} ownerId={session?.user?.id||'anonymous'} items={pag.pageItems} total={filteredTotal} count={filtered.length} statusCounts={statusCounts} today={today} query={query} onQueryChange={setQuery} hideSettled={hideSettled} onHideSettledChange={setHideSettled} onExport={exportCSV} sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} allSelected={allSelected} onToggleAll={toggleAll} selected={selected} onToggleOne={toggleOne} renderCell={(key,t)=>{
+        <TransactionGrid filters={groupPills} key={session?.user?.id||'anonymous'} ownerId={session?.user?.id||'anonymous'} items={pag.pageItems} total={filteredTotal} count={filtered.length} statusCounts={statusCounts} today={today} query={query} onQueryChange={setQuery} hideSettled={hideSettled} onHideSettledChange={setHideSettled} onExport={exportCSV} sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} allSelected={allSelected} onToggleAll={toggleAll} selected={selected} onToggleOne={toggleOne} renderCell={(key,t)=>{
           switch(key){
+            case 'brand':return <RetailBrandLogo transaction={t} loan={loans.find(l=>l.id===t.loanId)} onClick={()=>{const group=transactionGroup(t,loans.find(l=>l.id===t.loanId));if(['cash_loan','fees','adjustments'].includes(group))setLogoGroup(group);else setBrandTargets([t])}}/>
             case 'borrower':return <TransactionFieldCell transaction={t} field="userId" label="Borrower" options={borrowers.map(b=>({value:b.id,label:b.name}))} onSave={patch=>reviewEdit(t,patch)}/>
             case 'description':return <TransactionFieldCell transaction={t} field="description" label="Item description" onSave={patch=>reviewEdit(t,patch)}/>
             case 'amount':return <TransactionAmountCell transaction={t} allowOverride formatted onSave={patch=>reviewEdit(t,patch)}/>
+            case 'group':return <TransactionGroupCell transaction={t} loan={loans.find(l=>l.id===t.loanId)}/>
             case 'type':return <TransactionTypeCell transaction={t} allowOverride onSave={patch=>reviewEdit(t,patch)}/>
             case 'status':return <TransactionStatusCell transaction={t} allowOverride onSave={patch=>reviewEdit(t,patch)}/>
             default:return <TransactionFieldCell transaction={t} field={key} label={key==='txnDate'?'Transaction date':key==='dueDate'?'Due date':'Date paid'} onSave={patch=>reviewEdit(t,patch)}/>
@@ -742,7 +785,7 @@ export default function Transactions() {
               onClick={confirmImport}
               disabled={
                 importing ||
-                !importPreview ||
+                !importPreview || importPreview.errors.length>0 ||
                 (importPreview.mode === 'loans'
                   ? importPreview.groups.length === 0
                   : importPreview.rows.length === 0)
@@ -752,7 +795,7 @@ export default function Transactions() {
               {importing
                 ? 'Importing…'
                 : importPreview?.mode === 'loans'
-                  ? `Import ${importPreview.groups.length} loan${importPreview.groups.length === 1 ? '' : 's'}`
+                  ? `Import ${importPreview.rows.length} record${importPreview.rows.length === 1 ? '' : 's'}`
                   : `Import ${importPreview?.rows.length ?? 0} record${importPreview?.rows.length === 1 ? '' : 's'}`}
             </Button>
           </>
@@ -761,14 +804,14 @@ export default function Transactions() {
         {importPreview && (
           <div className="space-y-4">
             <p className="text-sm text-slate-600">
-              Borrowers are matched by exact name or email.{' '}
+              Borrowers are matched by exact name or email. Group accepts Cash Loan, Retail Installment, Straight Retail, Fees or Adjustments. Older files may omit Group. Negative entries reduce ledger dues and do not add to the separate account credit balance.{' '}
               {importPreview.mode === 'loans'
                 ? 'Loan columns detected — a row carrying a Principal Amount starts a new loan; the rows below it (with loan columns left blank) are its installments. Each loan gets a full Loan Disclosure Statement on the borrower’s dashboard, and amounts are imported verbatim.'
                 : 'No loan columns found — records import as standalone ledger entries (visible in Consolidated Transactions, not in My Loan Schedules). Use the Template to include loan-level columns.'}
             </p>
             <p className="rounded-lg bg-navy-50 px-3 py-2.5 text-sm font-medium text-navy-900">
               {importPreview.mode === 'loans'
-                ? `${importPreview.groups.length} loan${importPreview.groups.length === 1 ? '' : 's'} (${importPreview.groups.reduce((s, g) => s + g.rows.length, 0)} installment${importPreview.groups.reduce((s, g) => s + g.rows.length, 0) === 1 ? '' : 's'}) ready to import`
+                ? `${importPreview.groups.filter(g=>!g.standalone).length} loans (${importPreview.groups.reduce((s, g) => s + g.rows.length, 0)} records) ready to import`
                 : `${importPreview.rows.length} row${importPreview.rows.length === 1 ? '' : 's'} ready to import`}
               {importPreview.errors.length > 0 &&
                 ` · ${importPreview.errors.length} issue${importPreview.errors.length === 1 ? '' : 's'}`}
@@ -778,8 +821,8 @@ export default function Transactions() {
                 {importPreview.groups.map((g, gi) => (
                   <li key={gi} className="truncate">
                     <span className="font-medium text-slate-800">{g.loan.label}</span> ·{' '}
-                    {nameOf(g.loan.userId)} · {formatPeso(g.loan.principal)} ·{' '}
-                    {g.rows.length} {g.loan.txnType === 'straight' ? 'payment' : 'installments'}
+                    {nameOf(g.loan.userId)} · {formatPeso(g.standalone?g.rows.reduce((sum,row)=>sum+row.amount,0):g.loan.principal)} ·{' '}
+                    {g.rows.length} {g.standalone?'standalone record':g.loan.txnType === 'straight' ? 'payment' : 'installments'} · {TRANSACTION_GROUPS[g.rows[0]?.transactionGroup]}
                   </li>
                 ))}
               </ul>
@@ -831,9 +874,9 @@ export default function Transactions() {
               <label htmlFor="fr-find" className="mb-1 block text-xs font-medium text-slate-500">
                 Find text
               </label>
-              <input
+              <SearchInput
                 id="fr-find"
-                type="text"
+                type="search"
                 value={frFind}
                 onChange={(e) => setFrFind(e.target.value)}
                 placeholder="e.g. gcash"
@@ -884,16 +927,15 @@ export default function Transactions() {
 
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
             <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-600">
-              <Switch checked={frMatchCase} onChange={setFrMatchCase} label="Match case" />
-              Match case
+              <Switch stateLabels={{"on":"Matching is case sensitive","off":"Matching ignores case"}} checked={frMatchCase} onChange={setFrMatchCase} label="Match case" />
             </label>
             <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-600">
-              <Switch
+              <Switch stateLabels={{"on":"Only filtered transactions are searched","off":"All transactions are searched"}}
                 checked={frScope === 'filtered'}
                 onChange={(v) => setFrScope(v ? 'filtered' : 'all')}
                 label="Limit to current filter"
               />
-              Only current filter ({filtered.length})
+              <span className="text-[10px]">{filtered.length} filtered records</span>
             </label>
           </div>
 
@@ -1035,7 +1077,7 @@ export default function Transactions() {
             <button
               type="button"
               onClick={() => {
-                archiveTransactions([liveActionTxn.id])
+                reviewArchive([liveActionTxn.id])
                 setActionTxn(null)
               }}
               className="mt-1 flex w-full items-center gap-2 rounded-xl px-4 py-3 text-left text-red-600 transition-colors hover:bg-red-50 active:bg-red-100"
@@ -1047,6 +1089,11 @@ export default function Transactions() {
         </div>
       )}
       {correction&&<TransactionCorrectionReview key={correction.current.id+JSON.stringify(correction.patch)} request={correction} borrowers={borrowers} onSave={correctTransaction} onClose={closeCorrection}/>}
+      <Modal open={!!archiveReview} title="Review records to archive" onClose={()=>{if(!archiveBusy)setArchiveReview(null)}} footer={<><Button disabled={archiveBusy} variant="secondary" onClick={()=>setArchiveReview(null)}>Cancel</Button><Button disabled={archiveBusy||!archiveReview?.length||!!archiveError} onClick={confirmArchive}>{archiveBusy?'Archiving…':`Archive ${archiveReview?.length||0} records`}</Button></>}>
+        <p className="mb-3 text-sm text-slate-600">These records will be hidden from the active ledger and borrower balances. They can be restored from Reports &amp; Logs → Archives. This does not reverse a recorded payment.</p>
+        {archiveError&&<p role="alert" className="mb-3 text-sm text-red-600">{archiveError}</p>}
+        <ul className="divide-y divide-slate-100">{archiveReview?.map(row=><li key={row.id} className="py-2 text-sm"><strong>{nameOf(row.userId)}</strong><p>{row.description}</p><p className="text-xs text-slate-500">{row.id} · {formatPeso(row.amount)} · Due {formatDate(row.dueDate)}</p></li>)}</ul>
+      </Modal>
     </>
   )
 }

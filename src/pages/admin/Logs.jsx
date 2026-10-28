@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useApp } from '../../context/AppContext'
 import { PageHeader } from '../../components/AppShell'
 import Icon from '../../components/Icon'
-import { Badge, Button, Card, CardHeader, EmptyState, Modal, MultiSelect, inputClass } from '../../components/ui'
+import {SearchInput,  Badge, Button, Card, CardHeader, EmptyState, Modal, MultiSelect, inputClass } from '../../components/ui'
 import Pagination from '../../components/Pagination'
 import { usePagination } from '../../hooks/usePagination'
 import { downloadCSV, formatDate, formatPeso, toISODate } from '../../lib/amortization'
@@ -294,7 +294,7 @@ export default function Logs() {
               <label htmlFor="log-search" className="sr-only">
                 Search log entries
               </label>
-              <input
+              <SearchInput
                 id="log-search"
                 type="search"
                 value={query}

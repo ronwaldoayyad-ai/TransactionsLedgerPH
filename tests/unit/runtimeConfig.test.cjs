@@ -9,6 +9,12 @@ test('hosted database TLS always verifies certificates',()=>{
  const value=config(valid);assert.equal(value.ssl.rejectUnauthorized,true);assert.ok(!value.databaseUrl.includes('sslmode'));assert.equal(value.api,valid.SUPABASE_URL);
 });
 
+test('hosted origins reject credentials and URL modifiers, and connection strings cannot weaken explicit TLS',()=>{
+ for(const url of ['https://u:p@fixture.supabase.co','https://fixture.supabase.co/?x=1','https://fixture.supabase.co/#x'])assert.throws(()=>config({...valid,SUPABASE_URL:url}));
+ const value=config({...valid,DATABASE_URL:valid.DATABASE_URL+'&ssl=false&sslkey=untrusted&sslpassword=untrusted&uselibpqcompat=true'});assert.equal(value.ssl.rejectUnauthorized,true);assert.doesNotMatch(value.databaseUrl,/ssl|libpq/);
+ assert.throws(()=>config({...valid,SUPABASE_PUBLIC_KEY:'sb_secret_synthetic'}));
+});
+
 test('staged builds trust only the exact platform deployment hostname',()=>{
  const value=config({...valid,VERCEL_URL:'loanledger-reviewed-123.vercel.app'});assert.equal(value.origin,valid.APP_ORIGIN);assert.equal(value.deploymentOrigin,'https://loanledger-reviewed-123.vercel.app');assert.equal(config(valid).deploymentOrigin,null);
  for(const host of ['https://loanledger.vercel.app','loanledger.vercel.app/path','loanledger.vercel.app:443','loanledger.vercel.app.evil.invalid','user@loanledger.vercel.app','*.vercel.app','loanledger.vercel.app?x'])assert.throws(()=>config({...valid,VERCEL_URL:host}));

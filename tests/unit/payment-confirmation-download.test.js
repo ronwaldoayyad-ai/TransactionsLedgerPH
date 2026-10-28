@@ -1,0 +1,34 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
+const modelSource=fs.readFileSync('public/v41224-payment-confirmation.js','utf8').split('function paymentConfirmationRows')[0];
+const downloadSource=fs.readFileSync('public/v41224-payment-downloads.js','utf8').split('function decorateConfirmationDownloads')[0];
+const fixture=()=>{const record={id:'payment-1',userId:'borrower-1',amount:3209.96,paidDate:'2026-10-08',submittedAt:'2026-10-18T14:25:00Z',reference:'FSX-10082026013540',method:'bank_transfer',receiptNumber:'AR-example',allocations:[{amount:1000}],status:'approved',reviewedAt:'2026-10-19T03:04:05Z'};const context=vm.createContext({stagingData:{user:{id:'borrower-1'},payments:[record]},recentPayments:[],toast:()=>{},imageCalls:0,downloads:[]});vm.runInContext(modelSource+downloadSource,context);context.paymentConfirmationImage=async model=>{context.imageCalls++;return {model}};context.downloadAppFile=async(source,name,type,_preview,isCurrent)=>{const image=await source();if(!isCurrent())return false;context.downloads.push({image,name,type});return true};return {context,record}};
+test('confirmation keeps the submission reconciliation and shows the saved approval status and review time',async()=>{const {context}=fixture();const model=vm.runInContext("savedPaymentConfirmation('payment-1')",context);assert.equal(model.paid,320996);assert.equal(model.selected,100000);assert.equal(model.difference,-220996);assert.equal(model.coverage,'Excess submitted');assert.equal(model.status,'Approved');assert.equal(model.title,'Proof of Payment Approved!');assert.equal(model.subtitle,'Your submission has been approved.');assert.match(model.approvedAt,/Oct 19, 2026, 11:04/);assert.equal(model.reference,'FSX-10082026013540');assert.equal(await context.downloadPaymentConfirmation('payment-1'),true);assert.equal(context.downloads[0].name,'Payment-submission-AR-example.png');assert.equal(context.downloads[0].type,'image/png');assert.equal(context.imageCalls,1)});
+test('legacy records omit missing reconciliation and use stored acknowledgement as receipt fallback',()=>{const {context,record}=fixture();delete record.allocations;delete record.receiptNumber;context.recentPayments=[{id:record.id,acknowledgement:{number:'AR-legacy'}}];const model=vm.runInContext("savedPaymentConfirmation('payment-1')",context);assert.equal(model.selected,null);assert.equal(model.difference,null);assert.equal(model.receipt,'AR-legacy');assert.doesNotMatch(vm.runInContext("paymentConfirmationDate('2026-10-18',true)",context),/AM|PM|:00/);});
+test('missing and foreign submissions are refused without generating a file',async()=>{const {context,record}=fixture();assert.equal(await context.downloadPaymentConfirmation('missing'),false);record.userId='other-borrower';assert.equal(await context.downloadPaymentConfirmation(record.id),false);assert.equal(context.imageCalls,0);assert.equal(context.downloads.length,0)});
+test('account switch during PNG generation cancels download',async()=>{const {context,record}=fixture();context.paymentConfirmationImage=async()=>{context.stagingData={user:{id:'other-borrower'},payments:[]};return {}};assert.equal(await context.downloadPaymentConfirmation(record.id),false);assert.equal(context.downloads.length,0)});
+test('final download guard cancels during feedback delay',async()=>{const source=fs.readFileSync('public/v41224-notifications-documents.js','utf8');const start=source.indexOf("downloadAppFile=async("),end=source.indexOf('\n}',start)+2;let clicked=0,revoked=0;const context=vm.createContext({Blob,downloadAppFile:null,toast:()=>{},document:{body:{append:()=>{}},createElement:()=>({click:()=>clicked++,remove:()=>{}})},URL:{createObjectURL:()=> 'blob:fixture',revokeObjectURL:()=>revoked++},fileDownloadStartedAt:0,performance:{now:()=>1000},setTimeout:(fn,delay)=>{if(delay<120000)fn();},requestAnimationFrame:fn=>{context.current=false;fn()},current:true});vm.runInContext(source.slice(start,end),context);assert.equal(await context.downloadAppFile(new Blob(['png']),'file.png','image/png',null,()=>context.current),false);assert.equal(clicked,0);assert.equal(revoked,1)});
+
+test('pending, rejected and withdrawn confirmations never claim approval; missing legacy approval time is explicit',()=>{
+ const {context,record}=fixture();record.status='pending';let model=vm.runInContext("savedPaymentConfirmation('payment-1')",context);assert.equal(model.status,'Submitted for review');assert.equal(model.approvedAt,'');assert.equal(model.approved,false);
+ record.status='rejected';model=vm.runInContext("savedPaymentConfirmation('payment-1')",context);assert.equal(model.status,'Rejected');assert.equal(model.approvedAt,'');
+ record.status='approved';record.reviewedAt=null;model=vm.runInContext("savedPaymentConfirmation('payment-1')",context);assert.equal(model.approvedAt,'Not recorded');assert.notEqual(model.approvedAt,model.submittedAt);
+ record.retractedAt='2026-10-20T00:00:00Z';model=vm.runInContext("savedPaymentConfirmation('payment-1')",context);assert.equal(model.status,'Withdrawn');assert.equal(model.approvedAt,'');
+});
+test('approval preserves requested submission totals even when reviewed allocations differ',()=>{
+ const {context,record}=fixture();record.requestedAllocations=[{amount:1000}];record.allocations=[{amount:3209.96}];const model=vm.runInContext("savedPaymentConfirmation('payment-1')",context);assert.equal(model.selected,100000);assert.equal(model.difference,-220996);assert.equal(model.status,'Approved');
+});
+
+test('date-only review fields use the exact saved posting timestamp, with the same Manila time format as submission',()=>{
+ const {context,record}=fixture();record.reviewedAt='2026-10-19';record.postedAt='2026-10-19T15:42:33Z';const model=vm.runInContext("savedPaymentConfirmation('payment-1')",context);assert.equal(model.approvedAt,'Oct 19, 2026, 11:42 PM');assert.equal(model.submittedAt,'Oct 18, 2026, 10:25 PM');
+ record.reviewedAt='invalid';assert.equal(vm.runInContext("savedPaymentConfirmation('payment-1')",context).approvedAt,model.approvedAt);
+});
+
+test('historic approvals without a saved time never invent midnight or reuse the submission timestamp',()=>{
+ const {context,record}=fixture();record.reviewedAt='2026-10-19';delete record.postedAt;const model=vm.runInContext("savedPaymentConfirmation('payment-1')",context);assert.equal(model.approvedAt,'Oct 19, 2026 · Time not recorded');assert.notEqual(model.approvedAt,model.submittedAt);
+});
+test('a review change during image creation cancels an outdated confirmation download',async()=>{
+ const {context,record}=fixture();record.status='pending';context.paymentConfirmationImage=async()=>{record.status='approved';return {}};assert.equal(await context.downloadPaymentConfirmation(record.id),false);assert.equal(context.downloads.length,0);
+});

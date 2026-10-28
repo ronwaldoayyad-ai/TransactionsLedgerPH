@@ -26,6 +26,7 @@ export default function Queue() {
           payments={shown}
           defaultTab={selectedProof ? 'all' : 'pending'}
           canReview
+          showControls
           showBorrower
           pageSize={8}
           emptyBody="No payment proofs match this filter."

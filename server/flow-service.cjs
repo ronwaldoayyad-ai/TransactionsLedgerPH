@@ -1,15 +1,16 @@
 // Shared service; production dependencies are supplied by the validated runtime.
-const http=require('node:http'),crypto=require('node:crypto'),supabaseHeaders=require('./supabase-headers.cjs'),publicError=require('./public-service-error.cjs');
+const http=require('node:http'),crypto=require('node:crypto'),supabaseHeaders=require('./supabase-headers.cjs'),publicError=require('./public-service-error.cjs'),{objectPath,readUpload}=require('./upload-security.cjs');
 function respondError(res,error){const result=publicError(error);res.writeHead(result.status);res.end(JSON.stringify(result.body));}
-module.exports=function createFlowService({db,api,origin,jwt,hash,validator=require('./file-validator.cjs'),cookiePath='/api',backgroundWorkers=true,sendSupportVerification=null}){
+module.exports=function createFlowService({db,api,origin,jwt,hash,validator=require('./file-validator.cjs'),cookiePath='/api',backgroundWorkers=true,sendSupportVerification=null,telegramConfig={}}){
 async function validateUpload(req,body){
  const user=await active(req),allowed={ 'payment-proofs':['image/jpeg','image/png','image/webp','application/pdf'],avatars:['image/jpeg','image/png','image/webp'],'mobile-attachments':['image/jpeg','image/png','image/webp','image/gif','image/bmp','image/avif','application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document']};
- if(!allowed[body.bucket]||String(body.path).split('/')[0]!==user.id)throw Error('File ownership mismatch.');
+ if(!allowed[body.bucket])throw Error('File ownership mismatch.');
+ const encodedPath=objectPath(user.id,body.path);
  const object=(await db.query('select id,metadata,updated_at::text as version from storage.objects where bucket_id=$1 and name=$2',[body.bucket,body.path])).rows[0];
  const mime=object?.metadata?.mimetype,limit=body.bucket==='avatars'?2097152:5242880;
  if(!object||!allowed[body.bucket].includes(mime)||!object.metadata.size||object.metadata.size>limit)throw Error('Choose a supported file within the size limit.');
- const token=req.headers.authorization,download=await fetch(api+'/storage/v1/object/authenticated/'+body.bucket+'/'+body.path,{headers:{apikey:jwt('anon'),Authorization:token}});
- if(!download.ok)throw Error('Unable to read the uploaded file.');const bytes=Buffer.from(await download.arrayBuffer());if(bytes.length!==Number(object.metadata.size))throw Error('File size mismatch.');
+ const token=req.headers.authorization,download=await fetch(api+'/storage/v1/object/authenticated/'+body.bucket+'/'+encodedPath,{headers:{apikey:jwt('anon'),Authorization:token},redirect:'error',signal:AbortSignal.timeout(15000)});
+ const bytes=await readUpload(download,limit);if(bytes.length!==Number(object.metadata.size))throw Error('File size mismatch.');
  await validator(bytes,mime);
  await db.query('insert into mobile_private.verified_uploads(object_id,owner_id,bucket,path,updated_at,sha256,mime,size) values($1,$2,$3,$4,$5,$6,$7,$8) on conflict(object_id) do update set updated_at=excluded.updated_at,sha256=excluded.sha256,mime=excluded.mime,size=excluded.size',[object.id,user.id,body.bucket,body.path,object.version,crypto.createHash('sha256').update(bytes).digest('hex'),mime,bytes.length]);
  return {valid:true};
@@ -60,6 +61,12 @@ async function guestSupport(req,body){
   await client.query('commit');return {ticket_number:ticket.ticket_number,status:ticket.status,created_at:ticket.created_at};
  }catch(error){await client.query('rollback');if(uploaded)await fetch(api+'/storage/v1/object/mobile-attachments',{method:'DELETE',headers:{...supabaseHeaders(jwt('anon'),jwt('service_role')),'Content-Type':'application/json'},body:JSON.stringify({prefixes:[uploaded]})}).catch(()=>{});throw error;}finally{client.release();}
 }
+const telegram=require('./telegram.cjs')({db,active,origin,...telegramConfig});
+const groupLogoModule=require('./group-logos.cjs');
+const groupLogoHandler=groupLogoModule.createGroupLogoHandler({service:groupLogoModule.createGroupLogos({db,active}),origin});
+const retailLogoModule=require('./retail-logos.cjs');
+const retailLogoHandler=retailLogoModule.createRetailLogoHandler({service:retailLogoModule.createRetailLogos({db,active}),origin});
+const telegramHandler=require('./telegram-http.cjs')({service:telegram,origin});
 const notificationRules=require('./notification-rules.cjs')({db,active,wakeEnabled:backgroundWorkers});
 const notificationRulesHandler=require('./notification-rules-http.cjs')({service:notificationRules,origin});
 const releaseAccessHandler=require('./release-access.cjs')({db,active,origin});
@@ -73,6 +80,9 @@ const localHandler=async(req,res)=>{
    if(!answer)throw Error('Unsupported tracking action.');res.end(JSON.stringify(answer));
   }catch(error){respondError(res,error);}return;
  }
+ if(req.url.startsWith('/telegram/'))return telegramHandler(req,res);
+ if(req.url.startsWith('/group-logos/'))return groupLogoHandler(req,res);
+ if(req.url.startsWith('/retail-logos/'))return retailLogoHandler(req,res);
  if(req.url.startsWith('/release-access/'))return releaseAccessHandler(req,res);
  if(req.url.startsWith('/notification-rules/'))return notificationRulesHandler(req,res);
  if(req.url!=='/guest-support')return handler(req,res);
@@ -80,5 +90,5 @@ const localHandler=async(req,res)=>{
  if(req.headers.origin&&req.headers.origin!==origin){res.writeHead(403);res.end();return;}
  try{if(req.method!=='POST')throw Error('Unsupported request.');let chunks=[],size=0;for await(const c of req){size+=c.length;if(size>4194304)throw Error('Request too large.');chunks.push(c)}const body=JSON.parse(Buffer.concat(chunks).toString());res.end(JSON.stringify(await guestSupport(req,body)));}catch(error){respondError(res,error);}
 };
-return {jwt,hash,localAuth,db,server,active,handler:localHandler,startNotificationWorker:()=>notificationRules.start(),stopNotificationWorker:()=>notificationRules.stop(),runNotifications:()=>notificationRules.runOnce()};
+return {jwt,hash,localAuth,db,server,active,handler:localHandler,startNotificationWorker:()=>notificationRules.start(),stopNotificationWorker:()=>notificationRules.stop(),runNotifications:async()=>{let original;try{original=await notificationRules.runOnce()}finally{try{await telegram.run()}catch{console.warn('Telegram worker unavailable; queued deliveries retained.')}}return original}};
 };

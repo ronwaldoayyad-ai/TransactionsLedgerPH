@@ -165,7 +165,7 @@ export default function Users() {
       <Card>
         <CardHeader title="Borrower accounts" subtitle={`${borrowers.length} of ${allBorrowers.length} accounts`} />
         <div className="aw-directory-tools">
-          <label className="aw-directory-search"><Icon name="search" /><input value={query} onChange={event => setFilter('q', event.target.value)} aria-label="Search borrower accounts" placeholder="Search name, email or account number" /></label>
+          <label className="aw-directory-search admin-search-control animated-access-ring"><Icon name="search" /><input value={query} onChange={event => setFilter('q', event.target.value)} aria-label="Search borrower accounts" placeholder="Search name, email or account number" /></label>
           <label><span className="sr-only">Account status</span><select aria-label="Filter account status" value={statusFilter} onChange={event => setFilter('status', event.target.value)}><option value="all">All statuses</option><option value="active">Active</option><option value="invited">Invited</option><option value="disabled">Disabled</option></select></label>
         </div>
         {borrowers.length === 0 && <div className="aw-empty"><Icon name="users" /><h3>{allBorrowers.length ? 'No matching borrowers' : 'Your borrower directory starts here'}</h3><p>{allBorrowers.length ? 'Try another name, account number or status.' : 'Invite a borrower to create their account.'}</p>{allBorrowers.length > 0 && <button className="aw-text-link" onClick={() => setSearchParams({}, { replace: true })}>Clear filters</button>}</div>}

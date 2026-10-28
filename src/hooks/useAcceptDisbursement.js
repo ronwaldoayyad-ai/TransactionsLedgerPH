@@ -1,3 +1,4 @@
+import { debugError } from "../lib/debugLog"
 import { useApp } from '../context/AppContext'
 import { useDisbursements } from '../context/DisbursementsContext'
 import { useNotifications } from '../context/NotificationsContext'
@@ -45,7 +46,7 @@ export function useAcceptDisbursement() {
         attachments: [pdf],
       })
     } catch (e) {
-      console.error('[disbursements] acceptance confirmation failed:', e?.message ?? e)
+      debugError('[disbursements] acceptance confirmation failed:', e?.message ?? e)
     }
 
     return { disbursement: accepted }

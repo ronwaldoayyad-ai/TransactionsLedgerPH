@@ -4,12 +4,17 @@ module.exports=function createApiHandler(getRuntime){return async function handl
  const url=new URL(request.url),route=url.pathname==='/api'?'/'+(url.searchParams.get('__route')||''):url.pathname.slice('/api'.length);
  const json=(status,value)=>Response.json(value,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
  if(url.pathname!=='/api'&&!url.pathname.startsWith('/api/'))return json(404,{error:'Unsupported request.'});
- if(!routes.has(route)&&!/^\/(release-access|notification-rules)\/[a-z-]+$/.test(route)&&!/^\/support-tracking\/(capabilities|request|verify|read|end)$/.test(route)&&!['/pawcheebels/ask','/notification-worker','/health'].includes(route))return json(404,{error:'Unsupported request.'});
+ if(!routes.has(route)&&!/^\/(release-access|notification-rules|telegram)\/[a-z-]+$/.test(route)&&!/^\/(group-logos|retail-logos)\/(preview|save)$/.test(route)&&!/^\/support-tracking\/(capabilities|request|verify|read|end)$/.test(route)&&!['/pawcheebels/ask','/notification-worker','/health'].includes(route))return json(404,{error:'Unsupported request.'});
  if(request.method!=='POST'&&!(route==='/health'&&request.method==='GET'))return json(405,{error:'Unsupported request method.'});
  let runtime;try{runtime=getRuntime()}catch{return json(503,{error:'The service is not configured yet. Please contact support.'});}
  const {service,assistant,origin,deploymentOrigin,workerSecret}=runtime;
  const requestOrigin=request.headers.get('origin');
  if(requestOrigin&&requestOrigin!==origin&&requestOrigin!==deploymentOrigin)return json(403,{error:'This request is not allowed.'});
+ if(route!=='/notification-worker'&&request.method==='POST'&&request.headers.get('content-type')?.split(';')[0].trim().toLowerCase()!=='application/json')return json(415,{error:'Use a JSON request.'});
+ if(route!=='/notification-worker'&&runtime.requestGuard){
+  try{await runtime.requestGuard({route,address:request.headers.get('x-vercel-forwarded-for')?.split(',')[0]||''});}
+  catch(error){if(error.status===429)return Response.json({error:'Too many requests. Please wait and try again.'},{status:429,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Retry-After':String(Math.max(1,Math.min(86400,Number(error.retryAfter)||60)))}});return json(503,{error:'Request protection is temporarily unavailable. Please retry.'});}
+ }
  if(route==='/health'){
   try{await service.db.query('select 1');return json(200,{ready:true})}catch{return json(503,{ready:false})}
  }
@@ -19,7 +24,7 @@ module.exports=function createApiHandler(getRuntime){return async function handl
   try{return json(200,{processed:true,...await service.runNotifications()})}catch{return json(503,{error:'Notification processing failed. Queued events remain available for retry.'});}
  }
  try{
-  const limit=route==='/guest-support'?4194304:65536,chunks=[];let size=0;
+  const limit=route==='/guest-support'?4194304:/^\/(group-logos|retail-logos)\//.test(route)?3145728:65536,chunks=[];let size=0;
   if(request.body)for await(const chunk of request.body){size+=chunk.byteLength;if(size>limit)return json(413,{error:'Request is too large.'});chunks.push(Buffer.from(chunk));}
   const req=Readable.from(chunks);req.url=route;req.method=request.method;req.headers=Object.fromEntries(request.headers);
   // Nested handlers use the canonical origin. Normalize only after matching the

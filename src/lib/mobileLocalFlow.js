@@ -1,5 +1,6 @@
 import { serviceEndpoint } from './serviceEndpoint'
 import { supabase } from '../supabaseClient'
+import { attachmentDataUrlBlob } from './attachmentDataUrl'
 
 const fileKinds = { 'payment-submit':['image/jpeg','image/png','image/webp','application/pdf'], 'support-submit':['image/jpeg','image/png','image/webp','image/gif','image/bmp','image/avif'], 'avatar-upload':['image/jpeg','image/png','image/webp'], 'message-send':['image/jpeg','image/png','image/webp','application/pdf','application/msword','application/vnd.openxmlformats-officedocument.wordprocessingml.document'] }
 export async function validateMobileFile(file, action) {
@@ -22,7 +23,7 @@ export async function executeMobileCall(action,original,user){
  if(payload.file){
   const f=payload.file;delete payload.file
   if(!/^data:(image\/(jpeg|png|webp|gif|bmp|avif)|application\/(pdf|msword|vnd.openxmlformats-officedocument.wordprocessingml.document));base64,/.test(f.data||''))throw Error('Choose a supported attachment.')
-  const blob=await fetch(f.data).then(r=>r.blob());const file=new File([blob],String(f.name||'attachment'),{type:blob.type})
+  const blob=attachmentDataUrlBlob(f.data,action==='avatar-upload'?2*1024*1024:5*1024*1024);const file=new File([blob],String(f.name||'attachment'),{type:blob.type})
   await validateMobileFile(file,action)
   const bucket=action==='payment-submit'?'payment-proofs':action==='avatar-upload'?'avatars':'mobile-attachments'
   const ext=({'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/gif':'gif','image/bmp':'bmp','image/avif':'avif','application/pdf':'pdf','application/msword':'doc','application/vnd.openxmlformats-officedocument.wordprocessingml.document':'docx'})[file.type]

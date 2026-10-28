@@ -12,6 +12,11 @@ test('notification invalidations use the authenticated recipient column, includi
 })
 test('bursts coalesce and idle time causes no recurring reads',async()=>{let calls=0;const f=fixture(async()=>{calls++});f.event();f.event();f.event();await wait();assert.equal(calls,1);await wait();assert.equal(calls,1);f.stop()})
 test('initial join and reconnect reconcile missed events once each',async()=>{let calls=0;const f=fixture(async()=>{calls++});f.status('SUBSCRIBED');await wait();f.status('SUBSCRIBED');await wait();assert.equal(calls,2);f.stop()})
-test('events during a read request one follow-up without concurrent reads',async()=>{let release,calls=0;const held=new Promise(r=>release=r);const f=fixture(async()=>{calls++;if(calls===1)await held});f.event();await wait();f.event();f.event();assert.equal(calls,1);release();await wait();assert.equal(calls,2);f.stop()})
+test('events during a read request one follow-up without concurrent reads',{timeout:5000},async()=>{
+ let release,firstRead,secondRead,calls=0,active=0,maxActive=0;
+ const held=new Promise(r=>release=r),started=new Promise(r=>firstRead=r),followedUp=new Promise(r=>secondRead=r);
+ const f=fixture(async()=>{calls++;active++;maxActive=Math.max(maxActive,active);if(calls===1){firstRead();await held}else secondRead();active--});
+ try{f.event();await started;f.event();f.event();assert.equal(calls,1);release();await followedUp;assert.equal(calls,2);assert.equal(maxActive,1)}finally{release();f.stop()}
+})
 test('unmount cancels queued reads and ignores later channel callbacks',async()=>{let calls=0;const f=fixture(async()=>{calls++});f.event();f.stop();f.event();f.status('SUBSCRIBED');await wait();assert.equal(calls,0);assert.equal(f.removed(),1)})
 test('failed refreshes and channel errors are reported without a retry loop',async()=>{let calls=0;const f=fixture(async()=>{calls++;throw Error('Read failed')});f.status('CHANNEL_ERROR');f.event();await wait();assert.deepEqual(f.errors,['Live updates are reconnecting.','Read failed']);await wait();assert.equal(calls,1);f.stop()})

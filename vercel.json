@@ -3,22 +3,179 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "installCommand": "npm ci",
-  "regions": ["sin1"],
+  "regions": [
+    "sin1"
+  ],
   "redirects": [
-    { "source": "/:path*", "has": [{ "type": "host", "value": "support.ronwaldo.com" }], "destination": "https://loanledgerph.ronwaldo.com/:path*", "permanent": false },
-    { "source": "/:path*", "has": [{ "type": "host", "value": "transactions-ledger-ph.vercel.app" }], "destination": "https://loanledgerph.ronwaldo.com/:path*", "permanent": false },
-    { "source": "/:path*", "has": [{ "type": "host", "value": "www.loanledgerph.ronwaldo.com" }], "destination": "https://loanledgerph.ronwaldo.com/:path*", "permanent": false },
-    { "source": "/:path*", "has": [{ "type": "host", "value": "transactions-ledger-ph-ronwaldoayyad-ais-projects.vercel.app" }], "destination": "https://loanledgerph.ronwaldo.com/:path*", "permanent": false },
-    { "source": "/:path*", "has": [{ "type": "host", "value": "transactions-ledger-ph-git-main-ronwaldoayyad-ais-projects.vercel.app" }], "destination": "https://loanledgerph.ronwaldo.com/:path*", "permanent": false }
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "support.ronwaldo.com"
+        }
+      ],
+      "destination": "https://loanledgerph.ronwaldo.com/:path*",
+      "permanent": false
+    },
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "transactions-ledger-ph.vercel.app"
+        }
+      ],
+      "destination": "https://loanledgerph.ronwaldo.com/:path*",
+      "permanent": false
+    },
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.loanledgerph.ronwaldo.com"
+        }
+      ],
+      "destination": "https://loanledgerph.ronwaldo.com/:path*",
+      "permanent": false
+    },
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "transactions-ledger-ph-ronwaldoayyad-ais-projects.vercel.app"
+        }
+      ],
+      "destination": "https://loanledgerph.ronwaldo.com/:path*",
+      "permanent": false
+    },
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "transactions-ledger-ph-git-main-ronwaldoayyad-ais-projects.vercel.app"
+        }
+      ],
+      "destination": "https://loanledgerph.ronwaldo.com/:path*",
+      "permanent": false
+    }
   ],
   "functions": {
-    "api/index.js": { "maxDuration": 60, "includeFiles": "{server/**,public/notification-rule-core.js,public/faq-knowledge.json,public/locales/filipino-content.json,node_modules/@img/**,node_modules/@napi-rs/image*/**}" }
+    "api/index.js": {
+      "maxDuration": 60,
+      "includeFiles": "{server/**,public/notification-rule-core.js,public/faq-knowledge.json,public/locales/filipino-content.json,node_modules/@img/**,node_modules/@napi-rs/image*/**}"
+    }
   },
   "rewrites": [
-    { "source": "/api/:path*", "destination": "/api?__route=:path*" },
+    {
+      "source": "/.git/:path*",
+      "destination": "/api?__route=blocked-resource"
+    },
+    {
+      "source": "/.release/:path*",
+      "destination": "/api?__route=blocked-resource"
+    },
+    {
+      "source": "/.vercel/:path*",
+      "destination": "/api?__route=blocked-resource"
+    },
+    {
+      "source": "/.npmrc",
+      "destination": "/api?__route=blocked-resource"
+    },
+    {
+      "source": "/.env",
+      "destination": "/api?__route=blocked-resource"
+    },
+    {
+      "source": "/:file(\\.env\\.[^/]+)",
+      "destination": "/api?__route=blocked-resource"
+    },
+    {
+      "source": "/server/:path*",
+      "destination": "/api?__route=blocked-resource"
+    },
+    {
+      "source": "/src/:path*",
+      "destination": "/api?__route=blocked-resource"
+    },
+    {
+      "source": "/release/:path*",
+      "destination": "/api?__route=blocked-resource"
+    },
+    {
+      "source": "/supabase/:path*",
+      "destination": "/api?__route=blocked-resource"
+    },
+    {
+      "source": "/node_modules/:path*",
+      "destination": "/api?__route=blocked-resource"
+    },
+    {
+      "source": "/tools/:path*",
+      "destination": "/api?__route=blocked-resource"
+    },
+    {
+      "source": "/package.json",
+      "destination": "/api?__route=blocked-resource"
+    },
+    {
+      "source": "/package-lock.json",
+      "destination": "/api?__route=blocked-resource"
+    },
+    {
+      "source": "/vite.config.js",
+      "destination": "/api?__route=blocked-resource"
+    },
+    {
+      "source": "/vercel.json",
+      "destination": "/api?__route=blocked-resource"
+    },
+    {
+      "source": "/:path(.*\\.map)",
+      "destination": "/api?__route=blocked-resource"
+    },
+    {
+      "source": "/api/:path*",
+      "destination": "/api?__route=:path*"
+    },
     {
       "source": "/(.*)",
       "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-08+Oqf+meyOvDVYDGuJ7q8YoFqBYT3hdOjkPz9p1m2U='; script-src-attr 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://cdn.brandfetch.io https://upload.wikimedia.org https://ckbpdrucyogsjatnmvvu.supabase.co https://lzprybrxhwktfxqvsbjk.supabase.co; font-src 'self' data: blob:; connect-src 'self' https://api.brandfetch.io https://cdn.brandfetch.io https://ckbpdrucyogsjatnmvvu.supabase.co https://lzprybrxhwktfxqvsbjk.supabase.co wss://ckbpdrucyogsjatnmvvu.supabase.co wss://lzprybrxhwktfxqvsbjk.supabase.co; worker-src 'self' blob:; frame-src 'self' blob:; media-src 'self' blob: data:; form-action 'self'; upgrade-insecure-requests"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(self), microphone=(self), geolocation=(), payment=(), usb=(), web-share=(self)"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=63072000"
+        }
+      ]
     }
   ]
 }

@@ -1,3 +1,5 @@
+import { debugError, debugWarn } from "../lib/debugLog"
+import {transactionGroup,groupOptions} from '../lib/transactionGroups'
 import { prepareManualTransaction, prepareTransactionEdit, persistTransactionEdit, prepareAdminCorrection } from '../lib/transactionEditing'
 import { companionEnabled } from '../lib/serviceEndpoint'
 import { authenticatePassword } from '../lib/loginAccess'
@@ -95,7 +97,7 @@ const buildTransactions = (loanList) =>
 let reportDbError = null
 const logDbError = (op) => ({ error }) => {
   if (error) {
-    console.error(`[supabase] ${op} failed:`, error.message)
+    debugError(`[supabase] ${op} failed:`, error.message)
     reportDbError?.(`${op} failed: ${error.message}`)
   }
 }
@@ -171,7 +173,7 @@ export function AppProvider({ children }) {
             // Audit logging is best-effort: a failure here must never block the
             // user's action (their payment/etc. already saved) nor surface as a
             // scary sync banner — just record it to the console.
-            if (error) console.error('[supabase] audit insert failed:', error.message)
+            if (error) debugError('[supabase] audit insert failed:', error.message)
             else setAuditLog((prev) => [mapAudit(data), ...prev])
           })
         return
@@ -313,7 +315,7 @@ export function AppProvider({ children }) {
               if (s?.signedUrl) urlByPath[paths[i]] = s.signedUrl
             })
           } catch (e) {
-            console.error('[supabase] signed URLs failed:', e?.message ?? e)
+            debugError('[supabase] signed URLs failed:', e?.message ?? e)
           }
         }
         if (generation !== loadGeneration.current) return
@@ -322,7 +324,7 @@ export function AppProvider({ children }) {
 
       if (failures.length > 0) {
         const msg = `Some records could not be refreshed: ${failures.join(', ')}.`
-        console.error('[supabase]', msg)
+        debugError('[supabase]', msg)
         setSyncError(msg)
       } else {
         setSyncError(null)
@@ -330,7 +332,7 @@ export function AppProvider({ children }) {
       }
     } catch (e) {
       const msg = e?.message ?? 'Unexpected error while syncing with the database.'
-      console.error('[supabase] loadLiveData crashed:', msg)
+      debugError('[supabase] loadLiveData crashed:', msg)
       setSyncError(msg)
     }
   }, [])
@@ -599,7 +601,7 @@ export function AppProvider({ children }) {
             .eq('id', me.id)
           if (profileErr) return { error: profileErr.message }
           const { error: authErr } = await supabase.auth.updateUser({ email })
-          if (authErr) console.error('[supabase] auth email update failed:', authErr.message)
+          if (authErr) debugError('[supabase] auth email update failed:', authErr.message)
         }
       }
 
@@ -697,7 +699,7 @@ export function AppProvider({ children }) {
           })
           .then(({ error }) => {
             if (error) {
-              console.error('[supabase] invite failed:', error.message)
+              debugError('[supabase] invite failed:', error.message)
               setUsers((prev) => prev.filter((u) => u.id !== user.id))
             }
           })
@@ -775,7 +777,7 @@ export function AppProvider({ children }) {
           .from('payment-proofs')
           .upload(path, data.file, { contentType: data.file?.type || undefined })
         if (upErr) {
-          console.error('[supabase] proof upload failed:', upErr.message)
+          debugError('[supabase] proof upload failed:', upErr.message)
           reportDbError?.(`proof upload failed (${upErr.message})`)
           return null
         }
@@ -794,7 +796,7 @@ export function AppProvider({ children }) {
           .select()
           .single()
         if (error) {
-          console.error('[supabase] payment insert failed:', error.message)
+          debugError('[supabase] payment insert failed:', error.message)
           reportDbError?.(`payment save failed (${error.message})`)
           // Roll back the orphaned upload so storage doesn't accumulate junk.
           supabase.storage.from('payment-proofs').remove([path])
@@ -869,11 +871,11 @@ export function AppProvider({ children }) {
           const { error: rmErr } = await supabase.storage
             .from('payment-proofs')
             .remove([payment.filePath])
-          if (rmErr) console.error('[supabase] proof file delete failed:', rmErr.message)
+          if (rmErr) debugError('[supabase] proof file delete failed:', rmErr.message)
         }
         const { error } = await supabase.from('payments').delete().eq('id', payment.id)
         if (error) {
-          console.error('[supabase] payment delete failed:', error.message)
+          debugError('[supabase] payment delete failed:', error.message)
           reportDbError?.(`delete proof (${error.message})`)
           return { error: error.message }
         }
@@ -911,7 +913,7 @@ export function AppProvider({ children }) {
           .select()
           .single()
         if (error) {
-          console.error('[supabase] loan insert failed:', error.message)
+          debugError('[supabase] loan insert failed:', error.message)
           return null
         }
         // Persist the EXACT schedule the calculator displayed — never
@@ -924,7 +926,7 @@ export function AppProvider({ children }) {
           .insert(txns.map(toDbTransaction))
           .select()
         if (txnErr) {
-          console.error('[supabase] ledger insert failed:', txnErr.message)
+          debugError('[supabase] ledger insert failed:', txnErr.message)
           await supabase.from('loans').delete().eq('id', newLoan.id) // roll back
           return null
         }
@@ -949,7 +951,7 @@ export function AppProvider({ children }) {
       if (isLive) {
         const { error } = await supabase.from('loans').delete().eq('id', loanId)
         if (error) {
-          console.error('[supabase] unassign failed:', error.message)
+          debugError('[supabase] unassign failed:', error.message)
           return false
         }
       }
@@ -1009,17 +1011,18 @@ export function AppProvider({ children }) {
 
   // Soft delete: selected ledger rows move to the Archives (Reports & Logs).
   const archiveTransactions = useCallback(
-    (ids) => {
+    async (ids) => {
+      if(session?.user?.role!=='admin')return false
       const idSet = new Set(ids)
       if(transactions.some(t=>idSet.has(t.id)&&t.feeAssessmentId)){reportDbError?.('Assessed fees remain in the ledger. Void an unpaid assessment in Loan fees & billing.');return false}
       if(transactions.some(t=>idSet.has(t.id)&&t.paidAmount>0&&['unpaid','past_due'].includes(t.status))){reportDbError?.('An allocated due with an unpaid remainder cannot be archived.');return false}
       const archivedAt = toISODate(new Date())
       if (isLive) {
-        supabase
+        const {error} = await supabase
           .from('transactions')
           .update({ archived_at: archivedAt })
           .in('id', [...idSet])
-          .then(logDbError('archive'))
+        if(error){reportDbError?.('The records could not be archived. No rows were removed from this view. Please retry.');return false}
       }
       const moving = transactions.filter((t) => idSet.has(t.id)).map((t) => ({ ...t, archivedAt }))
       setArchivedTransactions((prev) => [...moving, ...prev])
@@ -1029,8 +1032,9 @@ export function AppProvider({ children }) {
         'TXN_ARCHIVED',
         `${idSet.size} installment${idSet.size === 1 ? '' : 's'} deleted and moved to Archives`,
       )
+      return true
     },
-    [isLive, log, actor, transactions],
+    [isLive, log, actor, transactions, session],
   )
 
   const restoreTransactions = useCallback(
@@ -1098,7 +1102,7 @@ export function AppProvider({ children }) {
         if (dbIds.length > 0) {
           const { error } = await supabase.from('audit_log').delete().in('id', dbIds)
           if (error) {
-            console.error('[supabase] purge audit failed:', error.message)
+            debugError('[supabase] purge audit failed:', error.message)
             return false
           }
         }
@@ -1127,6 +1131,7 @@ export function AppProvider({ children }) {
           description: r.description,
           amount: r.amount,
           type: r.type,
+          transaction_group:r.transactionGroup??null,
           txn_date: r.txnDate,
           due_date: r.dueDate,
           status: r.status,
@@ -1134,7 +1139,7 @@ export function AppProvider({ children }) {
         }))
         const { data, error } = await supabase.from('transactions').insert(dbRows).select()
         if (error) {
-          console.error('[supabase] import failed:', error.message)
+          debugError('[supabase] import failed:', error.message)
           return { error: error.message }
         }
         setTransactions((prev) => [...prev, ...data.map(mapTransaction)])
@@ -1157,12 +1162,14 @@ export function AppProvider({ children }) {
       let txnCount = 0
       if (isLive) {
         for (const g of groups) {
+          if(g.standalone){const result=await supabase.from('transactions').insert(g.rows.map(r=>({...toDbTransaction({...r,loanId:null}),id:r.id}))).select();if(result.error)return {error:result.error.message};setTransactions(prev=>[...prev,...result.data.map(mapTransaction)]);txnCount+=result.data.length;continue}
           const { data: loanRow, error } = await supabase
             .from('loans')
             .insert({
               user_id: g.loan.userId,
               label: g.loan.label,
               txn_type: g.loan.txnType,
+              loan_category:g.loan.loanCategory??null,
               principal: g.loan.principal,
               monthly_rate: g.loan.monthlyRate,
               duration_months: g.loan.durationMonths,
@@ -1185,6 +1192,7 @@ export function AppProvider({ children }) {
             description: r.description,
             amount: r.amount,
             type: r.type,
+          transaction_group:r.transactionGroup??null,
             txn_date: r.txnDate,
             due_date: r.dueDate,
             status: r.status,
@@ -1205,6 +1213,7 @@ export function AppProvider({ children }) {
         }
       } else {
         for (const g of groups) {
+          if(g.standalone){setTransactions(prev=>[...prev,...g.rows]);txnCount+=g.rows.length;continue}
           const id = nextId('ln')
           const loan = { ...g.loan, id, status: 'active', paidMonths: 0 }
           loan.disclosure = buildDisclosure(loan)
@@ -1394,7 +1403,7 @@ export function AppProvider({ children }) {
           .select()
           .single()
         if (error) {
-          console.error('[supabase] payment log insert failed:', error.message)
+          debugError('[supabase] payment log insert failed:', error.message)
           reportDbError?.(`payment log save failed (${error.message}) — a migration may be missing`)
           return null
         }
@@ -1420,7 +1429,7 @@ export function AppProvider({ children }) {
       if (isLive) {
         const { error } = await supabase.from('payment_logs').delete().eq('id', id)
         if (error) {
-          console.error('[supabase] payment log delete failed:', error.message)
+          debugError('[supabase] payment log delete failed:', error.message)
           reportDbError?.(`delete payment log (${error.message})`)
           return false
         }
@@ -1485,7 +1494,7 @@ export function AppProvider({ children }) {
           .select()
           .single()
         if (error) {
-          console.error('[supabase] arbitrage insert failed:', error.message)
+          debugError('[supabase] arbitrage insert failed:', error.message)
           reportDbError?.(`arbitrage save failed (${error.message}) — a migration may be missing`)
           return null
         }
@@ -1507,7 +1516,7 @@ export function AppProvider({ children }) {
       if (isLive) {
         const { error } = await supabase.from('arbitrage_loans').delete().eq('id', id)
         if (error) {
-          console.error('[supabase] arbitrage delete failed:', error.message)
+          debugError('[supabase] arbitrage delete failed:', error.message)
           reportDbError?.(`delete arbitrage (${error.message})`)
           return false
         }
@@ -1533,7 +1542,7 @@ export function AppProvider({ children }) {
           .select()
           .single()
         if (error) {
-          console.error('[supabase] rate insert failed:', error.message)
+          debugError('[supabase] rate insert failed:', error.message)
           reportDbError?.(`add rate failed (${error.message})`)
           return null
         }
@@ -1553,7 +1562,7 @@ export function AppProvider({ children }) {
       if (isLive) {
         const { error } = await supabase.from('interest_rates').delete().eq('id', id)
         if (error) {
-          console.error('[supabase] rate delete failed:', error.message)
+          debugError('[supabase] rate delete failed:', error.message)
           reportDbError?.(`delete rate (${error.message})`)
           return false
         }
@@ -1575,7 +1584,7 @@ export function AppProvider({ children }) {
           .select()
           .single()
         if (error) {
-          console.error('[supabase] tracked loan insert failed:', error.message)
+          debugError('[supabase] tracked loan insert failed:', error.message)
           reportDbError?.(`loan tracker save failed (${error.message}) — a migration may be missing`)
           return null
         }
@@ -1597,7 +1606,7 @@ export function AppProvider({ children }) {
       if (isLive) {
         const { error } = await supabase.from('tracked_loans').delete().eq('id', id)
         if (error) {
-          console.error('[supabase] tracked loan delete failed:', error.message)
+          debugError('[supabase] tracked loan delete failed:', error.message)
           reportDbError?.(`delete tracked loan (${error.message})`)
           return false
         }
@@ -1615,7 +1624,7 @@ export function AppProvider({ children }) {
     const { data, error } = await supabase.from('payment_due_overrides').select('*')
     if(owner!==authenticatedOwner.current||generation!==overrideGeneration.current)return
     if (error) {
-      console.warn('[supabase] payment_due_overrides refresh failed:', error.message)
+      debugWarn('[supabase] payment_due_overrides refresh failed:', error.message)
       return
     }
     setPaymentDueOverrides((data ?? []).map(mapPaymentDueOverride))
@@ -1647,7 +1656,7 @@ export function AppProvider({ children }) {
             { onConflict: 'borrower_id' },
           )
           if (error) {
-            console.error('[supabase] payment due overrides save failed:', error.message)
+            debugError('[supabase] payment due overrides save failed:', error.message)
             reportDbError?.(`payment due overrides save failed (${error.message}) — a migration may be missing`)
             return false
           }
@@ -1658,7 +1667,7 @@ export function AppProvider({ children }) {
             .delete()
             .in('borrower_id', toDelete)
           if (error) {
-            console.error('[supabase] payment due overrides delete failed:', error.message)
+            debugError('[supabase] payment due overrides delete failed:', error.message)
             reportDbError?.(`payment due overrides delete failed (${error.message})`)
             return false
           }
@@ -1698,7 +1707,7 @@ export function AppProvider({ children }) {
     if (isLive) {
       const { error } = await supabase.from('payment_due_overrides').delete().neq('borrower_id', '00000000-0000-0000-0000-000000000000')
       if (error) {
-        console.error('[supabase] payment due overrides clear-all failed:', error.message)
+        debugError('[supabase] payment due overrides clear-all failed:', error.message)
         reportDbError?.(`clear all payment due overrides (${error.message})`)
         return false
       }
@@ -1718,15 +1727,27 @@ export function AppProvider({ children }) {
   useEffect(()=>{
     if(!isLive||!dataReady)return undefined
     const generation=ledgerGeneration
-    const stop=subscribeToInvalidations({client:supabase,name:`ledger-rt-${pdoListenerId}`,table:'ledger_change_signals',ownerId:pdoListenerId,isAdmin:pdoIsAdmin,onChange:refreshLedger,onError:error=>console.warn('[ledger]',error.message),delay:100})
+    const stop=subscribeToInvalidations({client:supabase,name:`ledger-rt-${pdoListenerId}`,table:'ledger_change_signals',ownerId:pdoListenerId,isAdmin:pdoIsAdmin,onChange:refreshLedger,onError:error=>debugWarn('[ledger]',error.message),delay:100})
     return()=>{++generation.current;stop()}
   },[isLive,dataReady,pdoListenerId,pdoIsAdmin,refreshLedger])
   useEffect(() => {
     if (!isLive) return undefined
     const generationRef=overrideGeneration
-    const stop=subscribeToInvalidations({client:supabase,name:`payment-due-overrides-rt-${pdoListenerId}`,table:'payment_due_change_signals',ownerId:pdoListenerId,isAdmin:pdoIsAdmin,onChange:refreshPaymentDueOverrides,onError:error=>console.warn('[payment due]',error.message)})
+    const stop=subscribeToInvalidations({client:supabase,name:`payment-due-overrides-rt-${pdoListenerId}`,table:'payment_due_change_signals',ownerId:pdoListenerId,isAdmin:pdoIsAdmin,onChange:refreshPaymentDueOverrides,onError:error=>debugWarn('[payment due]',error.message)})
     return ()=>{++generationRef.current;stop()}
   }, [isLive, pdoListenerId,pdoIsAdmin, refreshPaymentDueOverrides])
+
+  const changeTransactionGroup=useCallback(async payload=>{
+    try{
+      if(session?.user?.role!=='admin')throw Error('Only the lender can change transaction groups.')
+      const current=transactions.find(t=>t.id===payload.id),loan=loans.find(l=>l.id===current?.loanId)
+      if(!current||current.userId!==payload.expectedUserId||current.type!==payload.expectedType||(current.loanId??null)!==(payload.expectedLoanId??null)||transactionGroup(current,loan)!==payload.expectedGroup)throw Error('The transaction changed. Refresh and review again.')
+      if(!groupOptions(current.type).some(option=>option.value===payload.group)||!payload.reviewed||payload.reason.trim().length<10)throw Error('Choose a matching group, enter a reason and review the change.')
+      if(isLive){const {data,error}=await supabase.rpc('admin_set_transaction_group',{p_payload:payload});if(error)throw Error(error.message);if(!data?.id)throw Error('The saved group could not be confirmed. Keep this form open and retry.');await refreshData()}
+      else{if(current.type==='Installment'&&current.loanId)setLoans(previous=>previous.map(l=>l.id===current.loanId?{...l,loanCategory:payload.group}:l));else setTransactions(previous=>previous.map(t=>t.id===current.id?{...t,transactionGroup:payload.group}:t));log(actor,'TXN_UPDATED','Group changed for '+current.id+': '+payload.group+'. '+payload.reason)}
+      return {error:null}
+    }catch(error){return {error:error.message||'Unable to save this group. Please retry.'}}
+  },[session,transactions,loans,isLive,refreshData,log,actor])
 
   const value = useMemo(
     () => ({
@@ -1742,7 +1763,7 @@ export function AppProvider({ children }) {
       refreshOwnProfile,
       syncError,
       getProofUrl,
-      importLoans,
+      importLoans,changeTransactionGroup,
       updateMyProfile,
       setMyAvatar,
       users,
@@ -1800,7 +1821,7 @@ export function AppProvider({ children }) {
     }),
     [
       session, effectiveSession, isViewingAs, startViewAs, stopViewAs, authLoading,
-      dataReady, refreshing, refreshData, refreshOwnProfile, syncError, getProofUrl, importLoans, updateMyProfile, setMyAvatar,
+      dataReady, refreshing, refreshData, refreshOwnProfile, syncError, getProofUrl, importLoans,changeTransactionGroup, updateMyProfile, setMyAvatar,
       users, loans, payments, paymentLogs,paymentPostings,hiddenPaymentBreakdowns,setPaymentBreakdownVisibility,postCredit,reversePayment, createPaymentLog, updatePaymentLog, deletePaymentLog,
       arbitrageLoans, interestRates, createArbitrageLoan, deleteArbitrageLoan,
       addInterestRate, deleteInterestRate,

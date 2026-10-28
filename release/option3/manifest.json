@@ -1,7 +1,7 @@
 {
   "status": "rehearsal candidate; production approval required",
   "classic_commit": "db08a917120a6455b8d2d0d42ddf981c5b3cbd63",
-  "sha256": "433b3218e4e4f58fadce82cc805039749de48dab29f1c405a88689ab6fde08b0",
+  "sha256": "5c576fec0bfe808a1f068484d6a472ded445f886af63ca93fbb7a805b1a5e61f",
   "transaction_boundaries": [
     {
       "file": "release/option3/foundation.sql",
@@ -137,6 +137,56 @@
       "file": "supabase/migrations/20261021230453_guest_support_tracking.sql",
       "begins": 1,
       "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261023182733_combined_fee_assessment.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261023192521_non_retrying_transaction_conflicts.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261023195500_loan_request_access_realtime.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261024180858_telegram_proof_alerts.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261024204957_telegram_borrower_message_alerts.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261025010004_transaction_groups.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261025190607_retail_brand_logos.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261025210130_retail_brand_lookup_indexes.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261026133642_transaction_group_logos.sql",
+      "begins": 1,
+      "commits": 1
+    },
+    {
+      "file": "supabase/migrations/20261026214552_uploaded_retail_and_proof_activity_logos.sql",
+      "begins": 1,
+      "commits": 1
     }
   ],
   "sources": [
@@ -247,6 +297,46 @@
     {
       "file": "supabase/migrations/20261021230453_guest_support_tracking.sql",
       "sha256": "b720794e4b25114306469b6a408004879cf7689622a299cbebae01da9766e84f"
+    },
+    {
+      "file": "supabase/migrations/20261023182733_combined_fee_assessment.sql",
+      "sha256": "d2ec31c04b980e32eaa0e9d706552602f47e5ebc83207e692e058feab38a6ddb"
+    },
+    {
+      "file": "supabase/migrations/20261023192521_non_retrying_transaction_conflicts.sql",
+      "sha256": "08684611d1ca10cf69d2f4178d2bc36bb57f4fe48d9efada072e6951acf509aa"
+    },
+    {
+      "file": "supabase/migrations/20261023195500_loan_request_access_realtime.sql",
+      "sha256": "c69e1f26283ca3b46244edc6c796d80090d040b5e594c8c646dfcb9da970e717"
+    },
+    {
+      "file": "supabase/migrations/20261024180858_telegram_proof_alerts.sql",
+      "sha256": "b6e65a6bfb72db5a910f60fc22aae77fa6d0e5c73aba41001f4691ad4244db6e"
+    },
+    {
+      "file": "supabase/migrations/20261024204957_telegram_borrower_message_alerts.sql",
+      "sha256": "dda444fa3c8960a91cda2d1f8f5c006965822595f6314c75775e8f267d5eb100"
+    },
+    {
+      "file": "supabase/migrations/20261025010004_transaction_groups.sql",
+      "sha256": "6d1f1963a1b5d50a96748faef04575c546cbf29c1a392a93e5a8c286402b40b5"
+    },
+    {
+      "file": "supabase/migrations/20261025190607_retail_brand_logos.sql",
+      "sha256": "fbcc85c09dc2354a857d563416706828dd999beffe84cd7cdd73fa3c5aa230ca"
+    },
+    {
+      "file": "supabase/migrations/20261025210130_retail_brand_lookup_indexes.sql",
+      "sha256": "8b02cb3e4163906973d341affa481339b5773f8e07c46004037e74a5eefdff86"
+    },
+    {
+      "file": "supabase/migrations/20261026133642_transaction_group_logos.sql",
+      "sha256": "2623296c32ad05c658197a94b96ec20ce987b4c282652e3e352d69a3c6e1e5e9"
+    },
+    {
+      "file": "supabase/migrations/20261026214552_uploaded_retail_and_proof_activity_logos.sql",
+      "sha256": "ca68fd12b4c65483bbe1229514630c1358ff92e45a5b64eb340e0e8745964f5a"
     }
   ],
   "adaptations": [

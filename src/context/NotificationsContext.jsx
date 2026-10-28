@@ -1,3 +1,4 @@
+import { debugWarn, debugError } from "../lib/debugLog"
 import { companionEnabled } from '../lib/serviceEndpoint'
 import { notificationRuleRequest, publishNotificationEvent } from '../lib/notificationRules'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
@@ -168,7 +169,7 @@ export function NotificationsProvider({ children }) {
     if(companionEnabled)query=query.is('archived_at',null)
     const { data, error } = await query.order('created_at', { ascending: false })
     if (error) {
-      console.warn('[notifications] load failed (run the migration?):', error.message)
+      debugWarn('[notifications] load failed (run the migration?):', error.message)
       return
     }
     setLiveNotifications((data ?? []).map(mapNotification))
@@ -180,7 +181,7 @@ export function NotificationsProvider({ children }) {
     // borrower, so a plain select is correctly scoped either way.
     const { data, error } = await supabase.from('notification_reads').select('*')
     if (error) {
-      console.warn('[notifications] reads load failed:', error.message)
+      debugWarn('[notifications] reads load failed:', error.message)
       return
     }
     setLiveReads((data ?? []).map(mapRead))
@@ -208,7 +209,7 @@ export function NotificationsProvider({ children }) {
       onChange:async()=>{
         await Promise.all([fetchAll(),fetchReads()])
         if(companionEnabled)window.dispatchEvent(new CustomEvent('loanledger-notification-rules-changed'))
-      },onError:error=>console.warn('[notifications]',error.message),delay:120})
+      },onError:error=>debugWarn('[notifications]',error.message),delay:120})
   }, [isLive, meId, signalOwnerId, fetchAll, fetchReads])
 
   // ---- Scoped notification list ----
@@ -288,7 +289,7 @@ export function NotificationsProvider({ children }) {
           .from('notification_reads')
           .upsert({ notification_id: id, user_id: meId, read_at: new Date().toISOString() }, { onConflict: 'notification_id,user_id' })
         if (error) {
-          console.error('[notifications] mark-read failed:', error.message)
+          debugError('[notifications] mark-read failed:', error.message)
           return
         }
         await fetchReads()
@@ -312,7 +313,7 @@ export function NotificationsProvider({ children }) {
           .eq('notification_id', id)
           .eq('user_id', meId)
         if (error) {
-          console.error('[notifications] mark-unread failed:', error.message)
+          debugError('[notifications] mark-unread failed:', error.message)
           return
         }
         await fetchReads()
@@ -341,7 +342,7 @@ export function NotificationsProvider({ children }) {
           attachments,
         })
         if (error) {
-          console.error('[notifications] create failed:', error.message)
+          debugError('[notifications] create failed:', error.message)
           return { error: error.message }
         }
         await fetchAll()
@@ -383,7 +384,7 @@ export function NotificationsProvider({ children }) {
           p_body: body,
         })
         if (error) {
-          console.error('[notifications] notify_admins failed:', error.message)
+          debugError('[notifications] notify_admins failed:', error.message)
           return { error: error.message }
         }
         await fetchAll()
@@ -423,7 +424,7 @@ export function NotificationsProvider({ children }) {
           .update({ category, title, body, audience, target_user_ids: ids, attachments })
           .eq('id', id)
         if (error) {
-          console.error('[notifications] update failed:', error.message)
+          debugError('[notifications] update failed:', error.message)
           return { error: error.message }
         }
         await fetchAll()
@@ -444,7 +445,7 @@ export function NotificationsProvider({ children }) {
         if(companionEnabled){await notificationRuleRequest('archive',{id});await Promise.all([fetchAll(),fetchReads()]);return}
         const { error } = await supabase.from('notifications').delete().eq('id', id)
         if (error) {
-          console.error('[notifications] delete failed:', error.message)
+          debugError('[notifications] delete failed:', error.message)
           return
         }
         await Promise.all([fetchAll(), fetchReads()])
@@ -466,7 +467,7 @@ export function NotificationsProvider({ children }) {
       .order('category')
       .order('created_at', { ascending: false })
     if (error) {
-      console.warn('[notifications] templates load failed (run the migration?):', error.message)
+      debugWarn('[notifications] templates load failed (run the migration?):', error.message)
       return
     }
     setLiveTemplates((data ?? []).map(mapTemplate))

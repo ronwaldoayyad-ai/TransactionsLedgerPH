@@ -9,12 +9,14 @@ jobs:
   build-and-regression:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: 24.19.0
+          node-version: 24.22.1
           cache: npm
       - run: npm ci
+      - run: npm run security:scan
+      - run: npm run security:audit
       - run: npm run lint:release
       - run: npm run test:release
       - run: npm run build
@@ -26,7 +28,7 @@ jobs:
           VITE_HOSTED_SERVICES_ENABLED: 'true'
           VITE_RELEASE_ACCESS_ENABLED: 'true'
           VITE_ALLOW_DEMO: 'false'
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: review-build-${{ github.sha }}
           path: dist
@@ -47,15 +49,17 @@ jobs:
           --health-timeout 5s
           --health-retries 30
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
-          node-version: 24.19.0
+          node-version: 24.22.1
           cache: npm
       - run: npm ci
       - run: node release/option3/generate-forward.cjs
       - run: git diff --exit-code -- release/option3/forward-candidate.sql release/option3/manifest.json
-      - run: node --test --test-concurrency=1 tests/integration/migration-rollback.test.cjs tests/integration/payment-posting.test.cjs tests/integration/support-tracking.test.cjs
+      - run: node --test --test-concurrency=1 tests/integration/migration-rollback.test.cjs tests/integration/payment-posting.test.cjs tests/integration/support-tracking.test.cjs tests/integration/combinedFeeMigration.test.cjs tests/integration/transactionGroupMigration.test.cjs tests/integration/retailBrands.test.cjs tests/integration/groupLogos.test.cjs tests/integration/retailLogoUploads.test.cjs tests/integration/request-security.test.cjs
         env:
           PAYMENT_TEST_PORT: '25432'
+          RUN_FEE_SQL_TESTS: '1'
+          FEE_LOCAL_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:25432/postgres
 # No production deploy job. Hosted acceptance and a reviewed migration are gates.

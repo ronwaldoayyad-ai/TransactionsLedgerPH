@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
+import RetailBrandLogo from '../../components/RetailBrandLogo'
+import LoanFeeInfo from '../../components/LoanFeeInfo'
+import {defaultInstallmentGroup} from '../../lib/transactionGroups'
 import { PageHeader } from '../../components/AppShell'
 import BorrowerScheduleTable from '../../components/BorrowerScheduleTable'
 import RefreshButton from '../../components/RefreshButton'
@@ -112,7 +115,7 @@ export default function LoanDetail() {
         ← Back to dashboard
       </Link>
       <PageHeader
-        title={loan.label}
+        title={<span className="flex items-center gap-2"><RetailBrandLogo compact transaction={transactions.find(t=>t.loanId===loan.id)} loan={loan}/>{loan.label}</span>}
         subtitle={
           canEdit
             ? `Loan ${loan.id} · editing as ${session.user.name} — changes sync to the borrower`
@@ -179,7 +182,7 @@ export default function LoanDetail() {
             {canEdit
               ? editFields.map((f) => (
                   <div key={f.label} className="flex items-center justify-between gap-3 px-5 py-2.5">
-                    <dt className="text-sm text-slate-600">{f.label}</dt>
+                    <dt className="flex items-center text-sm text-slate-600">{f.label}<LoanFeeInfo label={f.label} group={defaultInstallmentGroup(loan)}/></dt>
                     <dd>
                       <EditField type={f.type} step={f.step} value={f.value} onCommit={f.commit} />
                     </dd>
@@ -187,7 +190,7 @@ export default function LoanDetail() {
                 ))
               : facts.map(([label, value]) => (
                   <div key={label} className="flex items-center justify-between px-5 py-3">
-                    <dt className="text-sm text-slate-600">{label}</dt>
+                    <dt className="flex items-center text-sm text-slate-600">{label}<LoanFeeInfo label={label} group={defaultInstallmentGroup(loan)}/></dt>
                     <dd className="font-mono text-sm font-medium text-slate-900">{value}</dd>
                   </div>
                 ))}

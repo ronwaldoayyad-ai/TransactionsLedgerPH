@@ -1,3 +1,4 @@
+import { debugError } from "../../lib/debugLog"
 import { useMemo, useState } from 'react'
 import { useApp } from '../../context/AppContext'
 import { useInvoices } from '../../context/InvoicesContext'
@@ -5,7 +6,7 @@ import { useNotifications } from '../../context/NotificationsContext'
 import { PageHeader } from '../../components/AppShell'
 import Icon from '../../components/Icon'
 import RefreshButton from '../../components/RefreshButton'
-import { Badge, Button, Card, CardHeader, EmptyState, Field, Modal, MultiSelect, inputClass } from '../../components/ui'
+import {SearchInput,  Badge, Button, Card, CardHeader, EmptyState, Field, Modal, MultiSelect, inputClass } from '../../components/ui'
 import { formatDate, formatPeso, parseISODate, toISODate } from '../../lib/amortization'
 import {
   borrowerDueDates,
@@ -158,7 +159,7 @@ export default function Invoices() {
         attachments: [invoicePdfAttachment(toPdf(inv))],
       })
     } catch (e) {
-      console.error('[invoices] statement-ready notification failed:', e?.message ?? e)
+      debugError('[invoices] statement-ready notification failed:', e?.message ?? e)
     }
     setBusy(false)
     setPreview((p) => (p && p.id === inv.id ? { ...p, status: 'assigned' } : p))
@@ -271,7 +272,7 @@ export default function Invoices() {
           />
           {invoices.length > 0 && (
             <div className="flex flex-wrap items-center gap-2 px-5 pt-4">
-              <input
+              <SearchInput
                 type="search"
                 value={listQuery}
                 onChange={(e) => setListQuery(e.target.value)}

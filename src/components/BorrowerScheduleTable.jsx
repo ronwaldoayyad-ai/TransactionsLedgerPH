@@ -3,6 +3,8 @@ import { BORROWER_STATUS_LABELS, STATUS_LABELS, borrowerStatus } from '../lib/tr
 import { Badge, inputClass } from './ui'
 import Pagination from './Pagination'
 import { usePagination } from '../hooks/usePagination'
+import RetailBrandLogo from './RetailBrandLogo'
+import {useApp} from '../context/AppContext'
 
 // Uncontrolled input that commits to the parent only on blur (so each
 // keystroke doesn't fire a persist+audit write). `key={value}` remounts it
@@ -35,6 +37,7 @@ export default function BorrowerScheduleTable({
   pageSize = 0, // 0 = show all; >0 paginates rows while the footer keeps full totals
 }) {
   const today = toISODate(new Date())
+  const {loans}=useApp()
   const total = transactions.reduce((s, t) => s + (t.originalAmount ?? t.amount), 0)
   const colCount = 2 + (showTxnDate ? 1 : 0) + 2 // # + desc + [txn] + due + paid, before amount
   const paginate = pageSize > 0
@@ -142,7 +145,7 @@ export default function BorrowerScheduleTable({
           <div key={t.id} data-fee-kind={t.feeKind||undefined} className={`flex items-center gap-3 border-b border-slate-100 px-3 py-3 ${tint}`}>
             <span className="w-6 shrink-0 font-mono text-xs text-slate-400">{t.n}</span>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[13px] font-medium text-slate-800">{t.description}</p>
+              <div className="flex items-center gap-2"><RetailBrandLogo compact transaction={t} loan={loans.find(l=>l.id===t.loanId)}/><p className="truncate text-[13px] font-medium text-slate-800">{t.description}</p></div>
               {t.paidAmount>0&&t.remainingAmount>0&&<p className="mt-1 text-xs text-blue-700">Applied {formatPeso(t.paidAmount)} · Remaining {formatPeso(t.remainingAmount)}</p>}
               <p className="mt-0.5 text-[11px] leading-snug text-slate-500">
                 {showTxnDate ? `Txn ${formatDate(t.txnDate)} · ` : ''}Due {formatDate(t.dueDate)}
@@ -198,7 +201,7 @@ export default function BorrowerScheduleTable({
                   {editable ? (
                     <EditCell value={t.description} onCommit={(v) => onUpdate(t.id, { description: v })} />
                   ) : (
-                    t.description
+                    <div className="flex items-center gap-2"><RetailBrandLogo compact transaction={t} loan={loans.find(l=>l.id===t.loanId)}/><span>{t.description}</span></div>
                   )}
                   {t.paidAmount>0&&t.remainingAmount>0&&<small className="mt-1 block text-blue-700">Applied {formatPeso(t.paidAmount)} · Remaining {formatPeso(t.remainingAmount)}</small>}
                 </td>

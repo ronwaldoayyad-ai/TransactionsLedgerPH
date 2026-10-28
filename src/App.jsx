@@ -1,6 +1,7 @@
 import { lazy, Suspense, useState } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AppProvider, useApp } from './context/AppContext'
+import {RetailBrandsProvider} from './context/RetailBrandsContext'
 import { MessagesProvider } from './context/MessagesContext'
 import { AnnouncementsProvider } from './context/AnnouncementsContext'
 import { LoanRequestsProvider } from './context/LoanRequestsContext'
@@ -56,6 +57,7 @@ const Invoices = lazy(() => import('./pages/admin/Invoices'))
 const Disbursements = lazy(() => import('./pages/admin/Disbursements'))
 const AdminNotifications = lazy(() => import('./pages/admin/Notifications'))
 const AdminSettings = lazy(() => import('./pages/admin/Settings'))
+const Documentation = lazy(() => import('./pages/admin/Documentation'))
 
 function AdminLanding() {
   const { classicAdmin } = useReleaseAccess()
@@ -112,6 +114,7 @@ export default function App() {
       <InvoicesProvider>
       <DisbursementsProvider>
       <NotificationsProvider>
+      <RetailBrandsProvider>
       <BrowserRouter>
         <ReleaseAccessProvider>
         <VersionedBorrower>
@@ -121,6 +124,7 @@ export default function App() {
           <Route path="/set-password" element={<SetPassword />} />
           {/* Public — linked from the mobile app's store listings. */}
           <Route path="/privacy" element={<PrivacyPolicy />} />
+          <Route path="/terms" element={<PrivacyPolicy kind="terms" />} />
 
           <Route path="/portal" element={<Protected role="user"><UserDashboard /></Protected>} />
           <Route path="/portal/more" element={<Protected role="user"><UserDashboard /></Protected>} />
@@ -139,6 +143,7 @@ export default function App() {
           <Route path="/admin" element={<Protected role="admin"><AdminLanding /></Protected>} />
           <Route path="/admin/classic" element={<Protected role="admin"><PortfolioDetail /></Protected>} />
           <Route path="/admin/settings" element={<Protected role="admin"><AdminSettings /></Protected>} />
+          <Route path="/admin/documentation" element={<Protected role="admin"><Documentation /></Protected>} />
           <Route path="/admin/portfolio" element={<Protected role="admin"><PortfolioDetail /></Protected>} />
           <Route path="/admin/support" element={<Protected role="admin"><AdminSupport /></Protected>} />
           <Route path="/admin/transactions" element={<Protected role="admin"><Transactions /></Protected>} />
@@ -166,6 +171,7 @@ export default function App() {
         <ProcessingFeedback />
         </ReleaseAccessProvider>
       </BrowserRouter>
+      </RetailBrandsProvider>
       </NotificationsProvider>
       </DisbursementsProvider>
       </InvoicesProvider>

@@ -5,6 +5,8 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
 const require=createRequire(import.meta.url)
+const documentationInventory={name:'documentation-inventory',resolveId(id){if(id==='virtual:documentation-inventory')return '\0'+id},load(id){if(id==='\0virtual:documentation-inventory')return 'export default '+JSON.stringify(require('./tools/documentation-inventory.cjs').inventory(process.cwd()))}}
+const borrowerEffects={name:'borrower-effects-dev',configureServer(server){server.middlewares.use((req,_res,next)=>{if(req.url?.split('?')[0]==='/borrower-effects.js')req.url='/src/borrower/payment-metal.js';next()})}}
 const clientBuildConfig={name:'validate-client-build',configResolved(config){
   if(config.command==='build')require('./tools/validate-client-build.cjs')({...loadEnv(config.mode,config.envDir,'VITE_'),...process.env})
 }}
@@ -19,7 +21,7 @@ const localCompanion={name:'local-staging-flows',configureServer(server){
   server.middlewares.use('/local-flow',(req,res)=>{if(req.headers.host!==new URL(localOrigin).host){res.writeHead(403);res.end();return;}if(req.url.startsWith('/pawcheebels/'))return assistant(req,res);handler(req,res)})
 }}
 export default defineConfig({
-  plugins: [clientBuildConfig,react(), tailwindcss(),localCompanion],
+  plugins: [clientBuildConfig,react(), tailwindcss(),localCompanion,borrowerEffects,documentationInventory],
   resolve: {alias: {'@':resolve(process.cwd(),'src')}},
   server: {
     // The borrower-facing server must not restart an active screen as assets
@@ -31,12 +33,14 @@ export default defineConfig({
     } : {},
   },
   build: {
+    sourcemap: false,
     // Split heavy third-party libs into their own long-lived chunks so a code
     // change in app source doesn't bust their browser cache, and so the big,
     // rarely-changing dependencies download in parallel with the app shell.
     rollupOptions: {
-      input: {app:resolve(process.cwd(),'index.html'),loginIllustration:resolve(process.cwd(),'login-illustration.html')},
+      input: {app:resolve(process.cwd(),'index.html'),loginIllustration:resolve(process.cwd(),'login-illustration.html'),borrowerEffects:resolve(process.cwd(),'src/borrower/payment-metal.js')},
       output: {
+        entryFileNames:chunk=>chunk.name==='borrowerEffects'?'borrower-effects.js':'assets/[name]-[hash].js',
         manualChunks(id) {
           if (!id.includes('node_modules')) return
           // PDF stack (jspdf + autotable + its html2canvas/dompurify deps) is

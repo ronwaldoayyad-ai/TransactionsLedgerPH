@@ -2398,4 +2398,655 @@ alter table mobile_private.support_tracking_sessions enable row level security;
 revoke all on mobile_private.support_verification_challenges,mobile_private.support_tracking_sessions from public,anon,authenticated;
 
 
+-- 20261023182733_combined_fee_assessment.sql
+-- Additive combined assessments. Existing assessments and the single-date API remain intact.
+-- Production rollback is forward-only: disable the new UI/RPC grants; retain posted history.
+
+set local lock_timeout='5s';
+alter table public.fee_assessments
+ add column assessment_mode text not null default 'single_date',
+ add column source_due_dates date[],
+ add column prior_assessment_count integer,
+ add column repeat_confirmed boolean not null default false,
+ add column repeat_review_token text;
+alter table public.fee_assessments add constraint combined_fee_metadata check(
+ assessment_mode in ('single_date','combined') and
+ (assessment_mode<>'combined' or (
+  source_due_dates is not null and cardinality(source_due_dates) between 1 and 1000
+  and array_position(source_due_dates,null) is null
+  and source_due_date>=all(source_due_dates)
+  and prior_assessment_count is not null and prior_assessment_count>=0
+  and repeat_review_token is not null
+  and (prior_assessment_count=0 or repeat_confirmed)
+ ))
+);
+-- Preserve the monthly restriction for callers of the original single-date workflow.
+drop index public.fee_assessment_monthly_once;
+create unique index fee_assessment_monthly_once
+ on public.fee_assessments(user_id,source_due_date,assessment_month)
+ where voided_at is null and assessment_mode='single_date';
+
+create function mobile_private.fee_signed_amount(value text) returns numeric
+language plpgsql immutable security invoker set search_path='' as $$
+begin
+ if value is null or value!~'^-?[0-9]{1,10}([.][0-9]{1,2})?$' or abs(value::numeric)>9999999999.99 then
+  raise exception 'Use a valid ledger amount with at most two decimal centavo places.';
+ end if;
+ return value::numeric;
+end $$;
+revoke all on function mobile_private.fee_signed_amount(text) from public,anon,authenticated;
+
+create function mobile_private.combined_fee_context(borrower uuid) returns jsonb
+language plpgsql security definer set search_path='' as $$
+declare actor uuid:=mobile_private.active_user();cycle date:=date_trunc('month',clock_timestamp() at time zone 'Asia/Manila')::date;result jsonb;
+begin
+ if not public.is_admin() then raise exception 'Only an active lender can review fee assessments.' using errcode='42501';end if;
+ if not exists(select 1 from public.profiles where id=borrower and role='user' and status='active') then raise exception 'Choose an active borrower account.';end if;
+ select jsonb_build_object('assessmentMonth',cycle,'count',count(*),'total',coalesce(sum(total_amount),0),
+  'reviewToken',md5(coalesce(string_agg(id::text,',' order by id::text),'')))
+ into result from public.fee_assessments where user_id=borrower and assessment_month=cycle and voided_at is null;
+ return result||jsonb_build_object('assessments',coalesce((
+  select jsonb_agg(to_jsonb(h)) from (
+   select id,source_due_date,charge_due_date,total_amount,created_at,assessment_mode
+   from public.fee_assessments where user_id=borrower and assessment_month=cycle and voided_at is null
+   order by created_at desc,id limit 5
+  ) h
+ ),'[]'::jsonb));
+end $$;
+revoke all on function mobile_private.combined_fee_context(uuid) from public,anon,authenticated;
+grant execute on function mobile_private.combined_fee_context(uuid) to authenticated;
+
+create function mobile_private.assess_combined_fees(p_payload jsonb) returns jsonb
+language plpgsql security definer set search_path='' as $$
+declare
+ actor uuid:=mobile_private.active_user();op uuid:=(p_payload->>'key')::uuid;prior mobile_private.operation_keys;
+ borrower uuid:=(p_payload->>'borrowerId')::uuid;as_of date;charge_date date;dates date[];
+ today date:=(clock_timestamp() at time zone 'Asia/Manila')::date;cycle date;context jsonb;
+ rate numeric:=0;late numeric:=0;finance numeric:=0;base numeric:=0;balance numeric;
+ finance_on boolean;late_on boolean;items jsonb:=p_payload->'selections';item jsonb;ids text[];
+ due public.transactions;snapshots jsonb:='[]';assessment uuid:=gen_random_uuid();result jsonb;entry text;date_label text;rate_label text;
+begin
+ if not public.is_admin() then raise exception 'Only an active lender can assess fees.' using errcode='42501';end if;
+ if op is null or p_payload->'reviewed' is distinct from 'true'::jsonb then raise exception 'Review and confirm the combined charges before posting.';end if;
+ perform pg_advisory_xact_lock(hashtextextended(actor::text||op::text,0));
+ select * into prior from mobile_private.operation_keys where actor_id=actor and key=op;
+ if found then
+  if prior.action<>'fee-assess-combined' or prior.payload_hash<>md5(p_payload::text) then raise exception 'Retry details changed.';end if;
+  return prior.result;
+ end if;
+ if coalesce(p_payload->>'asOfDate','')!~'^[0-9]{4}-[0-9]{2}-[0-9]{2}$'
+  or coalesce(p_payload->>'chargeDueDate','')!~'^[0-9]{4}-[0-9]{2}-[0-9]{2}$' then raise exception 'Choose valid As of and new charge due dates.';end if;
+ as_of:=(p_payload->>'asOfDate')::date;charge_date:=(p_payload->>'chargeDueDate')::date;
+ if charge_date<as_of then raise exception 'The new charge due date cannot be before the As of date.';end if;
+ cycle:=date_trunc('month',today)::date;
+ if p_payload->>'assessmentMonth' is distinct from to_char(cycle,'YYYY-MM-DD') then raise exception 'The assessment month changed. Refresh and review again.';end if;
+ if jsonb_typeof(p_payload->'sourceDueDates') is distinct from 'array'
+  or jsonb_array_length(p_payload->'sourceDueDates') not between 1 and 1000 then raise exception 'Select between 1 and 1000 original due dates.';end if;
+ for item in select value from jsonb_array_elements(p_payload->'sourceDueDates') loop
+  if jsonb_typeof(item) is distinct from 'string' or (item#>>'{}')!~'^[0-9]{4}-[0-9]{2}-[0-9]{2}$' then raise exception 'Select valid original due dates.';end if;
+ end loop;
+ select array_agg((value#>>'{}')::date order by value#>>'{}') into dates from jsonb_array_elements(p_payload->'sourceDueDates');
+ if cardinality(dates)<>(select count(distinct x) from unnest(dates) x) or exists(select 1 from unnest(dates) d where d>as_of) then raise exception 'Original due dates must be unique and on or before the As of date.';end if;
+ if p_payload->'financeEnabled' not in ('true'::jsonb,'false'::jsonb) or p_payload->'financeEnabled' is null
+  or p_payload->'lateEnabled' not in ('true'::jsonb,'false'::jsonb) or p_payload->'lateEnabled' is null then raise exception 'Choose which fee components to apply.';end if;
+ finance_on:=(p_payload->>'financeEnabled')::boolean;late_on:=(p_payload->>'lateEnabled')::boolean;
+ if finance_on then
+  if coalesce(p_payload->>'rate','')!~'^[0-9]{1,3}([.][0-9]{1,2})?$' then raise exception 'Enter a finance charge rate from 0 to 100 percent.';end if;
+  rate:=(p_payload->>'rate')::numeric;if rate>100 then raise exception 'Finance charge rate must not exceed 100 percent.';end if;
+ end if;
+ if late_on then late:=mobile_private.fee_signed_amount(p_payload->>'lateAmount');if late<0 then raise exception 'Late fee cannot be negative.';end if;end if;
+ if jsonb_typeof(items) is distinct from 'array' or jsonb_array_length(items) not between 1 and 1000 then raise exception 'Choose between 1 and 1000 available ledger entries.';end if;
+ perform 1 from public.profiles where id=borrower and role='user' and status='active' for update;
+ if not found then raise exception 'Choose an active borrower account.';end if;
+ context:=mobile_private.combined_fee_context(borrower);
+ if p_payload->>'priorReviewToken' is distinct from context->>'reviewToken' then
+  raise exception 'Fee assessment history changed. Reload the assessment review and confirm again.' using errcode='PT409';
+ end if;
+ if (context->>'count')::integer>0 and p_payload->'repeatConfirmed' is distinct from 'true'::jsonb then raise exception 'Explicitly confirm another assessment for this borrower this month.';end if;
+ select array_agg(value->>'id' order by value->>'id') into ids from jsonb_array_elements(items);
+ if exists(select 1 from unnest(ids) x where x is null or length(x) not between 1 and 200)
+  or cardinality(ids)<>(select count(distinct x) from unnest(ids) x) then raise exception 'Duplicate or unavailable selected entry.';end if;
+ perform 1 from public.transactions where id=any(ids) order by id for update;
+ for item in select value from jsonb_array_elements(items) order by value->>'id' loop
+  select * into due from public.transactions where id=item->>'id';
+  if not found or due.user_id<>borrower or not due.due_date=any(dates) or due.due_date>as_of
+   or due.archived_at is not null or due.status not in ('unpaid','past_due') or due.amount=0 then
+   raise exception 'A selected ledger entry is unavailable. Refresh and review again.';
+  end if;
+  if due.amount<0 and due.amount_applied<>0 then raise exception 'A negative adjustment has an applied payment. Review the record first.';end if;
+  balance:=due.amount-due.amount_applied;
+  if balance=0 or balance<>mobile_private.fee_signed_amount(item->>'expectedBalance')
+   or due.amount<>mobile_private.fee_signed_amount(item->>'expectedAmount')
+   or due.amount_applied<>mobile_private.fee_signed_amount(item->>'expectedAppliedAmount')
+   or due.due_date::text is distinct from item->>'expectedDueDate'
+   or due.description is distinct from item->>'expectedDescription'
+   or due.status::text is distinct from item->>'expectedStatus' then
+   raise exception 'A selected balance or record changed. Refresh and review again.' using errcode='PT409';
+  end if;
+  base:=base+balance;
+  snapshots:=snapshots||jsonb_build_array(jsonb_build_object('id',due.id,'description',due.description,'dueDate',due.due_date,'originalAmount',due.amount,'paidAmount',due.amount_applied,'remainingAmount',balance,'feeKind',due.fee_kind));
+ end loop;
+ if base<=0 or base>9999999999.99 then raise exception 'The selected net balance must be positive and within the supported limit.';end if;
+ finance:=case when finance_on then round(base*rate/100,2) else 0 end;
+ if finance+late<=0 or finance+late>9999999999.99 then raise exception 'Choose positive charges within the supported amount limit.';end if;
+ insert into public.fee_assessments(id,user_id,actor_id,operation_key,source_due_date,assessment_month,charge_due_date,finance_enabled,finance_rate,late_enabled,base_amount,finance_amount,late_amount,total_amount,source_rows,assessment_mode,source_due_dates,prior_assessment_count,repeat_confirmed,repeat_review_token)
+ values(assessment,borrower,actor,op,as_of,cycle,charge_date,finance_on,rate,late_on,base,finance,late,finance+late,snapshots,'combined',dates,(context->>'count')::integer,coalesce(p_payload->'repeatConfirmed'='true'::jsonb,false),context->>'reviewToken');
+ date_label:=to_char(as_of,'Mon FMDD, YYYY');rate_label:=trim(trailing '.' from trim(trailing '0' from to_char(rate,'FM990.00')));
+ if finance>0 then
+  entry:='fee-'||assessment::text||'-finance';
+  insert into public.transactions(id,user_id,n,description,amount,type,txn_date,due_date,fee_assessment_id,fee_kind)
+  values(entry,borrower,1,rate_label||'% Finance Charge as of '||date_label||' (₱'||to_char(base,'FM999,999,999,990.00')||')',finance,'Straight',today,charge_date,assessment,'finance_charge');
+ end if;
+ if late>0 then
+  entry:='fee-'||assessment::text||'-late';
+  insert into public.transactions(id,user_id,n,description,amount,type,txn_date,due_date,fee_assessment_id,fee_kind)
+  values(entry,borrower,2,'Late Payment Fee as of '||date_label,late,'Straight',today,charge_date,assessment,'late_fee');
+ end if;
+ result:=jsonb_build_object('saved',true,'id',assessment,'base',base,'finance',finance,'late',late,'total',finance+late,'month',cycle,'dueDate',charge_date,'asOfDate',as_of,'sourceDueDates',dates);
+ insert into mobile_private.operation_keys(actor_id,key,action,payload_hash,result) values(actor,op,'fee-assess-combined',md5(p_payload::text),result);
+ return result;
+end $$;
+revoke all on function mobile_private.assess_combined_fees(jsonb) from public,anon,authenticated;
+grant execute on function mobile_private.assess_combined_fees(jsonb) to authenticated;
+
+create function public.combined_fee_context(p_borrower_id uuid) returns jsonb
+language sql security invoker set search_path='' as $$select mobile_private.combined_fee_context(p_borrower_id)$$;
+create function public.assess_combined_fees(p_payload jsonb) returns jsonb
+language sql security invoker set search_path='' as $$select mobile_private.assess_combined_fees(p_payload)$$;
+revoke all on function public.combined_fee_context(uuid),public.assess_combined_fees(jsonb) from public,anon,authenticated;
+grant execute on function public.combined_fee_context(uuid),public.assess_combined_fees(jsonb) to authenticated;
+notify pgrst,'reload schema';
+
+
+-- 20261023192521_non_retrying_transaction_conflicts.sql
+-- Stop domain-conflict errors from entering PostgREST 14 serialization retries.
+-- No financial calculation or stored record changes.
+-- Retain this correction on rollback; do not reintroduce custom SQLSTATE 40001.
+
+set local lock_timeout='5s';
+do $$
+declare definition text;changed text;expected text:='b08993e4da31be7ee7e51e199c83a6a0a5abdedfeb80a876ead63e85bcb7ee39';
+begin
+ definition:=pg_get_functiondef('public.admin_correct_transaction(jsonb)'::regprocedure);
+ if encode(sha256(convert_to(definition,'UTF8')),'hex')<>expected then
+  raise exception 'Transaction correction function differs from the reviewed version. Review its definition before applying this fix.';
+ end if;
+ changed:=replace(definition,'using errcode=''40001''','using errcode=''PT409''');
+ if changed=definition then raise exception 'Reviewed stale guard was not found.';end if;
+ execute changed;
+end $$;
+notify pgrst,'reload schema';
+
+
+-- 20261023195500_loan_request_access_realtime.sql
+
+set local lock_timeout='5s';
+-- Access flags only; existing RLS continues to scope borrowers to their own row.
+do $$
+begin
+ if not exists(select 1 from pg_publication_tables where pubname='supabase_realtime' and schemaname='public' and tablename='loan_request_access') then
+  alter publication supabase_realtime add table public.loan_request_access;
+ end if;
+end
+$$;
+
+
+-- 20261024180858_telegram_proof_alerts.sql
+
+set local lock_timeout='5s';
+create table mobile_private.telegram_settings(
+ singleton boolean primary key default true check(singleton),
+ version integer not null default 1,
+ enabled boolean not null default false,
+ chat_id text check(chat_id ~ '^[1-9][0-9]{0,19}$'),
+ chat_label text,
+ last_worker_error text,
+ bot_id text,
+ connected_by uuid references public.profiles(id) on delete set null,
+ updated_at timestamptz not null default now(),
+ check(not enabled or (chat_id is not null and bot_id is not null))
+);
+insert into mobile_private.telegram_settings(singleton) values(true);
+create table mobile_private.telegram_connections(
+ actor_id uuid primary key references public.profiles(id) on delete cascade,
+ nonce_hash text not null,
+ bot_id text not null,
+ expires_at timestamptz not null
+);
+create table mobile_private.telegram_deliveries(
+ id uuid primary key default gen_random_uuid(),
+ payment_id uuid unique,
+ kind text not null default 'proof' check(kind in ('proof','test')),
+ destination text not null check(destination ~ '^[1-9][0-9]{0,19}$'),
+ bot_id text not null,
+ settings_version integer not null,
+ payload jsonb not null,
+ status text not null default 'queued' check(status in ('queued','sending','retry','delivered','failed','uncertain','cancelled')),
+ attempts integer not null default 0,
+ next_at timestamptz not null default now(),
+ sending_at timestamptz,
+ delivered_at timestamptz,
+ message_id text,
+ last_error text,
+ created_at timestamptz not null default now()
+);
+create index telegram_ready on mobile_private.telegram_deliveries(next_at,created_at) where status in ('queued','retry');
+create table mobile_private.telegram_audit(
+ id uuid primary key default gen_random_uuid(),
+ actor_id uuid references public.profiles(id) on delete set null,
+ operation text not null,
+ detail jsonb not null default '{}',
+ created_at timestamptz not null default now()
+);
+alter table mobile_private.telegram_settings enable row level security;
+alter table mobile_private.telegram_connections enable row level security;
+alter table mobile_private.telegram_deliveries enable row level security;
+alter table mobile_private.telegram_audit enable row level security;
+revoke all on mobile_private.telegram_settings,mobile_private.telegram_connections,mobile_private.telegram_deliveries,mobile_private.telegram_audit from public,anon,authenticated;
+-- Queue a snapshot only for future successfully inserted proofs. No backfill and no HTTP in the payment transaction.
+create function mobile_private.queue_telegram_proof() returns trigger
+language plpgsql security definer set search_path='' as $$
+declare s mobile_private.telegram_settings; borrower_name text;
+begin
+ if new.status::text<>'pending' or coalesce(new.file_path,'')='' then return new;end if;
+ select * into s from mobile_private.telegram_settings where singleton and enabled;
+ if not found then return new;end if;
+ select name into borrower_name from public.profiles where id=new.user_id and role::text='user';
+ if not found then return new;end if;
+ insert into mobile_private.telegram_deliveries(payment_id,destination,bot_id,settings_version,payload)
+ values(new.id,s.chat_id,s.bot_id,s.version,jsonb_build_object('borrower',borrower_name,'amount',new.amount,'reference',coalesce(nullif(new.receipt_number,''),new.id::text),'submittedAt',coalesce(new.submitted_at_exact,clock_timestamp())))
+ on conflict(payment_id) do nothing;
+ return new;
+end $$;
+revoke all on function mobile_private.queue_telegram_proof() from public,anon,authenticated;
+create trigger telegram_new_proof after insert on public.payments for each row execute function mobile_private.queue_telegram_proof();
+-- Existing notification event wake-ups and the canonical one-minute worker also process this independent queue.
+
+
+-- 20261024204957_telegram_borrower_message_alerts.sql
+
+set local lock_timeout='5s';
+alter table mobile_private.telegram_settings add column message_enabled boolean not null default false;
+alter table mobile_private.telegram_settings add column connection_version integer not null default 1;
+alter table mobile_private.telegram_settings add constraint telegram_message_destination check(not message_enabled or (chat_id is not null and bot_id is not null));
+alter table mobile_private.telegram_deliveries add column source_message_id uuid unique;
+alter table mobile_private.telegram_deliveries add column connection_version integer not null default 1;
+-- Preserve the old retry boundary when upgrading delivery history.
+update mobile_private.telegram_deliveries d set connection_version=0
+from mobile_private.telegram_settings s where s.singleton and d.settings_version<>s.version;
+alter table mobile_private.telegram_deliveries drop constraint telegram_deliveries_kind_check;
+alter table mobile_private.telegram_deliveries add constraint telegram_deliveries_kind_check check(kind in ('proof','message','test'));
+
+create or replace function mobile_private.queue_telegram_proof() returns trigger
+language plpgsql security definer set search_path='' as $$
+declare s mobile_private.telegram_settings; borrower_name text;
+begin
+ if new.status::text<>'pending' or coalesce(new.file_path,'')='' then return new;end if;
+ select * into s from mobile_private.telegram_settings where singleton and enabled;
+ if not found then return new;end if;
+ select name into borrower_name from public.profiles where id=new.user_id and role::text='user';
+ if not found then return new;end if;
+ insert into mobile_private.telegram_deliveries(payment_id,destination,bot_id,settings_version,connection_version,payload)
+ values(new.id,s.chat_id,s.bot_id,s.version,s.connection_version,jsonb_build_object('borrower',borrower_name,'amount',new.amount,'reference',coalesce(nullif(new.receipt_number,''),new.id::text),'submittedAt',coalesce(new.submitted_at_exact,clock_timestamp())))
+ on conflict(payment_id) do nothing;
+ return new;
+end $$;
+revoke all on function mobile_private.queue_telegram_proof() from public,anon,authenticated;
+
+create function mobile_private.queue_telegram_message() returns trigger
+language plpgsql security definer set search_path='' as $$
+declare s mobile_private.telegram_settings; borrower_name text; preview text;
+begin
+ if new.from_admin or new.sender_id is distinct from new.borrower_id then return new;end if;
+ select * into s from mobile_private.telegram_settings where singleton and message_enabled;
+ if not found then return new;end if;
+ select name into borrower_name from public.profiles where id=new.borrower_id and role::text='user';
+ if not found then return new;end if;
+ preview:=btrim(regexp_replace(coalesce(new.body,''),'[[:space:][:cntrl:]]+',' ','g'));
+ if preview='' then
+  if coalesce(new.attachment_path,'')='' then return new;end if;
+  preview:='Attachment shared';
+ end if;
+ if char_length(preview)>200 then preview:=left(preview,200)||'…';end if;
+ insert into mobile_private.telegram_deliveries(kind,source_message_id,destination,bot_id,settings_version,connection_version,payload)
+ values('message',new.id,s.chat_id,s.bot_id,s.version,s.connection_version,jsonb_build_object('borrower',borrower_name,'borrowerId',new.borrower_id,'preview',preview,'sentAt',new.created_at))
+ on conflict(source_message_id) do nothing;
+ return new;
+end $$;
+revoke all on function mobile_private.queue_telegram_message() from public,anon,authenticated;
+create trigger telegram_borrower_message after insert on public.messages for each row execute function mobile_private.queue_telegram_message();
+
+
+-- 20261025010004_transaction_groups.sql
+-- Classification metadata only. No backfill or accounting/credit mutation.
+-- Rollback: restore the previous app; retain the nullable metadata for safe forward retry.
+
+set local lock_timeout='3s';
+set local statement_timeout='30s';
+alter table public.transactions add column transaction_group text
+ check(transaction_group in ('cash_loan','retail_installment','straight_retail','fees','adjustments'));
+create function mobile_private.transaction_group_key(p_type text,p_description text,p_amount numeric,p_fee text,p_explicit text,p_loan_category text default null)
+returns text language sql immutable set search_path='' as $$
+ select case when p_type='Installment' then
+  case when p_loan_category in ('cash_loan','retail_installment') then p_loan_category
+   when p_explicit in ('cash_loan','retail_installment') then p_explicit
+   when coalesce(p_description,'')~*'cash\s+loan|paypal\s+send' then 'cash_loan' else 'retail_installment' end
+  when p_explicit in ('straight_retail','fees','adjustments') then p_explicit
+  when p_fee is not null or btrim(coalesce(p_description,''))~*'^(\d+(\.\d+)?\s*%\s*)?finance\s+charge\y|^late\s+(payment\s+)?fee\y' then 'fees'
+  when p_amount<0 or btrim(coalesce(p_description,''))~*'^(partial\s+payment|overpayment|account\s+credit|credit\s+applied)\y' then 'adjustments'
+  else 'straight_retail' end;
+$$;
+revoke all on function mobile_private.transaction_group_key(text,text,numeric,text,text,text) from public,anon;
+grant execute on function mobile_private.transaction_group_key(text,text,numeric,text,text,text) to authenticated,service_role;
+
+create function mobile_private.validate_transaction_group() returns trigger language plpgsql set search_path='' as $$
+begin
+ if tg_op='UPDATE' and new.type is distinct from old.type and new.transaction_group is not distinct from old.transaction_group then new.transaction_group:=null;end if;
+ if new.transaction_group is not null and
+  ((new.type='Installment' and new.transaction_group not in ('cash_loan','retail_installment')) or
+   (new.type='Straight' and new.transaction_group not in ('straight_retail','fees','adjustments'))) then
+  raise exception 'Group must match the transaction type.';
+ end if;
+ return new;
+end $$;
+revoke all on function mobile_private.validate_transaction_group() from public,anon,authenticated;
+create trigger validate_transaction_group before insert or update of type,transaction_group on public.transactions
+ for each row execute function mobile_private.validate_transaction_group();
+
+create function mobile_private.set_transaction_group(p_payload jsonb) returns jsonb
+language plpgsql security definer set search_path='' as $$
+declare actor uuid:=mobile_private.active_user();op uuid:=(p_payload->>'key')::uuid;
+ row_before public.transactions;linked public.loans;group_before text;target text:=p_payload->>'group';
+ reason text:=btrim(coalesce(p_payload->>'reason',''));prior mobile_private.operation_keys;result jsonb;scope text;
+begin
+ if not public.is_admin() then raise exception 'Only an active lender can change transaction groups.' using errcode='42501';end if;
+ if op is null or p_payload->'reviewed' is distinct from 'true'::jsonb or length(reason) not between 10 and 2000 then raise exception 'Review the group and enter a reason of 10 to 2,000 characters.';end if;
+ perform pg_advisory_xact_lock(hashtextextended(actor::text||op::text,0));
+ select * into prior from mobile_private.operation_keys where actor_id=actor and key=op;
+ if found then
+  if prior.action<>'transaction-group' or prior.payload_hash<>md5(p_payload::text) then raise exception 'Retry details changed.';end if;
+  return prior.result;
+ end if;
+ select * into row_before from public.transactions where id=p_payload->>'id';
+ if not found or row_before.archived_at is not null then raise exception 'This transaction is unavailable.';end if;
+ -- Same borrower lock used by posting/corrections; metadata changes do not alter funds.
+ perform pg_advisory_xact_lock(hashtextextended(row_before.user_id::text,53));
+ -- Lock loan before transaction, consistent with loan/schedule operations.
+ if row_before.type='Installment' and row_before.loan_id is not null then
+  select * into linked from public.loans where id=row_before.loan_id for update;
+ end if;
+ select * into row_before from public.transactions where id=row_before.id for update;
+ if row_before.archived_at is not null or row_before.type is distinct from p_payload->>'expectedType'
+  or row_before.user_id::text is distinct from p_payload->>'expectedUserId' or row_before.loan_id is distinct from p_payload->>'expectedLoanId' then raise exception 'The transaction changed. Refresh and review again.' using errcode='40001';end if;
+ if row_before.type='Installment' and target not in ('cash_loan','retail_installment')
+  or row_before.type='Straight' and target not in ('straight_retail','fees','adjustments') or target is null then raise exception 'Choose a group matching the transaction type.';end if;
+ group_before:=mobile_private.transaction_group_key(row_before.type,coalesce(linked.label,row_before.description),row_before.amount,row_before.fee_kind,case when linked.id is not null then null else row_before.transaction_group end,linked.loan_category);
+ if group_before is distinct from p_payload->>'expectedGroup' then raise exception 'The group changed. Refresh and review again.' using errcode='40001';end if;
+ if row_before.type='Installment' and row_before.loan_id is not null then
+  if linked.id is null or linked.user_id<>row_before.user_id then raise exception 'The linked installment group is unavailable.';end if;
+  update public.loans set loan_category=target where id=linked.id;
+  scope:='loan';
+ else
+  update public.transactions set transaction_group=target where id=row_before.id;
+  scope:='transaction';
+ end if;
+ insert into public.audit_log(actor,action,detail) select name,'TXN_UPDATED','Group changed for '||row_before.id||' ('||scope||'): '||group_before||' → '||target||'. '||reason from public.profiles where id=actor;
+ result:=jsonb_build_object('id',row_before.id,'loanId',row_before.loan_id,'group',target,'scope',scope);
+ insert into mobile_private.operation_keys(actor_id,key,action,payload_hash,result) values(actor,op,'transaction-group',md5(p_payload::text),result);
+ return result;
+end $$;
+revoke all on function mobile_private.set_transaction_group(jsonb) from public,anon;
+grant execute on function mobile_private.set_transaction_group(jsonb) to authenticated;
+create function public.admin_set_transaction_group(p_payload jsonb) returns jsonb
+language sql security invoker set search_path='' as $$select mobile_private.set_transaction_group(p_payload);$$;
+revoke all on function public.admin_set_transaction_group(jsonb) from public,anon;
+grant execute on function public.admin_set_transaction_group(jsonb) to authenticated;
+
+
+-- 20261025190607_retail_brand_logos.sql
+-- Additive presentation metadata only; no financial rows are updated or backfilled.
+
+set local lock_timeout='3s';
+set local statement_timeout='30s';
+create table public.retail_brand_assignments(
+ target_key text primary key,loan_id text references public.loans(id) on delete cascade,
+ transaction_id text references public.transactions(id) on delete cascade,
+ user_id uuid not null references public.profiles(id) on delete cascade,
+ mode text not null check(mode in ('manual','none','auto')),domain text,name text,
+ version uuid not null default gen_random_uuid(),updated_at timestamptz not null default now(),
+ check((loan_id is not null)::int+(transaction_id is not null)::int=1),
+ check(target_key=case when loan_id is not null then 'loan:'||loan_id else 'transaction:'||transaction_id end),
+ check((mode='manual' and name is not null and domain is not null and length(name) between 1 and 120 and domain=lower(domain) and length(domain)<=253 and domain~'^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$') or (mode in ('none','auto') and domain is null and name is null))
+);
+create index retail_brand_assignments_owner on public.retail_brand_assignments(user_id);
+create table public.retail_brand_rules(
+ id uuid primary key default gen_random_uuid(),alias text not null check(length(alias) between 2 and 80 and alias!~'[@/<>]' and alias!~'[0-9]{9}'),
+ domain text not null check(length(domain)<=253 and domain=lower(domain) and domain~'^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$'),
+ name text not null check(length(name) between 1 and 120),active boolean not null default true,
+ version uuid not null default gen_random_uuid(),updated_at timestamptz not null default now()
+);
+create unique index retail_brand_rule_phrase_domain on public.retail_brand_rules(lower(btrim(alias)),domain);
+alter table public.retail_brand_assignments enable row level security;
+alter table public.retail_brand_rules enable row level security;
+revoke all on public.retail_brand_assignments,public.retail_brand_rules from public,anon,authenticated;
+grant select on public.retail_brand_assignments,public.retail_brand_rules to authenticated;
+create policy own_retail_brands on public.retail_brand_assignments for select to authenticated using(
+ mobile_private.valid_session() and (public.is_admin() or
+ exists(select 1 from public.loans l where l.id=loan_id and l.user_id=(select auth.uid())) or
+ exists(select 1 from public.transactions t where t.id=transaction_id and t.user_id=(select auth.uid()) and t.archived_at is null))
+);
+-- Rules contain merchant/product names only, never borrower or payment data.
+create policy retail_brand_reference on public.retail_brand_rules for select to authenticated using(mobile_private.valid_session());
+create policy mobile_valid_session on public.retail_brand_assignments as restrictive to authenticated using(mobile_private.valid_session());
+create policy mobile_valid_session on public.retail_brand_rules as restrictive to authenticated using(mobile_private.valid_session());
+alter publication supabase_realtime add table public.retail_brand_assignments,public.retail_brand_rules;
+
+create function mobile_private.assign_retail_brand(p_payload jsonb) returns jsonb
+language plpgsql security definer set search_path='' as $$
+declare actor uuid:=mobile_private.active_user();op uuid:=(p_payload->>'key')::uuid;
+ prior mobile_private.operation_keys;result jsonb;target jsonb;scope text;target_id text;target_key_value text;
+ owner_id uuid;description_value text;group_value text;before_assignment public.retail_brand_assignments;
+ loan public.loans;txn public.transactions;count_value int:=0;mode_value text:=p_payload->>'mode';domain_value text:=lower(btrim(p_payload->>'domain'));name_value text:=btrim(p_payload->>'name');
+begin
+ if not public.is_admin() then raise exception 'Only an active lender can assign brand logos.' using errcode='42501';end if;
+ if op is null or p_payload->'reviewed' is distinct from 'true'::jsonb or jsonb_typeof(p_payload->'targets') is distinct from 'array'
+  or jsonb_array_length(p_payload->'targets') not between 1 and 200 or mode_value is null or mode_value not in ('manual','none','auto') then raise exception 'Review between 1 and 200 retail items before saving.';end if;
+ if mode_value='manual' and (domain_value is null or length(domain_value)>253 or domain_value!~'^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$' or name_value is null or length(name_value) not between 1 and 120) then raise exception 'Choose a valid brand from the search results.';end if;
+ if mode_value<>'manual' then domain_value:=null;name_value:=null;end if;
+ perform pg_advisory_xact_lock(724021);
+ select * into prior from mobile_private.operation_keys where actor_id=actor and key=op;
+ if found then
+  if prior.action<>'retail-brand' or prior.payload_hash<>md5(p_payload::text) then raise exception 'Retry details changed.';end if;
+  return prior.result;
+ end if;
+ if (select count(*) from jsonb_array_elements(p_payload->'targets'))<>(select count(distinct (x->>'scope')||':'||(x->>'id')) from jsonb_array_elements(p_payload->'targets') x) then raise exception 'A retail item was selected more than once.';end if;
+ for target in select value from jsonb_array_elements(p_payload->'targets') order by value->>'scope',value->>'id' loop
+  scope:=target->>'scope';target_id:=target->>'id';loan:=null;txn:=null;owner_id:=null;description_value:=null;group_value:=null;
+  if scope='loan' then
+   select * into loan from public.loans where id=target_id;
+   if loan.id is not null and loan.txn_type::text<>'straight' and exists(select 1 from public.transactions t where t.loan_id=loan.id and t.archived_at is null) then
+    owner_id:=loan.user_id;description_value:=loan.label;
+    group_value:=mobile_private.transaction_group_key('Installment',loan.label,loan.principal,null,null,loan.loan_category);
+   end if;
+  elsif scope='transaction' then
+   select * into txn from public.transactions where id=target_id and archived_at is null;
+   if txn.id is not null and not(txn.type='Installment' and txn.loan_id is not null) then
+    owner_id:=txn.user_id;description_value:=txn.description;
+    group_value:=mobile_private.transaction_group_key(txn.type,txn.description,txn.amount,txn.fee_kind,txn.transaction_group,null);
+   end if;
+  end if;
+  if owner_id is null or group_value not in ('retail_installment','straight_retail') then raise exception 'An item is no longer available as retail. Refresh and review again.' using errcode='40001';end if;
+  if owner_id::text is distinct from target->>'expectedUserId' or description_value is distinct from target->>'expectedDescription' then raise exception 'An item changed. Refresh and review again.' using errcode='40001';end if;
+  target_key_value:=scope||':'||target_id;
+  select * into before_assignment from public.retail_brand_assignments a where a.target_key=target_key_value for update;
+  if before_assignment.version::text is distinct from target->>'expectedVersion' then raise exception 'A logo choice changed. Refresh and review again.' using errcode='40001';end if;
+  insert into public.retail_brand_assignments(target_key,loan_id,transaction_id,user_id,mode,domain,name)
+   values(target_key_value,case when scope='loan' then target_id end,case when scope='transaction' then target_id end,owner_id,mode_value,case when mode_value='manual' then domain_value end,case when mode_value='manual' then name_value end)
+   on conflict(target_key) do update set user_id=excluded.user_id,mode=excluded.mode,domain=excluded.domain,name=excluded.name,version=gen_random_uuid(),updated_at=clock_timestamp();
+  count_value:=count_value+1;
+ end loop;
+ insert into public.audit_log(actor,action,detail) select name,'TXN_UPDATED','Brand logo metadata: '||mode_value||' for '||count_value||' retail items; '||coalesce(domain_value,'automatic/no logo') from public.profiles where id=actor;
+ result:=jsonb_build_object('updated',count_value);
+ insert into mobile_private.operation_keys(actor_id,key,action,payload_hash,result) values(actor,op,'retail-brand',md5(p_payload::text),result);
+ return result;
+end $$;
+revoke all on function mobile_private.assign_retail_brand(jsonb) from public,anon;
+grant execute on function mobile_private.assign_retail_brand(jsonb) to authenticated;
+create function public.admin_assign_retail_brand(p_payload jsonb) returns jsonb language sql security invoker set search_path='' as $$select mobile_private.assign_retail_brand(p_payload);$$;
+revoke all on function public.admin_assign_retail_brand(jsonb) from public,anon;
+grant execute on function public.admin_assign_retail_brand(jsonb) to authenticated;
+
+create function mobile_private.save_retail_brand_rule(p_payload jsonb) returns jsonb
+language plpgsql security definer set search_path='' as $$
+declare actor uuid:=mobile_private.active_user();op uuid:=(p_payload->>'key')::uuid;prior mobile_private.operation_keys;before_rule public.retail_brand_rules;rule_id uuid;result jsonb;
+begin
+ if not public.is_admin() then raise exception 'Only an active lender can manage brand keywords.' using errcode='42501';end if;
+ if op is null then raise exception 'A retry key is required.';end if;
+ perform pg_advisory_xact_lock(724021);
+ select * into prior from mobile_private.operation_keys where actor_id=actor and key=op;
+ if found then if prior.action<>'retail-brand-rule' or prior.payload_hash<>md5(p_payload::text) then raise exception 'Retry details changed.';end if;return prior.result;end if;
+ if p_payload->>'id' is not null then
+  select * into before_rule from public.retail_brand_rules where id=(p_payload->>'id')::uuid for update;
+  if not found or before_rule.version::text is distinct from p_payload->>'expectedVersion' then raise exception 'This keyword changed. Refresh and review again.' using errcode='40001';end if;
+  update public.retail_brand_rules set alias=btrim(p_payload->>'alias'),domain=lower(btrim(p_payload->>'domain')),name=btrim(p_payload->>'name'),active=coalesce((p_payload->>'active')::boolean,true),version=gen_random_uuid(),updated_at=clock_timestamp() where id=before_rule.id returning id into rule_id;
+ else
+  insert into public.retail_brand_rules(alias,domain,name) values(btrim(p_payload->>'alias'),lower(btrim(p_payload->>'domain')),btrim(p_payload->>'name'))
+   on conflict(lower(btrim(alias)),domain) do update set name=excluded.name,active=true,version=gen_random_uuid(),updated_at=clock_timestamp() returning id into rule_id;
+ end if;
+ insert into public.audit_log(actor,action,detail) select name,'TXN_UPDATED','Brand matching keyword updated: '||rule_id from public.profiles where id=actor;
+ result:=jsonb_build_object('id',rule_id);
+ insert into mobile_private.operation_keys(actor_id,key,action,payload_hash,result) values(actor,op,'retail-brand-rule',md5(p_payload::text),result);
+ return result;
+end $$;
+revoke all on function mobile_private.save_retail_brand_rule(jsonb) from public,anon;
+grant execute on function mobile_private.save_retail_brand_rule(jsonb) to authenticated;
+create function public.admin_save_retail_brand_rule(p_payload jsonb) returns jsonb language sql security invoker set search_path='' as $$select mobile_private.save_retail_brand_rule(p_payload);$$;
+revoke all on function public.admin_save_retail_brand_rule(jsonb) from public,anon;
+grant execute on function public.admin_save_retail_brand_rule(jsonb) to authenticated;
+
+
+-- 20261025210130_retail_brand_lookup_indexes.sql
+-- Follow-up to the applied logo metadata migration; no existing financial data changes.
+
+set local lock_timeout='3s';
+set local statement_timeout='30s';
+create index retail_brand_assignments_loan on public.retail_brand_assignments(loan_id);
+create index retail_brand_assignments_transaction on public.retail_brand_assignments(transaction_id);
+
+
+-- 20261026133642_transaction_group_logos.sql
+-- Additive global presentation metadata. No loan, transaction, payment or credit edits.
+
+set local lock_timeout='3s';
+set local statement_timeout='30s';
+create table public.transaction_group_logos(
+ group_key text primary key check(group_key in ('cash_loan','fees','adjustments')),
+ svg text check(svg is null or (octet_length(svg) between 1 and 65536 and svg like '<svg%' and svg like '%</svg>')),
+ filename text check(filename is null or length(filename) between 1 and 120),
+ version uuid not null default gen_random_uuid(),
+ updated_at timestamptz not null default now(),
+ check((svg is null)=(filename is null))
+);
+alter table public.transaction_group_logos enable row level security;
+revoke all on public.transaction_group_logos from public,anon,authenticated,service_role;
+grant select on public.transaction_group_logos to authenticated;
+-- Writes go through the existing active-admin server and SVG validator, never the Data API.
+create policy group_logo_reference on public.transaction_group_logos for select to authenticated using(mobile_private.valid_session());
+create policy mobile_valid_session on public.transaction_group_logos as restrictive to authenticated using(mobile_private.valid_session());
+insert into public.transaction_group_logos(group_key) values('cash_loan'),('fees'),('adjustments');
+alter publication supabase_realtime add table public.transaction_group_logos;
+
+
+-- 20261026214552_uploaded_retail_and_proof_activity_logos.sql
+-- Additive logo metadata only. No loan, ledger, proof, payment or credit writes.
+
+set local lock_timeout='3s';
+set local statement_timeout='30s';
+
+create table public.retail_brand_assets(
+ id uuid primary key default gen_random_uuid(),
+ svg text not null check(octet_length(svg) between 1 and 65536 and svg like '<svg%' and svg like '%</svg>'),
+ filename text not null check(length(filename) between 1 and 120),
+ sha256 text not null unique check(sha256~'^[a-f0-9]{64}$'),
+ created_at timestamptz not null default now()
+);
+alter table public.retail_brand_assets enable row level security;
+revoke all on public.retail_brand_assets from public,anon,authenticated,service_role;
+grant select on public.retail_brand_assets to authenticated;
+
+alter table public.retail_brand_assignments add column logo_id uuid references public.retail_brand_assets(id);
+create index retail_brand_assignments_logo on public.retail_brand_assignments(logo_id) where logo_id is not null;
+alter table public.retail_brand_assignments drop constraint retail_brand_assignments_mode_check;
+alter table public.retail_brand_assignments drop constraint retail_brand_assignments_check2;
+alter table public.retail_brand_assignments add constraint retail_brand_assignments_mode_check check(mode in ('manual','none','auto','upload'));
+alter table public.retail_brand_assignments add constraint retail_brand_assignments_check2 check(
+ (mode='manual' and logo_id is null and name is not null and domain is not null and length(name) between 1 and 120 and domain=lower(domain) and length(domain)<=253 and domain~'^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$')
+ or (mode in ('none','auto') and domain is null and name is null and logo_id is null)
+ or (mode='upload' and domain is null and logo_id is not null and name is not null and length(name) between 1 and 120)
+);
+create policy own_retail_brand_assets on public.retail_brand_assets for select to authenticated using(
+ mobile_private.valid_session() and (public.is_admin() or exists(
+  select 1 from public.retail_brand_assignments a where a.logo_id=retail_brand_assets.id and a.user_id=(select auth.uid())
+ ))
+);
+create policy mobile_valid_session on public.retail_brand_assets as restrictive to authenticated using(mobile_private.valid_session());
+-- Assets are immutable and deduplicated. Assignment invalidations refresh their assets.
+
+alter table public.transaction_group_logos drop constraint transaction_group_logos_group_key_check;
+alter table public.transaction_group_logos add constraint transaction_group_logos_group_key_check check(group_key in ('cash_loan','fees','adjustments','payment_proof_submitted'));
+insert into public.transaction_group_logos(group_key) values('payment_proof_submitted');
+
+-- The existing Brandfetch/automatic/removal operation must clear a custom asset.
+create or replace function mobile_private.assign_retail_brand(p_payload jsonb) returns jsonb
+language plpgsql security definer set search_path='' as $$
+declare actor uuid:=mobile_private.active_user();op uuid:=(p_payload->>'key')::uuid;
+ prior mobile_private.operation_keys;result jsonb;target jsonb;scope text;target_id text;target_key_value text;
+ owner_id uuid;description_value text;group_value text;before_assignment public.retail_brand_assignments;
+ loan public.loans;txn public.transactions;count_value int:=0;mode_value text:=p_payload->>'mode';domain_value text:=lower(btrim(p_payload->>'domain'));name_value text:=btrim(p_payload->>'name');
+begin
+ if not public.is_admin() then raise exception 'Only an active lender can assign brand logos.' using errcode='42501';end if;
+ if op is null or p_payload->'reviewed' is distinct from 'true'::jsonb or jsonb_typeof(p_payload->'targets') is distinct from 'array'
+  or jsonb_array_length(p_payload->'targets') not between 1 and 200 or mode_value is null or mode_value not in ('manual','none','auto') then raise exception 'Review between 1 and 200 retail items before saving.';end if;
+ if mode_value='manual' and (domain_value is null or length(domain_value)>253 or domain_value!~'^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$' or name_value is null or length(name_value) not between 1 and 120) then raise exception 'Choose a valid brand from the search results.';end if;
+ if mode_value<>'manual' then domain_value:=null;name_value:=null;end if;
+ perform pg_advisory_xact_lock(724021);
+ select * into prior from mobile_private.operation_keys where actor_id=actor and key=op;
+ if found then
+  if prior.action<>'retail-brand' or prior.payload_hash<>md5(p_payload::text) then raise exception 'Retry details changed.';end if;
+  return prior.result;
+ end if;
+ if (select count(*) from jsonb_array_elements(p_payload->'targets'))<>(select count(distinct (x->>'scope')||':'||(x->>'id')) from jsonb_array_elements(p_payload->'targets') x) then raise exception 'A retail item was selected more than once.';end if;
+ for target in select value from jsonb_array_elements(p_payload->'targets') order by value->>'scope',value->>'id' loop
+  scope:=target->>'scope';target_id:=target->>'id';loan:=null;txn:=null;owner_id:=null;description_value:=null;group_value:=null;
+  if scope='loan' then
+   select * into loan from public.loans where id=target_id;
+   if loan.id is not null and loan.txn_type::text<>'straight' and exists(select 1 from public.transactions t where t.loan_id=loan.id and t.archived_at is null) then
+    owner_id:=loan.user_id;description_value:=loan.label;
+    group_value:=mobile_private.transaction_group_key('Installment',loan.label,loan.principal,null,null,loan.loan_category);
+   end if;
+  elsif scope='transaction' then
+   select * into txn from public.transactions where id=target_id and archived_at is null;
+   if txn.id is not null and not(txn.type='Installment' and txn.loan_id is not null) then
+    owner_id:=txn.user_id;description_value:=txn.description;
+    group_value:=mobile_private.transaction_group_key(txn.type,txn.description,txn.amount,txn.fee_kind,txn.transaction_group,null);
+   end if;
+  end if;
+  if owner_id is null or group_value not in ('retail_installment','straight_retail') then raise exception 'An item is no longer available as retail. Refresh and review again.' using errcode='40001';end if;
+  if owner_id::text is distinct from target->>'expectedUserId' or description_value is distinct from target->>'expectedDescription' then raise exception 'An item changed. Refresh and review again.' using errcode='40001';end if;
+  target_key_value:=scope||':'||target_id;
+  select * into before_assignment from public.retail_brand_assignments a where a.target_key=target_key_value for update;
+  if before_assignment.version::text is distinct from target->>'expectedVersion' then raise exception 'A logo choice changed. Refresh and review again.' using errcode='40001';end if;
+  insert into public.retail_brand_assignments(target_key,loan_id,transaction_id,user_id,mode,domain,name)
+   values(target_key_value,case when scope='loan' then target_id end,case when scope='transaction' then target_id end,owner_id,mode_value,case when mode_value='manual' then domain_value end,case when mode_value='manual' then name_value end)
+   on conflict(target_key) do update set user_id=excluded.user_id,mode=excluded.mode,domain=excluded.domain,name=excluded.name,logo_id=null,version=gen_random_uuid(),updated_at=clock_timestamp();
+  count_value:=count_value+1;
+ end loop;
+ insert into public.audit_log(actor,action,detail) select name,'TXN_UPDATED','Brand logo metadata: '||mode_value||' for '||count_value||' retail items; '||coalesce(domain_value,'automatic/no logo') from public.profiles where id=actor;
+ result:=jsonb_build_object('updated',count_value);
+ insert into mobile_private.operation_keys(actor_id,key,action,payload_hash,result) values(actor,op,'retail-brand',md5(p_payload::text),result);
+ return result;
+end $$;
+
+
+
 commit;

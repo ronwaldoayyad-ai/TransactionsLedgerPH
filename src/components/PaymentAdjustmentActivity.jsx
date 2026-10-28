@@ -3,6 +3,7 @@ import {useApp} from '../context/AppContext'
 import {buildPaymentAdjustments} from '../lib/paymentReadModel'
 import {formatDate,formatPeso} from '../lib/amortization'
 import {Button,Modal} from './ui'
+import RetailBrandLogo from './RetailBrandLogo'
 
 export default function PaymentAdjustmentActivity({ownerId:requestedOwner,search=''}){
  const {session,users,paymentPostings,transactions,archivedTransactions,paymentLogs,hiddenPaymentBreakdowns,setPaymentBreakdownVisibility}=useApp()
@@ -30,7 +31,7 @@ export default function PaymentAdjustmentActivity({ownerId:requestedOwner,search
  {!visible.length&&<p className="rounded-xl border border-slate-200 p-4 text-sm text-slate-500">No payment breakdowns to show.</p>}
  {visible.map(r=><article key={r.id} data-payment-adjustment-id={r.id} className={`rounded-xl border p-4 text-sm ${r.status==='reversed'?'border-slate-200 bg-slate-50':'border-emerald-200 bg-emerald-50/60'}`}>
   {admin&&<div className="mb-3 flex flex-wrap items-center justify-between gap-2">{hidden.has(r.id)?<span className="text-xs text-slate-500">Deleted breakdown</span>:<label className="flex items-center gap-2 text-xs text-slate-600"><input type="checkbox" aria-label={'Select payment breakdown '+(r.reference||r.id)} checked={selectedIds.includes(r.id)} disabled={busy} onChange={()=>toggle(r.id)}/> Select</label>}<Button variant="secondary" disabled={busy} onClick={()=>openReview([r.id],!hidden.has(r.id))}>{hidden.has(r.id)?'Restore breakdown':'Delete breakdown'}</Button></div>}
-  <header className="flex flex-wrap justify-between gap-2"><strong>{r.kind==='overpayment'?'Overpayment':'Partial Payment'} for {r.dueDates.length?r.dueDates.map(formatDate).join(' · '):'unallocated credit'}</strong><strong>−{formatPeso(Math.abs(r.amount))}</strong></header>
+  <header className="flex flex-wrap justify-between gap-2"><strong className="flex items-center gap-2"><RetailBrandLogo compact transaction={{id:r.id,type:'Straight',transactionGroup:'adjustments'}}/>{r.kind==='overpayment'?'Overpayment':'Partial Payment'} for {r.dueDates.length?r.dueDates.map(formatDate).join(' · '):'unallocated credit'}</strong><strong>−{formatPeso(Math.abs(r.amount))}</strong></header>
   <p className="mt-1 text-xs text-slate-600">{admin&&`${users.find(u=>u.id===r.ownerId)?.name||'Borrower'} · `}{formatDate(r.date)}{r.status==='reversed'?' · Reversed':''}{r.reference&&` · ${r.reference}`}</p>
   <details className="mt-3"><summary className="cursor-pointer font-medium">Allocation breakdown</summary><p className="mt-2">Cash received: {formatPeso(r.cashReceived)} · Credit used: {formatPeso(r.creditUsed)} · Applied to dues: {formatPeso(r.totalApplied)}</p><ul className="mt-2 space-y-2">{r.allocations.map((a,i)=><li key={i} className="rounded-lg bg-white/70 p-3"><strong>{a.description}</strong>{a.dueDate&&<p>Due {formatDate(a.dueDate)}</p>}<p>Before: {formatPeso(a.beforeBalance)} · Applied: {formatPeso(a.amount)} · After: {formatPeso(a.afterBalance)}</p></li>)}</ul></details>{r.note&&<p className="mt-2 break-words text-xs text-slate-600">{r.note}</p>}
  </article>)}

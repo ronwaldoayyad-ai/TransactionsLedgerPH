@@ -145,12 +145,11 @@ export default function DuesOverview({
           <div className="flex flex-wrap items-center justify-end gap-3">
             {hasFullyPaid && (
               <label className="flex cursor-pointer items-center gap-2 text-xs font-medium text-slate-600">
-                <Switch
+                <Switch stateLabels={{"on":"Fully paid loans are hidden","off":"Fully paid loans are shown"}}
                   checked={hidePaidLoans}
                   onChange={setHidePaidLoans}
                   label="Hide fully paid loans"
                 />
-                Hide fully paid
               </label>
             )}
             <ModeToggle mode={mode} onChange={setMode} />

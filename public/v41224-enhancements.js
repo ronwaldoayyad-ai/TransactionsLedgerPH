@@ -68,18 +68,26 @@ setmode=value=>{
  card.classList.toggle('next-due',!!mode);
  card.querySelectorAll('.switch button').forEach((button,index)=>{button.classList.toggle('sel',index===mode);button.setAttribute('aria-pressed',String(index===mode));});
  card.querySelector('.balance-content').replaceWith(template.content.querySelector('.balance-content'));
- document.querySelector('#app>.dashboard-due-advisory')?.remove();
+ document.querySelector('#app .dashboard-due-advisory')?.remove();
  const advisory=template.content.querySelector('.dashboard-due-advisory');if(advisory)card.after(advisory);
- const breakdown=document.querySelector('#app>.section .glass');if(breakdown)breakdown.innerHTML=expandableRowsHTML('dashboardTransactionBreakdown',transactionBreakdownItems(),5);
+ const breakdown=document.querySelector('#app .section .glass');if(breakdown)breakdown.innerHTML=expandableRowsHTML('dashboardTransactionBreakdown',transactionBreakdownItems(),5);
  if(!matchMedia('(prefers-reduced-motion: reduce)').matches){
-  for(const element of [card.querySelector('.balance-content'),advisory].filter(Boolean))element.animate([{opacity:.35,transform:'translateX('+direction*10+'px)'},{opacity:1,transform:'translateX(0)'}],{duration:280,easing:'cubic-bezier(.22,1,.36,1)'});
+  for(const element of [advisory].filter(Boolean))element.animate([{opacity:.35,transform:'translateX('+direction*10+'px)'},{opacity:1,transform:'translateX(0)'}],{duration:280,easing:'cubic-bezier(.22,1,.36,1)'});
  }
 };
 const approvedRenderFinder=renderFinder;
+let finderRenderedOwner=null,finderRenderedSource=null;
 renderFinder=()=>{
- // A data snapshot must not restart the orb's continuous light animation.
- const mounted=document.querySelector('#accountFinder.finder-compact');
- if(page==='dashboard'&&finderCompact&&mounted){positionFinder();return;}
+ // Keep the focused input and pending first search intact during data updates.
+ const owner=stagingData?.user?.id||null,mounted=document.querySelector('#accountFinder');
+ const sameOwner=owner===finderRenderedOwner,sourceChanged=finderRenderedSource!==stagingData;
+ finderRenderedOwner=owner;finderRenderedSource=stagingData;
+ if(!sameOwner){finderQuery='';finderFilter='All';finderStatusFilter='All';}
+ if(sameOwner&&borrowerShortcutsVisible()&&mounted&&mounted.classList.contains('finder-compact')===finderCompact){
+  positionFinder();
+  if(sourceChanged&&!finderCompact&&finderQuery.trim())requestAnimationFrame(renderStagingFinderResults);
+  return;
+ }
  approvedRenderFinder();
  document.querySelector('.finder-collapse')?.remove();
  const input=document.querySelector('#finderInput');
@@ -89,9 +97,9 @@ let stagingListOwner=null,stagingMessageVisible=20;
 const approvedExpandableRows=expandableRowsHTML;
 expandableRowsHTML=(key,rows,limit=3)=>approvedExpandableRows(key,rows,Math.max(1,Math.min(5,limit)));
 const approvedRecentRender=renderRecentPayments;
-renderRecentPayments=()=>{approvedRecentRender();const count=recentPayments.filter(p=>recentPaymentFilter==='All'||p.status===recentPaymentFilter).length;const button=document.querySelector('.recent-view-all');if(button){button.hidden=count<=3;button.setAttribute('aria-expanded',String(recentShowAll));}};
+renderRecentPayments=()=>{approvedRecentRender();const button=document.querySelector('.recent-view-all');if(button){button.hidden=recentPaymentTotal<=5;const footer=button.closest('.recent-more-footer');if(footer)footer.hidden=button.hidden;button.setAttribute('aria-expanded',String(recentShowAll));}};
 const approvedRecentFilter=setRecentPaymentFilter;
-setRecentPaymentFilter=value=>{recentShowAll=false;approvedRecentFilter(value);};
+setRecentPaymentFilter=value=>{recentShowAll=false;recentPaymentLimit=5;approvedRecentFilter(value);};
 const approvedDisbursementRows=disbursementRows;
 disbursementRows=()=>{const host=document.createElement('div');host.innerHTML=approvedDisbursementRows();const rows=[...host.querySelectorAll(':scope > .disbursement-row')];return rows.length?expandableRowsHTML('disbursements',rows.map(el=>el.outerHTML),5):host.innerHTML;};
 const approvedFilterDisbursements=filterDisbursements;
@@ -100,6 +108,7 @@ const approvedMessages=messages;
 messages=()=>{const host=document.createElement('div');host.innerHTML=approvedMessages();const thread=host.querySelector('#chatMessages');if(thread){const rows=[...thread.querySelectorAll('.chat-row')];rows.slice(0,Math.max(0,rows.length-stagingMessageVisible)).forEach(row=>row.remove());if(rows.length>20){const button=document.createElement('button');button.className='list-more-button';button.type='button';button.textContent=stagingMessageVisible<rows.length?'Show more messages':'Show fewer messages';button.setAttribute('onclick',stagingMessageVisible<rows.length?'stagingMessageVisible+=20;render()':'stagingMessageVisible=20;render()');thread.prepend(button);}}return host.innerHTML;};
 localToday=()=>accountDayKey(new Date());
 let finderCacheSource=null,finderRecordCache=[],finderQueryTimer=null,finderResultOffset=0;
+let finderMatchSource=null,finderMatchQuery=null,finderMatchCache=[];
 const normalizeFinder=value=>String(value||'').normalize('NFKD').toLowerCase().replace(/,/g,'').replace(/[^a-z0-9]+/g,' ').trim();
 const originalFinderRecords=finderRecords;
 finderRecords=()=>{
@@ -109,9 +118,17 @@ finderRecords=()=>{
  }
  return finderRecordCache;
 };
-finderResults=(query,ignoreFilters=false)=>{const words=normalizeFinder(query.slice(0,200)).split(/\s+/).filter(Boolean);if(!words.length)return [];return finderRecords().filter(r=>words.every(w=>r._search.includes(w))&&(ignoreFilters||((finderFilter==='All'||r._type===finderFilter)&&(finderStatusFilter==='All'||r._status===finderStatusFilter))));};
+finderResults=(query,ignoreFilters=false)=>{
+ const normalized=normalizeFinder(String(query).slice(0,200));if(!normalized)return [];
+ const records=finderRecords();
+ if(finderMatchSource!==records||finderMatchQuery!==normalized){
+  const words=normalized.split(/\s+/);finderMatchCache=records.filter(r=>words.every(w=>r._search.includes(w)));
+  finderMatchSource=records;finderMatchQuery=normalized;
+ }
+ return ignoreFilters?finderMatchCache:finderMatchCache.filter(r=>(finderFilter==='All'||r._type===finderFilter)&&(finderStatusFilter==='All'||r._status===finderStatusFilter));
+};
 function renderStagingFinderResults(){
- if(page!=='dashboard'||!finderQuery.trim()||finderCompact)return;
+ if(!borrowerShortcutsVisible()||!finderQuery.trim()||finderCompact)return;
  const matches=finderResults(finderQuery),total=finderResults(finderQuery,true).length,size=50;
  finderResultOffset=Math.min(finderResultOffset,Math.max(0,Math.floor((matches.length-1)/size)*size));
  let overlay=document.querySelector('#finderResultsOverlay');
@@ -124,9 +141,9 @@ function pageFinderResults(direction){finderResultOffset=Math.max(0,finderResult
 updateFinderResults=query=>{clearTimeout(finderQueryTimer);finderQuery=String(query).slice(0,200);finderResultOffset=0;if(!finderQuery.trim()){closeFinderResults(true);return;}finderQueryTimer=setTimeout(renderStagingFinderResults,150);};
 const oldCloseFinder=closeFinderResults;
 closeFinderResults=(immediate=false)=>{clearTimeout(finderQueryTimer);oldCloseFinder(immediate);};
-function collapseUnfocusedFinder(event){if(page==='dashboard'&&!finderCompact&&!event.target.closest('#accountFinder,.finder-results-dialog'))setFinderCompact(true);}
+function collapseUnfocusedFinder(event){if(borrowerShortcutsVisible()&&!finderCompact&&!event.target.closest('#accountFinder,.finder-results-dialog'))setFinderCompact(true);}
 document.addEventListener('pointerdown',collapseUnfocusedFinder);
-document.addEventListener('focusout',event=>{if(event.target.id==='finderInput')setTimeout(()=>{if(page==='dashboard'&&!finderCompact&&!document.activeElement?.closest('#accountFinder,#finderResultsOverlay'))setFinderCompact(true);},0);});
+document.addEventListener('focusout',event=>{if(event.target.id==='finderInput')setTimeout(()=>{if(borrowerShortcutsVisible()&&!finderCompact&&!document.activeElement?.closest('#accountFinder,#finderResultsOverlay'))setFinderCompact(true);},0);});
 let stagingChatSize=null,stagingChatResize=null;
 const stagingChatSizeKey=()=>'loanledger-chat-size-'+(stagingData?.user.id||'signed-out');
 function saveStagingChatSize(){try{localStorage.setItem(stagingChatSizeKey(),JSON.stringify(stagingChatSize))}catch{}}
@@ -171,7 +188,7 @@ function stagingCompareLatestTransactions(a,b){return stagingCompareValues({date
 function stagingCompareProfileGroups(a,b){const x=stagingLoans()[a.index],y=stagingLoans()[b.index];return stagingCompareValues({date:Date.parse(x.txnDate),amount:x.principal,id:x.id},{date:Date.parse(y.txnDate),amount:y.principal,id:y.id},'Newest');}
 function stagingTransactionDate(timestamp){return Number.isFinite(timestamp)?stagingDate(new Date(timestamp).toISOString()):'—';}
 const stagingLoanActive=loan=>!['cancelled','refunded','completed'].includes(String(loan.status).toLowerCase())&&stagingRows().some(t=>t.loanId===loan.id&&stagingOwed(t));
-const stagingCategory=loan=>loan.loanCategory||'unclassified';
+const stagingCategory=loan=>TransactionGroups.defaultInstallmentGroup(loan);
 const stagingVisibleGroups=()=>stagingGroups().map((group,index)=>({group,index,loan:stagingLoans()[index]})).filter(({loan,group})=>(!excludeFullyPaidInstallments||stagingLoanActive(loan))&&(installmentCategoryFilter==='all'||stagingCategory(loan)===installmentCategoryFilter)&&(!txSearch||`${group[0]} ${loan.loanCategory==='cash_loan'?'Cash Loan':'Retail Installments'} ${group[2]} ${group[4]}`.toLowerCase().includes(txSearch.toLowerCase()))).sort((a,b)=>stagingCompareValues({date:Date.parse(a.loan.txnDate),amount:Number(a.loan.principal)||0,id:a.loan.id},{date:Date.parse(b.loan.txnDate),amount:Number(b.loan.principal)||0,id:b.loan.id}));
 loanProfileCategory=group=>({cash_loan:'Cash Loan',retail_installment:'Retail Installments'}[stagingCategory(stagingLoans().find(l=>l.id===group[5])||{})]||'Unclassified');
 function setInstallmentCategory(value){if(!['all','cash_loan','retail_installment'].includes(value))return;installmentCategoryFilter=value;render();}
@@ -179,18 +196,18 @@ const oldExclude=setExcludeFullyPaidInstallments;
 setExcludeFullyPaidInstallments=value=>{for(const key of ['installmentGroups-cash_loan','installmentGroups-retail_installment','installmentGroups-unclassified'])expandedLists[key]=false;oldExclude(value);};
 installmentGroupCards=()=>{
  const cards=stagingVisibleGroups();
- const control='<div class="installment-filter"><div class="installment-filter-copy"><b>Installment transactions</b><small>'+(excludeFullyPaidInstallments?'Showing active and unpaid groups':'Showing all groups')+'</small></div><div class="installment-filter-control"><span>Exclude fully paid</span><label class="installment-switch"><input type="checkbox" role="switch" aria-label="Exclude fully paid installment transactions" aria-checked="'+excludeFullyPaidInstallments+'" '+(excludeFullyPaidInstallments?'checked':'')+' onchange="setExcludeFullyPaidInstallments(this.checked)"><span class="installment-switch-track"></span></label></div></div>';
+ const control='<div class="installment-filter"><div class="installment-filter-copy"><b>Installment transactions</b><small>'+(excludeFullyPaidInstallments?'Showing active and unpaid groups':'Showing all groups')+'</small></div><div class="installment-filter-control"><span>'+(excludeFullyPaidInstallments?'Fully paid installments are hidden':'Fully paid installments are shown')+'</span><label class="installment-switch"><input type="checkbox" role="switch" aria-label="Exclude fully paid installment transactions" aria-checked="'+excludeFullyPaidInstallments+'" '+(excludeFullyPaidInstallments?'checked':'')+' onchange="setExcludeFullyPaidInstallments(this.checked)"><span class="installment-switch-track"></span></label></div></div>';
  const tabs='<div class="installment-category-tabs" role="group" aria-label="Filter installment category">'+[['all','All'],['cash_loan','Cash Loan'],['retail_installment','Retail Installments']].map(([id,name])=>'<button type="button" class="'+(installmentCategoryFilter===id?'sel':'')+'" aria-pressed="'+(installmentCategoryFilter===id)+'" onclick="setInstallmentCategory(\''+id+'\')">'+name+'</button>').join('')+'</div>';
  const sections=[['cash_loan','Cash Loan'],['retail_installment','Retail Installments'],['unclassified','Unclassified']].filter(([id])=>id!=='unclassified'||cards.some(x=>stagingCategory(x.loan)===id)).map(([id,title])=>{
   const bucket=cards.filter(x=>stagingCategory(x.loan)===id);
   if(installmentCategoryFilter!=='all'&&installmentCategoryFilter!==id)return '';
   const rows=bucket.map(({group:c,index:idx})=>{const past=installmentPastDueCount(c);return '<div class="item installment-click installment-group-row" role="button" tabindex="0" onclick="openInstallment('+idx+')" onkeydown="if(event.key===\'Enter\'||event.key===\' \')openInstallment('+idx+')"><div class="ico">▣</div><div class="itext"><b>'+c[0]+(past?'<span class="schedule-overdue-label">'+past+' PAST DUE</span>':'')+'</b><small><strong class="installment-principal">'+c[1]+'</strong> · '+c[2]+'</small><small class="transaction-date-label">Transaction Date · '+c[4]+'</small><div class="group-progress" role="progressbar" aria-label="'+c[0]+' payment progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+c[3]+'"><span style="width:'+c[3]+'%"></span></div><div class="group-progress-label"><span>'+c[3]+'% paid</span><span>View schedule ›</span></div></div><span class="arrow">›</span></div>'});
-  return '<section class="installment-category-section" data-loan-category="'+id+'"><div class="sectiontitle"><h3>'+title+'</h3><span class="count">'+bucket.length+'</span></div><div class="glass">'+(rows.length?expandableRowsHTML('installmentGroups-'+id,rows,5):'<div class="empty-state">No '+title.toLowerCase()+' to show.</div>')+'</div></section>';
+  return '<section class="installment-category-section" data-loan-category="'+id+'"><div class="sectiontitle"><div class="transaction-group-heading"><h3>'+title+'</h3>'+transactionTotalHTML(displayedAmountTotal(bucket.map(entry=>entry.loan.principal)))+'</div><span class="count">'+bucket.length+'</span></div><div class="glass">'+(rows.length?expandableRowsHTML('installmentGroups-'+id,rows,5):'<div class="empty-state">No '+title.toLowerCase()+' to show.</div>')+'</div></section>';
  }).join('');return control+tabs+sections;
 };
 const oldTransactions=transactions;
 transactions=()=>{const container=document.createElement('div');container.innerHTML=oldTransactions();const sections=[...container.querySelectorAll(':scope > .transaction-group')],straight=sections[0],installment=sections[1];if(straight&&installment){container.insertBefore(installment,straight);installment.querySelector('.transaction-count').textContent=stagingVisibleGroups().length;}return container.innerHTML;};
-straightTransactions=()=>{const host=document.createElement('div');host.innerHTML=transactions();return '<button type="button" class="screen-back" onclick="goBack()"><span aria-hidden="true">‹</span> Back</button>'+head('Straight Transactions','Your direct transactions')+host.querySelector('.transaction-tools').outerHTML+[...host.querySelectorAll('.transaction-group')].find(section=>section.querySelector('h2')?.textContent==='Straight Transactions').outerHTML;};
+straightTransactions=()=>{const host=document.createElement('div');host.innerHTML=transactions();return '<button type="button" class="screen-back" onclick="goBack()"><span aria-hidden="true">‹</span> Back</button>'+head('Straight Transactions','Your direct transactions')+host.querySelector('.transaction-tools').outerHTML+host.querySelector('.transaction-group[data-transaction-group="straight"]').outerHTML;};
 const oldHead=head;
 head=(title,subtitle='')=>oldHead(title,subtitle).replace('<i class="notification-unread-dot"></i>',unreadNotificationCount()?'<span class="notification-unread-count" aria-hidden="true">'+unreadNotificationCount()+'</span>':'');
 const approvedNotificationInbox=notificationInbox;
@@ -222,7 +239,7 @@ const enhancementRender=render;
 render=()=>{
  if(stagingData){
   if(stagingListOwner!==stagingData.user.id){
-   stagingListOwner=stagingData.user.id;txSort='Newest';expandedLists={};recentShowAll=false;notificationExpanded=false;stagingMessageVisible=20;installmentCategoryFilter='all';stagingBalanceScope='all';dashboardDuesExpanded=false;
+   stagingListOwner=stagingData.user.id;straightGroupFilter='all';txSort='Newest';expandedLists={};recentShowAll=false;recentPaymentLimit=5;notificationExpanded=false;stagingMessageVisible=20;installmentCategoryFilter='all';stagingBalanceScope='all';dashboardDuesExpanded=false;
    try{const saved=JSON.parse(localStorage.getItem(stagingChatSizeKey())||'null');stagingChatSize=saved&&Number.isFinite(saved.width)&&Number.isFinite(saved.height)&&saved.width>0&&saved.height>0?saved:null;}catch{stagingChatSize=null;}
   }
   profilePhotoData=stagingData.preference?.use_profile_photo===false?'':stagingData.user.avatarUrl||'';

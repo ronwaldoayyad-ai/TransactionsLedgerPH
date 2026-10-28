@@ -1,3 +1,4 @@
+import { debugWarn, debugError } from "../lib/debugLog"
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { useApp } from './AppContext'
 import { useRecordRefresh } from '../lib/recordRefresh'
@@ -118,7 +119,7 @@ export function DisbursementsProvider({ children }) {
       .order('created_at', { ascending: false })
     if (error) {
       // Degrade gracefully if the migration hasn't been run yet.
-      console.warn('[disbursements] load failed (run the migration?):', error.message)
+      debugWarn('[disbursements] load failed (run the migration?):', error.message)
       return
     }
     setLiveDisbursements((data ?? []).map(mapDisbursement))
@@ -213,7 +214,7 @@ export function DisbursementsProvider({ children }) {
         p_deduction_items: d.deductionItems ?? [],
       })
       if (error) {
-        console.error('[disbursements] create failed:', error.message)
+        debugError('[disbursements] create failed:', error.message)
         return { error: error.message }
       }
       const row = Array.isArray(data) ? data[0] : data
@@ -238,7 +239,7 @@ export function DisbursementsProvider({ children }) {
         .update({ status: 'assigned', updated_at: new Date().toISOString() })
         .eq('id', id)
       if (error) {
-        console.error('[disbursements] assign failed:', error.message)
+        debugError('[disbursements] assign failed:', error.message)
         return { error: error.message }
       }
       await fetchAll()
@@ -259,7 +260,7 @@ export function DisbursementsProvider({ children }) {
         .update({ status, updated_at: new Date().toISOString() })
         .eq('id', id)
       if (error) {
-        console.error('[disbursements] status update failed:', error.message)
+        debugError('[disbursements] status update failed:', error.message)
         return { error: error.message }
       }
       await fetchAll()
@@ -277,7 +278,7 @@ export function DisbursementsProvider({ children }) {
       }
       const { error } = await supabase.from('loan_disbursements').delete().eq('id', id)
       if (error) {
-        console.error('[disbursements] delete failed:', error.message)
+        debugError('[disbursements] delete failed:', error.message)
         return { error: error.message }
       }
       await fetchAll()
@@ -302,7 +303,7 @@ export function DisbursementsProvider({ children }) {
       }
       const { data, error } = await supabase.rpc('acknowledge_loan_disbursement', { p_id: id })
       if (error) {
-        console.error('[disbursements] acknowledge failed:', error.message)
+        debugError('[disbursements] acknowledge failed:', error.message)
         return { error: error.message }
       }
       const row = Array.isArray(data) ? data[0] : data

@@ -1,10 +1,12 @@
+import { attachmentDataUrlBlob } from './attachmentDataUrl'
+
 // Keep guest screenshots below the function request limit. Signed-in documents
 // already upload directly to Supabase Storage, outside the function body.
 export async function guestSupportPayload(payload) {
   if (!payload.file) return payload
   const file = payload.file
   if (!/^data:image\/(jpeg|png|webp|gif|bmp|avif);base64,/.test(file.data || '')) throw Error('Choose a supported screenshot.')
-  const blob = await fetch(file.data).then(response => response.blob())
+  const blob = attachmentDataUrlBlob(file.data)
   if (!blob.size || blob.size > 5242880) throw Error('Choose a screenshot up to 5 MB.')
   if (blob.size <= 2500000) return payload
   const bitmap = await createImageBitmap(blob)

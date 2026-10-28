@@ -1,3 +1,4 @@
+import { debugError } from "../../lib/debugLog"
 import { useMemo, useState } from 'react'
 import { useApp } from '../../context/AppContext'
 import { useDisbursements } from '../../context/DisbursementsContext'
@@ -217,7 +218,7 @@ export default function Disbursements() {
         attachments: [disbursementPdfAttachment(toPdf(d, nameOf(d.userId)))],
       })
     } catch (e) {
-      console.error('[disbursements] ready notification failed:', e?.message ?? e)
+      debugError('[disbursements] ready notification failed:', e?.message ?? e)
     }
     setBusy(false)
     setPreview((p) => (p && p.id === d.id ? { ...p, status: 'assigned' } : p))

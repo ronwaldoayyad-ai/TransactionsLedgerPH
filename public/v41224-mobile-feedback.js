@@ -27,9 +27,9 @@ try{const saved=JSON.parse(sessionStorage.getItem('loanledger-download-feedback'
 const proofLibraryLoads=new Map();
 const parseProofBeforeAmountLabel=parseProofText;
 parseProofText=text=>parseProofBeforeAmountLabel(String(text).replace(/^\s*(?:payment\s+)?amount\s*(?=[:\-]?\s*(?:(?:PHP|₱)\s*)?[\d,]+\.\d{2}\s*$|\s*$)/gim,'Amount paid '));
-loadProofLibrary=(name,url)=>{if(window[name])return Promise.resolve(window[name]);if(proofLibraryLoads.has(name))return proofLibraryLoads.get(name);const loading=new Promise((resolve,reject)=>{const script=document.createElement('script');script.src=url;script.onload=()=>window[name]?resolve(window[name]):reject(Error('Recognition library is unavailable.'));script.onerror=()=>{script.remove();reject(Error('Recognition resources could not load. You can enter the details manually.'));};document.head.append(script);});proofLibraryLoads.set(name,loading);loading.catch(()=>proofLibraryLoads.delete(name));return loading;};
+loadProofLibrary=(name,url)=>{if(window[name])return Promise.resolve(window[name]);if(proofLibraryLoads.has(name))return proofLibraryLoads.get(name);const loading=name==='pdfjsLib'?import('/assets/ocr/pdf.min.mjs'):new Promise((resolve,reject)=>{const script=document.createElement('script');script.src=url;script.onload=()=>window[name]?resolve(window[name]):reject(Error('Recognition library is unavailable.'));script.onerror=()=>{script.remove();reject(Error('Recognition resources could not load. You can enter the details manually.'));};document.head.append(script);});proofLibraryLoads.set(name,loading);loading.catch(()=>proofLibraryLoads.delete(name));return loading;};
 let cachedProofWorker=null,proofWorkerLoading=null,proofWorkerEpoch=0,proofWorkerIdleTimer=null,proofProgressListener=()=>{};
-const proofOcrMetrics={workerCreates:0};
+const proofOcrMetrics={workerCreates:0,fastReads:0,detailReads:0};
 async function disposeProofWorker(){proofWorkerEpoch++;clearTimeout(proofWorkerIdleTimer);const worker=cachedProofWorker;cachedProofWorker=null;proofWorkerLoading=null;if(worker)await worker.terminate().catch(()=>{});}
 function deferProofWorkerRelease(){clearTimeout(proofWorkerIdleTimer);proofWorkerIdleTimer=setTimeout(()=>disposeProofWorker(),120000);}
 createProofWorker=async progress=>{
@@ -43,16 +43,36 @@ const clearProofBeforeCache=clearPaymentProof;
 clearPaymentProof=()=>{if(proofScanBusy){disposeProofWorker();proofWorker=null;}clearProofBeforeCache();};
 const manualProofBeforeCache=useManualPaymentDetails;
 useManualPaymentDetails=()=>{disposeProofWorker();proofWorker=null;manualProofBeforeCache();};
-prepareProofImage=async uploaded=>{const url=URL.createObjectURL(uploaded);try{const image=await new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(Error('The image could not be read.'));img.src=url;});const w=image.naturalWidth,h=image.naturalHeight,scale=Math.min(2,1600/w,4000/h,Math.sqrt(4200000/(w*h))),canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.floor(w*scale));canvas.height=Math.max(1,Math.floor(h*scale));canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);return canvas;}finally{URL.revokeObjectURL(url);}};
+function proofImageDimensions(width,height,detail=false){
+ if(!Number.isFinite(width)||!Number.isFinite(height)||width<=0||height<=0)throw Error('The image could not be read.');
+ const scale=detail?Math.min(2,1600/width,4000/height,Math.sqrt(4200000/(width*height))):Math.min(1,1200/width,3000/height,Math.sqrt(2400000/(width*height)));
+ return {width:Math.max(1,Math.floor(width*scale)),height:Math.max(1,Math.floor(height*scale))};
+}
+function proofNeedsDetail(result){return !Object.values(parseProofText(result?.text||'')).every(Boolean)||!Number.isFinite(result?.confidence)||result.confidence<85;}
+prepareProofImage=async(uploaded,detail=false)=>{const url=URL.createObjectURL(uploaded);try{const image=await new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>resolve(img);img.onerror=()=>reject(Error('The image could not be read.'));img.src=url;});const size=proofImageDimensions(image.naturalWidth,image.naturalHeight,detail),canvas=document.createElement('canvas');canvas.width=size.width;canvas.height=size.height;canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);return canvas;}finally{URL.revokeObjectURL(url);}};
+async function readProofImage(uploaded,progress,registerWorker){
+ // Decode the image while the shared engine is loading. Keep the original upload untouched.
+ const epoch=proofWorkerEpoch,workerTask=createProofWorker(progress);workerTask.catch(()=>{});
+ let image,worker;
+ try{
+  image=await prepareProofImage(uploaded);worker=await workerTask;if(epoch!==proofWorkerEpoch)throw Error('Recognition was canceled.');registerWorker(worker);
+  const result=await worker.recognize(image);if(epoch!==proofWorkerEpoch)throw Error('Recognition was canceled.');proofOcrMetrics.fastReads++;image.width=image.height=0;
+  if(!proofNeedsDetail(result.data))return result.data.text;
+  image=await prepareProofImage(uploaded,true);proofOcrMetrics.detailReads++;
+  if(epoch!==proofWorkerEpoch)throw Error('Recognition was canceled.');return (await worker.recognize(image)).data.text;
+ }finally{if(image)image.width=image.height=0;if(!worker)workerTask.then(w=>releaseProofWorker(w,true)).catch(()=>{});}
+}
 extractProofText=async(uploaded,progress,registerWorker)=>{
- if(uploaded.type!=='application/pdf'){const image=await prepareProofImage(uploaded);try{const worker=await createProofWorker(progress);registerWorker(worker);return (await worker.recognize(image)).data.text;}finally{image.width=image.height=0;}}
- const pdfjs=await loadProofLibrary('pdfjsLib','/assets/ocr/pdf.min.js');pdfjs.GlobalWorkerOptions.workerSrc='/assets/ocr/pdf.worker.min.js';const pdf=await pdfjs.getDocument({data:new Uint8Array(await uploaded.arrayBuffer()),isEvalSupported:false}).promise;
- try{let text='';for(let n=1;n<=pdf.numPages;n++){const p=await pdf.getPage(n),content=await p.getTextContent();let lastY=null;for(const item of content.items){if(lastY!==null&&Math.abs(item.transform[5]-lastY)>3)text+='\n';text+=item.str+' ';lastY=item.transform[5];}text+='\n';if(Object.values(parseProofText(text)).every(Boolean))return text;}
+ if(uploaded.type!=='application/pdf')return readProofImage(uploaded,progress,registerWorker);
+ const pdfjs=await loadProofLibrary('pdfjsLib','/assets/ocr/pdf.min.js');pdfjs.GlobalWorkerOptions.workerSrc='/assets/ocr/pdf.worker.min.mjs';const pdfTask=pdfjs.getDocument({data:new Uint8Array(await uploaded.arrayBuffer()),isEvalSupported:false,cMapUrl:location.origin+'/assets/ocr/pdf/cmaps/',cMapPacked:true,standardFontDataUrl:location.origin+'/assets/ocr/pdf/standard_fonts/',wasmUrl:location.origin+'/assets/ocr/pdf/wasm/'});
+ try{const pdf=await pdfTask.promise;let text='';for(let n=1;n<=pdf.numPages;n++){const p=await pdf.getPage(n),content=await p.getTextContent();let lastY=null;for(const item of content.items){if(lastY!==null&&Math.abs(item.transform[5]-lastY)>3)text+='\n';text+=item.str+' ';lastY=item.transform[5];}text+='\n';if(Object.values(parseProofText(text)).every(Boolean))return text;}
  const worker=await createProofWorker(progress);registerWorker(worker);for(let n=1;n<=pdf.numPages;n++){const p=await pdf.getPage(n),base=p.getViewport({scale:1}),scale=Math.min(1.5,1600/base.width,4000/base.height,Math.sqrt(4200000/(base.width*base.height))),v=p.getViewport({scale}),canvas=document.createElement('canvas');canvas.width=Math.floor(v.width);canvas.height=Math.floor(v.height);try{await p.render({canvasContext:canvas.getContext('2d'),viewport:v}).promise;text+='\n'+(await worker.recognize(canvas)).data.text;}finally{canvas.width=canvas.height=0;p.cleanup();}if(Object.values(parseProofText(text)).every(Boolean))break;}return text;
- }finally{await pdf.destroy();}
+ }finally{await pdfTask.destroy();}
 };
-// Begin loading when the borrower opens the chooser, before a file is selected.
-document.addEventListener('click',event=>{if(page==='payment'&&(event.target.closest('label.upload')||event.target.id==='proof')&&document.querySelector('#allocationConfirm')?.checked&&!proofScanBusy)createProofWorker(()=>{}).then(deferProofWorkerRelease).catch(()=>{});},true);
+// Prepare only after payment intent, not during login or an unrelated dashboard visit.
+function warmProofRecognition(){if(page!=='payment'||!document.querySelector('#allocationConfirm')?.checked||proofScanBusy)return;createProofWorker(()=>{}).then(worker=>{if(worker===cachedProofWorker&&!proofScanBusy)deferProofWorkerRelease();}).catch(()=>{});}
+document.addEventListener('change',event=>{if(event.target.id==='allocationConfirm')warmProofRecognition();});
+document.addEventListener('click',event=>{if(event.target.closest('label.upload')||event.target.id==='proof')warmProofRecognition();},true);
 const goBeforeOcrCleanup=go;go=destination=>{if(destination==='login'){disposeProofWorker();downloadNotice?.remove();downloadNotice=null;clearTimeout(downloadNoticeTimer);}goBeforeOcrCleanup(destination);};
 let invoicePickerOwner=null,invoicePickerYear='',invoicePickerMonth='';
 function invoicePeriodDates(){return invoiceDueDates().map((date,index)=>({date,index,key:dueKey(date)}));}

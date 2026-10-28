@@ -28,8 +28,8 @@ const stagingDue=(view=mode)=>{
 };
 const stagingTotal=(view=mode)=>stagingDue(view).reduce((sum,t)=>sum+t.amount,0);
 function stagingRecentActivity(){
-  const activity=stagingRows().filter(t=>['paid','refunded'].includes(t.status)).map(t=>({date:t.datePaid||t.txnDate,markup:transactionItem(t.status==='paid'?'✓':'↩',htmlSafe(t.description),stagingDate(t.datePaid),t.amount,t.status==='paid'?'green':'purple',t.status==='paid'?'Payment Received':'Refund Processed')}));
-  (stagingData?.payments||[]).forEach(p=>activity.push({date:p.submittedAt,markup:transactionItem('▣','Payment Proof Submitted',stagingDate(p.submittedAt),p.amount,'','Payment Proof Submitted')}));
+  const activity=stagingRows().filter(t=>['paid','refunded'].includes(t.status)).map(t=>({date:t.datePaid||t.txnDate,markup:transactionItem(t.status==='paid'?'✓':'↩',htmlSafe(t.description),stagingDate(t.datePaid),t.amount,t.status==='paid'?'green':'purple',t.status==='paid'?'Payment Received':'Refund Processed').replace(/<(div|button) /,'<$1 data-staging-transaction-id="'+htmlSafe(t.id)+'" ')}));
+  (stagingData?.payments||[]).forEach(p=>activity.push({date:p.submittedAt,markup:transactionItem('▣','Payment Proof Submitted','Submitted on '+stagingDate(p.submittedAt),p.amount,'','Proof submission').replace(/^<(div|button)\b/,'<$1 data-payment-proof-id="'+htmlSafe(p.id)+'"')}));
   return activity.sort((a,b)=>(b.date||'').localeCompare(a.date||'')).map(a=>a.markup);
 }
 const stagingPending=()=>toast('This action is not connected yet. No submission or change has been saved.');
@@ -64,14 +64,14 @@ dashboardDueListHTML=()=>{
 };
 transactionBreakdownItems=()=>(page==='balance'?stagingRows().filter(stagingOwed):stagingDue()).map(t=>{const index=stagingLoans().findIndex(l=>l.id===t.loanId);return payableBreakdownItem(htmlSafe(t.description),'Due '+stagingDate(t.dueDate),cash(t.amount),t.dueDate,'',index<0?null:index,'▣');});
 transactionRecords=()=>stagingRows().map(t=>{const status=stagingStatus(t),paid=['Paid','Refunded'].includes(status);return [status==='Paid'?'✓':status==='Past Due'?'!':'◷',htmlSafe(t.description),(paid?'Paid '+stagingDate(t.datePaid):'Due '+stagingDate(t.dueDate)),t.amount,status==='Paid'?'green':'orange',status==='Past Due'?'Past Dues':status,stagingLoans().some(l=>l.id===t.loanId)?'installment':'straight',Date.parse(t.txnDate),t.id];});
-historyPaymentRecords=()=>stagingRows().filter(t=>t.status==='paid').map(t=>{const index=stagingLoans().findIndex(l=>l.id===t.loanId);return ['✓',htmlSafe(t.description),'Paid '+stagingDate(t.datePaid)+' · Due '+stagingDate(t.dueDate),t.amount,'green','Payments',index>=0?'installment':'straight',stagingDate(t.txnDate),Date.parse(t.datePaid||t.txnDate),index];});
+historyPaymentRecords=()=>stagingRows().filter(t=>t.status==='paid').map(t=>{const index=stagingLoans().findIndex(l=>l.id===t.loanId);return ['✓',htmlSafe(t.description),'Paid '+stagingDate(t.datePaid)+' · Due '+stagingDate(t.dueDate),t.amount,'green','Payments',index>=0?'installment':'straight',stagingDate(t.txnDate),Date.parse(t.datePaid||t.txnDate),index,t.id];});
 historyAccountRecords=historyPaymentRecords;
 const stagingOriginalStraight=straightTransactions;
 straightTransactions=()=>head('Straight Transactions','Your direct transactions')+'<div class="glass">'+expandableRowsHTML('straight-real',transactionRecords().filter(r=>r[6]==='straight').sort(stagingCompareTransactions).map(r=>transactionItem(r[0],r[1],r[2],r[3],r[4],r[1],r[5],'transaction-row',stagingTransactionDate(r[7]))),5)+'</div>';
 loanDisclosureData=(index=selectedInstallmentIndex)=>{
   const loan=stagingLoans()[index];if(!loan)return null;
   const rows=stagingRows().filter(t=>t.loanId===loan.id).sort((a,b)=>(a.n||0)-(b.n||0)||a.dueDate.localeCompare(b.dueDate)).map((t,i)=>({number:t.n||i+1,title:t.description+(t.paidAmount>0&&t.remainingAmount>0?' · Applied '+cash(t.paidAmount)+' · Remaining '+cash(t.remainingAmount):''),dueDate:t.dueDate,amount:t.originalAmount??t.amount,status:stagingStatus(t),paidDate:t.datePaid||''}));
-  return {id:loan.id,name:loan.label,borrower:stagingData.user.name,account:borrowerAccountNumber(),transactionDate:loan.txnDate,principal:loan.principal,months:rows.length,verified:rows.filter(r=>r.status==='Paid').length,rate:loan.monthlyRate,firstPaymentDate:loan.firstPaymentDate,dst:loan.dst,processing:loan.processingFee,notarial:loan.notarialFee,feeTotal:loan.dst+loan.processingFee+loan.notarialFee,netProceeds:loan.disclosure?.netProceeds??loan.principal,totalRepayment:rows.reduce((n,r)=>n+r.amount,0),status:rows.length&&rows.every(r=>r.status==='Paid')?'Fully Paid':rows.some(r=>r.status==='Past Due')?'Past Due':'In Progress',penaltyRate:3,latePaymentFee:1500,rows};
+  return {id:loan.id,name:loan.label,borrower:stagingData.user.name,account:borrowerAccountNumber(),transactionDate:loan.txnDate,principal:loan.principal,months:rows.length,verified:rows.filter(r=>r.status==='Paid').length,rate:loan.monthlyRate,firstPaymentDate:loan.firstPaymentDate,dst:loan.dst,processing:loan.processingFee,notarial:loan.notarialFee,feeTotal:loan.dst+loan.processingFee+loan.notarialFee,netProceeds:loan.disclosure?.netProceeds??loan.principal,totalRepayment:rows.reduce((n,r)=>n+r.amount,0),status:installmentGroupState(loan,stagingRows().filter(t=>t.loanId===loan.id),localToday()),penaltyRate:3,latePaymentFee:1500,rows};
 };
 const stagingOriginalBalance=balance;
 balance=()=>stagingOriginalBalance().replace(cash(67158.99),cash(stagingRows().filter(stagingOwed).reduce((n,t)=>n+t.amount,0))).replace('7 items · Current due Oct 25, 2026 · Past due Sep/Aug 2026',countLabel(stagingRows().filter(stagingOwed).length,'outstanding item'));
@@ -112,11 +112,11 @@ window.addEventListener('message',event=>{
     const key=JSON.stringify(message.data);if(key===stagingSnapshotKey)return;stagingSnapshotKey=key;
     const sameOwner=stagingData?.user.id===message.data.user.id,focused=document.activeElement;
     const focus=sameOwner&&focused?.id?{id:focused.id,start:focused.selectionStart,end:focused.selectionEnd}:null;
-    const scroll=sameOwner?['.phone-screen','#app','#chatMessages'].map(selector=>({selector,top:document.querySelector(selector)?.scrollTop||0})):[];
+    const scroll=sameOwner?['.phone-screen','#app','#chatMessages','.quick-access-section .quickgrid'].map(selector=>({selector,top:document.querySelector(selector)?.scrollTop||0,left:document.querySelector(selector)?.scrollLeft||0})):[];
     const previousUser=stagingData?.user.id;stagingData=message.data;
     const user=stagingData.user;
     if(!personalInfoEditing||previousUser!==user.id)personalInfo={fullName:[user.firstName,user.lastName].filter(Boolean).join(' ')||user.name,preferredDisplayName:user.nickname||'',email:user.email,phone:user.phone,birthDate:'',address:'',occupation:''};profilePhotoData=user.avatarUrl||'';
-    recentPayments=stagingData.payments.map(p=>({id:p.id,amount:p.amount,paidDate:stagingDate(p.submittedAt),dueDate:'See lender allocation',reference:p.reference,proofName:p.fileName,method:p.method,status:p.status[0].toUpperCase()+p.status.slice(1),reviewedDate:stagingDate(p.reviewedAt),format:p.fileType==='pdf'?'PDF':'IMAGE',note:p.note}));
+    recentPayments=stagingData.payments.map(p=>({id:p.id,amount:p.amount,submittedAt:p.submittedAt,paidDate:stagingDate(p.submittedAt),dueDate:'See lender allocation',reference:p.reference,proofName:p.fileName,method:p.method,status:p.status[0].toUpperCase()+p.status.slice(1),reviewedDate:stagingDate(p.reviewedAt),format:p.fileType==='pdf'?'PDF':'IMAGE',note:p.note}));
     mostRecentPayment=recentPayments.find(p=>p.id===mostRecentPayment?.id)||null;
     chatMessages=stagingData.messages.map(m=>({id:m.id,sender:m.fromAdmin?'lender':'borrower',body:m.body,time:new Date(m.createdAt).toLocaleTimeString('en-PH',{hour:'numeric',minute:'2-digit'}),replyTo:null,reactions:[]}));
     notificationItems=stagingData.notifications.map(n=>({id:n.id,kind:({payment:'Payment',document:'Loan',account:'Account',general:'Account'}[n.category]||'Account'),icon:'♧',title:htmlSafe(n.title),detail:htmlSafe(n.body),time:new Date(n.createdAt).toLocaleString('en-PH')}));
@@ -124,7 +124,7 @@ window.addEventListener('message',event=>{
     loanRequests=stagingData.requests.map(r=>({...r,id:r.requestNumber||r.id,amount:r.amount,term:r.termMonths,rate:r.monthlyRate,bank:r.bankName,accountNumber:r.bankAccountNumber,accountName:r.bankAccountName,status:r.status,createdAt:r.createdAt,fees:{processing:r.processingFee,dst:r.dst,notarial:r.notarialFee},schedule:(r.schedule||[]).map(row=>({month:row.month,payment:row.totalPayment,remaining:row.remainingBalance}))}));
     if(previousUser!==user.id||page==='login'){dashboardGreetingChoice=null;dashboardGreetingLanguage=null;dashboardGreetingTranslation=null;finderCompact=true;page='dashboard';previousPage='login';}
     stagingBusy=false;render();
-    for(const saved of scroll){const target=document.querySelector(saved.selector);if(target)target.scrollTop=saved.top;}
+    for(const saved of scroll){const target=document.querySelector(saved.selector);if(target){target.scrollTop=saved.top;target.scrollLeft=saved.left;}}
     if(focus){const target=document.getElementById(focus.id);if(target){target.focus({preventScroll:true});try{target.setSelectionRange(focus.start,focus.end)}catch{}}}
   }
   if(message.type==='proof'&&message.url){const url=new URL(message.url);if(url.origin!=='http://127.0.0.1:54321')return;closeRecentProofModal();const modal=document.createElement('div');modal.id='recentProofModal';modal.className='recent-proof-overlay';modal.innerHTML='<div class="recent-proof-dialog" role="dialog" aria-modal="true"><button class="recent-proof-close" onclick="closeRecentProofModal()">×</button><h2>Payment proof</h2>'+(message.mime==='pdf'?'<iframe class="proof-real-preview" title="Payment proof"></iframe>':'<img class="proof-real-preview" alt="Payment proof">')+'</div>';modal.querySelector('iframe,img').src=url.href;document.body.appendChild(modal);}

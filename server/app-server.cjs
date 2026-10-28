@@ -1,11 +1,12 @@
 // Local acceptance harness for the Vercel Web Request API and static build.
 const http=require('node:http'),fs=require('node:fs'),path=require('node:path');
 const {createPawcheebelsHandler}=require('./pawcheebels.cjs');
-const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json','.svg':'image/svg+xml','.png':'image/png','.webp':'image/webp','.jpg':'image/jpeg','.woff2':'font/woff2','.mp4':'video/mp4'};
+const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.wasm':'application/wasm','.css':'text/css; charset=utf-8','.json':'application/json','.svg':'image/svg+xml','.png':'image/png','.webp':'image/webp','.jpg':'image/jpeg','.woff2':'font/woff2','.mp4':'video/mp4'};
 module.exports=function createAppServer({service,origin,dist,env=process.env}){
  const root=path.resolve(dist),assistant=createPawcheebelsHandler({origin,authenticate:service.active,env});
  const api=require('./web-api.cjs')(()=>({service,assistant,origin,workerSecret:env.NOTIFICATION_WORKER_SECRET}));
  return http.createServer(async(req,res)=>{
+  for(const {key,value}of require('./security-headers.json'))res.setHeader(key,key==='Content-Security-Policy'&&!origin.startsWith('https:')?value.replace('; upgrade-insecure-requests',''):value);
   res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','strict-origin-when-cross-origin');
   res.setHeader('X-Frame-Options','SAMEORIGIN');res.setHeader('Cache-Control','no-store');
   try{
@@ -20,6 +21,7 @@ module.exports=function createAppServer({service,origin,dist,env=process.env}){
    }
    if(!['GET','HEAD'].includes(req.method)){res.writeHead(405);res.end();return;}
    const decoded=decodeURIComponent(url.pathname),candidate=path.resolve(root,'.'+decoded);
+   if(/^\/(?:\.git|\.release|\.vercel|\.env(?:\.[^/]*)?|\.npmrc|server|src|release|supabase|node_modules|tools)(?:\/|$)/.test(decoded)||/^\/(?:package(?:-lock)?\.json|vite\.config\.js|vercel\.json)$/.test(decoded)||decoded.endsWith('.map')){res.writeHead(404);res.end();return;}
    if(candidate!==root&&!candidate.startsWith(root+path.sep)){res.writeHead(403);res.end();return;}
    let file=candidate;
    if(!fs.existsSync(file)||!fs.statSync(file).isFile()){

@@ -6,7 +6,7 @@ const {assertSingleTransaction}=require('../../release/option3/sql-transaction-b
 const root=path.resolve(__dirname,'../..');
 const candidate=fs.readFileSync(path.join(root,'release/option3/forward-candidate.sql'),'utf8');
 const commands=assertSingleTransaction(candidate);
-const config={host:'127.0.0.1',port:25432,user:'postgres',password:'postgres',max:1,connectionTimeoutMillis:5000,statement_timeout:30000};
+const config={host:'127.0.0.1',port:Number(process.env.PAYMENT_TEST_PORT||25432),user:'postgres',password:'postgres',max:1,connectionTimeoutMillis:5000,statement_timeout:Number(process.env.MIGRATION_TEST_TIMEOUT_MS||30000)};
 const clean=sql=>sql.replace(/^\\.*$/gm,'');
 
 const {fingerprint}=require('../../release/option3/database-fingerprint.cjs');

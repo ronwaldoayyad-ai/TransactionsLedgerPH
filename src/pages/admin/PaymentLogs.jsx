@@ -1,3 +1,4 @@
+import { debugError } from "../../lib/debugLog"
 import { useMemo, useState } from 'react'
 import { useApp } from '../../context/AppContext'
 import { useNotifications } from '../../context/NotificationsContext'
@@ -5,7 +6,7 @@ import PaymentAdjustmentActivity from '../../components/PaymentAdjustmentActivit
 import { PageHeader } from '../../components/AppShell'
 import Icon from '../../components/Icon'
 import RefreshButton from '../../components/RefreshButton'
-import { Badge, Button, Card, CardHeader, CurrencyInput, EmptyState, Field, Modal, MultiSelect, inputClass } from '../../components/ui'
+import {SearchInput,  Badge, Button, Card, CardHeader, CurrencyInput, EmptyState, Field, Modal, MultiSelect, inputClass } from '../../components/ui'
 import Pagination from '../../components/Pagination'
 import { usePagination } from '../../hooks/usePagination'
 import { formatDate, formatPeso, toISODate } from '../../lib/amortization'
@@ -160,7 +161,7 @@ export default function PaymentLogs() {
             targetUserIds: [created.userId],
           })
         } catch (e) {
-          console.error('[payment-logs] payment notification failed:', e?.message ?? e)
+          debugError('[payment-logs] payment notification failed:', e?.message ?? e)
         }
       }
       // Historical acknowledgements do not settle dues. Reviewed postings own
@@ -247,7 +248,7 @@ export default function PaymentLogs() {
           subtitle={`${rows.filter((r) => r.kind === 'payment').length} payment${rows.filter((r) => r.kind === 'payment').length === 1 ? '' : 's'} logged`}
           action={
             <div className="flex flex-wrap items-center gap-2">
-              <input
+              <SearchInput
                 type="search"
                 aria-label="Search payment logs"
                 placeholder="Search…"
