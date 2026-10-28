@@ -7,4 +7,3 @@ function harness(error,role='admin'){const updates=[],rows=[{id:'row',amount:100
 test('failed archive writes leave records visible and do not record a successful archive',async()=>{const h=harness({message:'fixture failure'});assert.equal(await h.run(['row']),false);assert.deepEqual(h.updates,['error']);});
 test('successful archive writes update the view only after persistence succeeds',async()=>{const h=harness(null);assert.equal(await h.run(['row']),true);assert.deepEqual(h.updates,['archive','remove','log']);});
 test('borrowers cannot initiate admin archiving even before the database policy check',async()=>{const h=harness(null,'user');assert.equal(await h.run(['row']),false);assert.deepEqual(h.updates,[]);});
-
