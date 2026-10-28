@@ -1,6 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { Button, CurrencyInput, EmptyState, Field, Modal, inputClass } from '../ui'
 import { MiniCard } from './CardVisual'
+import WalletDeck from './WalletDeck'
+import { buildBillTrackerModel, defaultBillMonth } from '../../lib/billPresentation'
 
 // Apple-like pill buttons, sized to match the urgency badge and status pill.
 const PILL_BTN = 'rounded-full px-3 py-0.5 text-xs font-semibold transition-all duration-150 active:scale-[0.94] cursor-pointer'
@@ -33,6 +35,7 @@ const PILL = {
   PENDING: 'bg-blue-50 text-blue-700',
   PARTIAL: 'bg-amber-50 text-amber-700',
   PAID: 'bg-emerald-50 text-emerald-700',
+  PAST_DUE: 'bg-red-50 text-red-700',
 }
 
 export default function BillTracker({ cards, accounts, bills, payments, wallet }) {
@@ -42,96 +45,39 @@ export default function BillTracker({ cards, accounts, bills, payments, wallet }
   const [payFor, setPayFor] = useState(null) // bill | null
   const [confirmDelete, setConfirmDelete] = useState(null) // bill id
 
-  const cardOf = (id) => cards.find((c) => c.id === id)
-  const cardLabel = (id) => {
-    const c = cardOf(id)
-    return c ? `${c.bankName} ${c.network} •••• ${c.last4}` : 'Card'
-  }
-
-  const enriched = useMemo(
-    () => bills.map((b) => ({ bill: b, ...billState(b, payments, today) })),
-    [bills, payments, today],
-  )
-  const counts = useMemo(
-    () => ({
-      pending: enriched.filter((e) => e.status === 'pending').length,
-      past_due: enriched.filter((e) => e.status === 'past_due').length,
-      paid: enriched.filter((e) => e.status === 'paid').length,
-    }),
-    [enriched],
-  )
-  const shown = enriched
-    .filter((e) => e.status === sub)
-    .sort((a, b) => a.bill.dueDate.localeCompare(b.bill.dueDate))
+  const [view, setView] = useState('cards')
+  const [expandedByStatus, setExpandedByStatus] = useState({})
+  const model = useMemo(() => buildBillTrackerModel(bills, payments, today), [bills, payments, today])
+  const cardsById = useMemo(() => new Map(cards.map(card => [card.id, card])), [cards])
+  const groups = model.groups[sub]
+  const initialMonth = defaultBillMonth(groups, today)
+  const openMonths = expandedByStatus[sub] ?? (initialMonth ? [initialMonth] : [])
+  const toggleMonth = key => setExpandedByStatus(previous => ({ ...previous, [sub]: openMonths.includes(key) ? openMonths.filter(month => month !== key) : [...openMonths, key] }))
+  const changeAllMonths = open => setExpandedByStatus(previous => ({ ...previous, [sub]: open ? groups.map(group => group.key) : [] }))
+  const onEdit = row => setBillModal({ initial: row.bill, payment: row.status === 'paid' ? row.lastPaid : null })
 
   return (
-    <div className="space-y-4">
-      {/* Sub-tabs */}
-      <div className="wallet-bill-statuses grid grid-cols-3 gap-2">
+    <div className="wallet-bills space-y-4">
+      <div className="wallet-bill-statuses grid grid-cols-3 gap-2" role="group" aria-label="Filter bills by status">
         {SUB_TABS.map(([key, label]) => (
-          <button
-            key={key}
-            onClick={() => setSub(key)}
-            className={`flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors duration-150 ${
-              sub === key ? SUB_COLOR[key].active : 'cursor-pointer border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
-            }`}
-          >
-            <span className={`h-2 w-2 shrink-0 rounded-full ${SUB_COLOR[key].dot}`} />
-            {label}
-            <span className={`rounded-full px-1.5 text-xs font-semibold ${SUB_COLOR[key].badge}`}>
-              {counts[key]}
-            </span>
+          <button type="button" key={key} onClick={() => setSub(key)} aria-pressed={sub === key}
+            className={`wallet-bill-filter rounded-xl border transition-colors duration-150 ${sub === key ? SUB_COLOR[key].active : 'cursor-pointer border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}>
+            <span className="wallet-bill-filter-label"><span className={`h-2 w-2 shrink-0 rounded-full ${SUB_COLOR[key].dot}`} />{label}<span className={`rounded-full px-1.5 text-xs font-semibold ${SUB_COLOR[key].badge}`}>{model.summary[key].count}</span></span>
+            <strong className="wallet-bill-filter-total">{formatPeso(model.summary[key].amount)}</strong>
+            <span className="wallet-bill-filter-caption">{key === 'paid' ? 'Payments recorded' : 'Remaining due'}</span>
           </button>
         ))}
       </div>
-
-      {shown.length === 0 ? (
-        <EmptyState icon="check" title={`No ${SUB_TABS.find(([k]) => k === sub)[1].toLowerCase()} bills`} />
-      ) : (
+      <p className="text-xs leading-relaxed text-slate-500">Grouped by bill due month. Pending and Past Due show unpaid balances; Paid shows payments on fully settled bills.</p>
+      <div className="wallet-bill-toolbar">
+        <div className="wallet-bill-view" role="group" aria-label="Bill view">
+          {[['cards', 'Cards'], ['list', 'List']].map(([key, label]) => <button type="button" key={key} aria-pressed={view === key} onClick={() => setView(key)}>{label}</button>)}
+        </div>
+        <div className="wallet-bill-expand"><button type="button" disabled={!groups.length || groups.every(group => openMonths.includes(group.key))} onClick={() => changeAllMonths(true)}>Expand all</button><button type="button" disabled={!groups.some(group => openMonths.includes(group.key))} onClick={() => changeAllMonths(false)}>Collapse all</button></div>
+      </div>
+      {groups.length === 0 ? <EmptyState icon="check" title={`No ${SUB_TABS.find(([key]) => key === sub)[1].toLowerCase()} bills`} /> : (
         <div className="space-y-3">
-          {shown.map(({ bill, paid, remaining, status, partial }) => {
-            const card = cardOf(bill.cardId)
-            const badge = urgencyBadge(bill, today)
-            const pill = status === 'paid' ? 'PAID' : partial ? 'PARTIAL' : 'PENDING'
-            const lastPaid = payments
-              .filter((p) => p.billId === bill.id)
-              .sort((a, b) => String(b.paidOn).localeCompare(String(a.paidOn)))[0]
-            return (
-              <div className={`rounded-xl border border-l-4 border-slate-200 p-4 ${BORDER[status]} ${status === 'paid' ? 'bg-[#f4f4ee]' : 'bg-white'}`} key={bill.id}>
-                <div className="flex items-start gap-3">
-                  {card && <MiniCard card={card} />}
-                  <div className="min-w-0 flex-1">
-                    {/* Due date · days badge · action buttons — one row. */}
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className={`font-bold ${status === 'past_due' ? 'text-red-600' : 'text-slate-900'}`}>
-                        Due: {formatDate(bill.dueDate)}
-                      </span>
-                      {status !== 'paid' && (
-                        <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${BADGE_TONE[badge.tone]}`}>{badge.label}</span>
-                      )}
-                      {status !== 'paid' && (
-                        <button type="button" className={BILL_BTN.pay} onClick={() => setPayFor(bill)}>Pay Bill</button>
-                      )}
-                      <button type="button" className={BILL_BTN.edit} onClick={() => setBillModal({ initial: bill, payment: status === 'paid' ? lastPaid : null })}>Edit</button>
-                      <button type="button" className={BILL_BTN.delete} onClick={() => setConfirmDelete(bill.id)}>Delete</button>
-                    </div>
-                    <p className="mt-1 truncate text-xs text-slate-500">{cardLabel(bill.cardId)}</p>
-                    <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 rounded-lg bg-slate-50 px-3 py-2 text-sm">
-                      <span className="text-slate-500">Total: <span className="font-semibold text-slate-800">{formatPeso(bill.amountDue)}</span></span>
-                      <span className="text-slate-500">
-                        Paid: <span className="font-semibold text-slate-800">{formatPeso(paid)}</span>
-                        {lastPaid && <span className="text-xs text-slate-400"> on {formatDate(lastPaid.paidOn)}</span>}
-                      </span>
-                      <span className="ml-auto text-slate-500">
-                        Remaining: <span className={`font-semibold ${remaining > 0 ? 'text-red-600' : 'text-emerald-600'}`}>{formatPeso(remaining)}</span>
-                      </span>
-                    </div>
-                  </div>
-                  <span className={`shrink-0 self-start rounded-full px-2.5 py-0.5 text-xs font-bold uppercase tracking-wide ${PILL[pill]}`}>{pill}</span>
-                </div>
-              </div>
-            )
-          })}
+          {groups.map(group => <BillMonth key={sub + '-' + group.key} group={group} expanded={openMonths.includes(group.key)} onToggle={() => toggleMonth(group.key)} view={view} cardsById={cardsById} today={today} onPay={setPayFor} onEdit={onEdit} onDelete={setConfirmDelete} />)}
         </div>
       )}
 
@@ -188,6 +134,51 @@ export default function BillTracker({ cards, accounts, bills, payments, wallet }
       </Modal>
     </div>
   )
+}
+
+function BillMonth({ group, expanded, onToggle, view, cardsById, today, onPay, onEdit, onDelete }) {
+  const id = useId()
+  const [activeBillId, setActiveBillId] = useState(null)
+  const activeIndex = Math.max(0, group.rows.findIndex(row => row.id === activeBillId))
+  const paid = group.rows[0].status === 'paid'
+  const item = row => <BillItem row={row} card={cardsById.get(row.bill.cardId)} today={today} view={view} onPay={onPay} onEdit={onEdit} onDelete={onDelete} />
+  return <section className="wallet-bill-month" data-bill-month={group.key}>
+    <h3><button type="button" className="wallet-bill-month-toggle" id={id + '-toggle'} aria-expanded={expanded} aria-controls={id + '-content'} onClick={onToggle}>
+      <span className="wallet-bill-month-title"><strong>{group.label}</strong><small>{group.rows.length} {group.rows.length === 1 ? 'bill' : 'bills'} · Due month</small></span>
+      <span className="wallet-bill-month-amount"><strong>{formatPeso(group.summary.amount)}</strong><small>{paid ? 'Payments recorded' : 'Remaining due'}</small></span>
+      <span aria-hidden="true" className="wallet-bill-chevron">{expanded ? '−' : '+'}</span>
+    </button></h3>
+    {expanded && <div id={id + '-content'} role="region" aria-labelledby={id + '-toggle'} className="wallet-bill-month-content">
+      <dl className="wallet-bill-month-totals">
+        <div><dt>Billed total</dt><dd>{formatPeso(group.summary.billed)}</dd></div>
+        <div><dt>Payments recorded</dt><dd>{formatPeso(group.summary.paid)}</dd></div>
+        <div><dt>Remaining due</dt><dd>{formatPeso(group.summary.remaining)}</dd></div>
+      </dl>
+      {view === 'cards' ? <WalletDeck items={group.rows} activeIndex={activeIndex} onSelect={index => setActiveBillId(group.rows[index].id)} renderItem={item} interactive label={group.label + ' bills'} hint={group.rows.length === 1 ? 'One bill in this month.' : 'Swipe left or right, or use the arrows to view each bill.'} /> : <div className="wallet-bill-list">{group.rows.map(row => <div key={row.id}>{item(row)}</div>)}</div>}
+    </div>}
+  </section>
+}
+
+function BillItem({ row, card, today, view, onPay, onEdit, onDelete }) {
+  const { bill, paid, remaining, status, partial, lastPaid } = row
+  const badge = urgencyBadge(bill, today)
+  const pill = status === 'paid' ? 'PAID' : partial ? 'PARTIAL' : status === 'past_due' ? 'PAST_DUE' : 'PENDING'
+  return <article className={`wallet-bill-item wallet-bill-item-${view} ${BORDER[status]} ${status === 'paid' ? 'is-paid' : ''}`} aria-label={`${card?.bankName || 'Card'} bill due ${formatDate(bill.dueDate)}`}>
+    <header className="wallet-bill-item-header">
+      {card && <MiniCard card={card} />}
+      <div className="wallet-bill-identity"><strong>{card?.bankName || 'Card unavailable'}</strong><small>{card ? `${card.network} •••• ${card.last4}` : 'Original bill retained'}</small></div>
+      <span className={`wallet-bill-pill ${PILL[pill]}`}>{pill.replace('_', ' ')}</span>
+    </header>
+    <div className="wallet-bill-hero"><span>{status === 'paid' ? 'Payments recorded' : 'Remaining due'}</span><strong>{formatPeso(status === 'paid' ? paid : remaining)}</strong></div>
+    <div className="wallet-bill-due"><span>Due <strong>{formatDate(bill.dueDate)}</strong></span>{status !== 'paid' && <span className={`wallet-bill-urgency ${BADGE_TONE[badge.tone]}`}>{badge.label}</span>}</div>
+    <dl className="wallet-bill-item-totals"><div><dt>Billed</dt><dd>{formatPeso(bill.amountDue)}</dd></div><div><dt>Paid</dt><dd>{formatPeso(paid)}</dd></div></dl>
+    {lastPaid && <p className="wallet-bill-last-payment">Last payment · {formatDate(lastPaid.paidOn)}</p>}
+    <footer className="wallet-bill-actions">
+      {status !== 'paid' && <button type="button" className={BILL_BTN.pay} onClick={() => onPay(bill)}>Pay Bill</button>}
+      <button type="button" className={BILL_BTN.edit} onClick={() => onEdit(row)}>Edit</button>
+      <button type="button" className={BILL_BTN.delete} onClick={() => onDelete(bill.id)}>Delete</button>
+    </footer>
+  </article>
 }
 
 function BillForm({ cards, accounts = [], initial, payment = null, today, onClose, onSave, onSavePayment }) {

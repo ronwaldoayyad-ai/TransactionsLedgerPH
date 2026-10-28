@@ -1,6 +1,6 @@
 // Pure logic for the admin-only Card & Bills Wallet. Self-contained — no
 // dependency on the loan/transaction domain.
-import { parseISODate } from './amortization'
+import { parseISODate } from './amortization.js'
 
 export const NETWORKS = ['Visa', 'Mastercard', 'Amex', 'JCB', 'Discover', 'Diners Club', 'UnionPay']
 export const TIERS = ['Classic', 'Gold', 'Platinum', 'Signature', 'World', 'World Elite', 'Infinite', 'Prestige']

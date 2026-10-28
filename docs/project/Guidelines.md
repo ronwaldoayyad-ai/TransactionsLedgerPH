@@ -41,3 +41,9 @@ Open Transactions → Brand logos, select one or more retail items, then use Upl
 Open Group logos (also available in Settings) to upload a shared Cash Loan, Fees, Adjustments or Payment Proof Submitted image. The proof image appears in borrower Recent Activity and the separate submission-history section. SVG and transparent PNG use the same validation as retail uploads. Replacing/removing artwork changes presentation only.
 
 Switches state the current effect rather than the next action. If a save is pending or delivery is unavailable, read its feedback before assuming the feature is active. Search borders animate only in the admin workspace and become still when reduced motion is requested.
+
+## Bills Tracker views
+
+In Cards & Bills → Bills Tracker, choose Pending, Past Due or Paid. Each filter shows its bill count and amount: Pending/Past Due sum unpaid balances; Paid sums the recorded payments on fully settled bills. Partial payments remain reflected in the appropriate unpaid balance.
+
+Cards is the default view. Bills are grouped by due month (including paid bills), with the current month expanded, or the nearest due month when no current-month bills match. Each expanded month shows billed/paid/remaining totals and its own swipeable card deck. Use the arrows or focus the card and press Left/Right. List shows the same bills and actions in compact rows. Use month headings or Expand all/Collapse all to control the space. Pay Bill, Edit and Delete retain their existing review/save flows; changing views or collapsing a month never posts a payment or changes a bill.
