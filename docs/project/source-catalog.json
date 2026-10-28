@@ -134,6 +134,7 @@
     "tests/unit/paymentAllocation.test.js": "e17b55a96e0164ca42e575084c7326470bb61f63f6f4a359b0ffb3153794aed2",
     "tests/unit/paymentAllocationSuggestion.test.js": "cc35ca71acc33eb02342e794413d5ab8ccea760fe8bac7ff246d7e02989f119a",
     "tests/unit/paymentCollections.test.js": "0484cd06a8aa5ca78d9d8232f4d557f71eb8d8a2060cfec042dd56bbcc6a9276",
+    "tests/unit/paymentDraftRealtime.test.cjs": "94f3302ff2e0bf618372889645ad960e7122e7ff462b557ab1b289417c07d8db",
     "tests/unit/paymentExperience.test.cjs": "4021209414cd24172e620740ccca9663f3709359e4843722e44bf6143a10555a",
     "tests/unit/paymentFan.test.cjs": "bcd54c2a5a3e770f0009d5e07f131a007a1ba7366c1c749ce24f5fec3710b793",
     "tests/unit/paymentProofSorting.test.js": "fefdd8b961183ff0d84e2e21d32541b55a0e20d0f5e2dcc4872243af4e8e9fd5",
