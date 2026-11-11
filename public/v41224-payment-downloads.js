@@ -25,6 +25,7 @@ function decorateConfirmationDownloads(){
   const actions=row.querySelector('.recent-actions'),proof=actions?.querySelector('[onclick^="downloadRecentPayment"]');
   const id=proof?.getAttribute('onclick')?.match(/'([^']+)'/)?.[1];
   if(!actions||!proof||!id)return;
+  row.dataset.paymentId=id;
   let group=actions.querySelector('.recent-downloads');
   if(!group){group=document.createElement('div');group.className='recent-downloads';group.setAttribute('role','group');group.setAttribute('aria-label','Payment downloads');actions.prepend(group);}
   let receipt=actions.querySelector('[onclick^="downloadAcknowledgement"]');
