@@ -1,4 +1,5 @@
 const crypto=require('node:crypto'),path=require('node:path'),{pathToFileURL}=require('node:url')
+const planDeliveries=require('./notification-planning.cjs')
 const uuid=value=>/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value||'')
 const corePromise=import(pathToFileURL(path.join(__dirname,'../public/notification-rule-core.js')).href)
 module.exports=({db,active,wakeEnabled=true})=>{
@@ -142,12 +143,7 @@ module.exports=({db,active,wakeEnabled=true})=>{
     try{
      for(const rule of await rules(client))if(rule.enabled&&(!event.payload.schedule_rule||event.payload.schedule_rule===rule.id))for(const action of core.evaluateGraph(rule.graph,event.event_type,event.payload,event.payload.schedule_root)){
       if(!['inbox','banner','popup','paw'].includes(action.channel))continue
-      for(const recipient of await recipients(action,event,client)){
-       const preference=(await client.query('select ui_options from public.borrower_preferences where user_id=$1',[recipient])).rows[0]
-       const language=preference?.ui_options?.language==='Filipino'?'Filipino':'English'
-       if(action.language!=='all'&&action.language!==language)continue
-       await client.query("insert into mobile_private.notification_deliveries(event_id,rule_id,rule_version,node_id,recipient_id,channel,due_at,action,language) values($1,$2,$3,$4,$5,$6,$7::timestamptz+($8*interval '1 second'),$9,$10) on conflict(event_id,rule_id,node_id,recipient_id) do nothing",[event.id,rule.id,rule.version,action.nodeId,recipient,action.channel,event.occurred_at,action.delay,action,language])
-      }
+      await planDeliveries(client,event,rule,action,await recipients(action,event,client))
      }
      await client.query('update mobile_private.notification_events set processed_at=now(),last_error=null where id=$1',[event.id]);await client.query('commit')
     }catch{await client.query('rollback');await client.query("update mobile_private.notification_events set tries=tries+1,retry_at=now()+interval '1 minute',last_error='Delivery planning failed. Review the rule and retry.' where id=$1",[event.id])}
