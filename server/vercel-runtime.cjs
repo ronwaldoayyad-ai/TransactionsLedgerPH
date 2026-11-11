@@ -3,7 +3,9 @@ let runtime;
 module.exports=function getRuntime(){
  if(runtime)return runtime;
  const config=require('./runtime-config.cjs')();
- const db=new Pool({connectionString:config.databaseUrl,ssl:config.ssl,max:3,connectionTimeoutMillis:10000,idleTimeoutMillis:10000,allowExitOnIdle:true,statement_timeout:20000});
+ // Fluid keeps the invocation alive until idle clients close. Keep this short
+ // so the minute-by-minute worker does not reserve memory for ten idle seconds.
+ const db=new Pool({connectionString:config.databaseUrl,ssl:config.ssl,max:3,connectionTimeoutMillis:10000,idleTimeoutMillis:1000,allowExitOnIdle:true,statement_timeout:20000});
  require('@vercel/functions/db-connections').attachDatabasePool(db);
  db.on('error',()=>console.error('Database connection interrupted.'));
  const protection=require('./request-security.cjs').createRequestSecurity({db,secret:config.secret});
