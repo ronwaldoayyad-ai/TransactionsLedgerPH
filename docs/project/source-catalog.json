@@ -129,6 +129,7 @@
     "tests/unit/messageViewport.test.cjs": "08d5c787f8bb962fa9f6d3df4c392e9595e4da3b387656b7e3e64bae4819890b",
     "tests/unit/migration-boundaries.test.cjs": "551e1bb3aaec5f8931a787b2f927ae81853a46682194e3cdf249fcc455c2a231",
     "tests/unit/mobileActionError.test.js": "d4d5a82419c97453212f44ab41ecdc91ee36fe0e62a162f9c54482bfd599f34c",
+    "tests/unit/notificationPlanning.test.cjs": "360ec39d5f3849c164474ce1049e46e993b955fedf631308e5a25a337b0ad90d",
     "tests/unit/partialDuesBreakdown.test.js": "50c737edb37149d07c18a321d189a03b2f2d36a077abf0f72a8f384bf56ef1f6",
     "tests/unit/payment-confirmation-download.test.js": "a1e26e847b450d813a720708553ea070a074370695ed88cfc28a25feaf2b88a5",
     "tests/unit/paymentAdjustmentPresentation.test.cjs": "014022451ad21a817ce3c8eb9910b7bb47d9c811c92956172cf594fc3377a1fc",
